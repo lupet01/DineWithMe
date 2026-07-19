@@ -295,6 +295,14 @@ model Feedback {
   comfortLevel      ComfortLevel
   wouldDineAgain    Boolean?
   notes             String?
+  // 1-5 star rating from the Post-Dinner "How Was It?" screen. Nullable
+  // because rows written before this column existed (and rows from a
+  // skipped rating screen) have no value.
+  rating            Int?
+  // Multi-select vibe tags from the same screen (e.g. "GREAT_CONVERSATIONS",
+  // "GOOD_FOOD"). Native Postgres array, defaults to empty rather than
+  // null so callers can always treat it as a list.
+  vibeTags          String[]           @default([])
   createdAt         DateTime           @default(now())
 
   dinner Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)

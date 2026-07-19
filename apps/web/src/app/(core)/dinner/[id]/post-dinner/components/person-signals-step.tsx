@@ -1,126 +1,124 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Check, X } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 
-interface PersonSignalsStepProps {
+interface ConnectionsStepProps {
   attendees: Array<{
     id: string;
     firstName: string | null;
     lastName: string | null;
     email: string;
   }>;
-  onComplete: (signals: Array<{ targetUserId: string; wouldDineAgain: boolean }>) => void;
+  onComplete: (targetUserIds: string[]) => void;
   onSkip: () => void;
   submitting: boolean;
 }
 
-export function PersonSignalsStep({ attendees, onComplete, onSkip, submitting }: PersonSignalsStepProps) {
-  const [signals, setSignals] = useState<Map<string, boolean>>(new Map());
+/**
+ * Screen 4 "Connections" - a simpler binary tap-to-connect toggle per
+ * person, replacing the old per-person "would you dine again" thumbs
+ * up/down picker. Rather than inventing a new signal type server-side,
+ * tapping a person is sent as personSignals: [{ targetUserId, wouldDineAgain:
+ * true }] - the existing mutual-interest and trust-event logic in
+ * api/feedback/submit/route.ts already treats wouldDineAgain: true as "this
+ * person stood out to me", which is exactly what a tap means here. People
+ * who aren't tapped are simply omitted from personSignals (no explicit
+ * "no" is recorded, matching "It's mutual - they won't know unless they
+ * tap you too").
+ */
+export function PersonSignalsStep({ attendees, onComplete, onSkip, submitting }: ConnectionsStepProps) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const handleToggle = (userId: string, value: boolean) => {
-    const newSignals = new Map(signals);
-    if (newSignals.get(userId) === value) {
-      newSignals.delete(userId);
+  const toggle = (userId: string) => {
+    const next = new Set(selected);
+    if (next.has(userId)) {
+      next.delete(userId);
     } else {
-      newSignals.set(userId, value);
+      next.add(userId);
     }
-    setSignals(newSignals);
+    setSelected(next);
   };
 
   const handleSubmit = () => {
-    const signalsArray = Array.from(signals.entries()).map(([targetUserId, wouldDineAgain]) => ({
-      targetUserId,
-      wouldDineAgain,
-    }));
-    onComplete(signalsArray);
+    onComplete(Array.from(selected));
   };
 
-  const getDisplayName = (attendee: typeof attendees[0]) => {
+  const getDisplayName = (attendee: (typeof attendees)[0]) => {
     if (attendee.firstName && attendee.lastName) {
       return `${attendee.firstName} ${attendee.lastName}`;
     }
     if (attendee.firstName) {
       return attendee.firstName;
     }
-    return attendee.email.split("@")[0];
+    return attendee.email.split("@")[0] || attendee.email;
+  };
+
+  const getInitial = (attendee: (typeof attendees)[0]) => {
+    const name = getDisplayName(attendee);
+    return name.charAt(0).toUpperCase();
   };
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-          <Users className="h-8 w-8 text-blue-600" />
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-          Who would you dine with again?
+      <div className="pt-4 text-center">
+        <div className="mb-3 text-5xl">✨</div>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-gray-900">
+          Did anyone stand out?
         </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Tap to indicate interest • Completely private
+        <p className="mt-2 text-[13px] leading-relaxed text-gray-500">
+          Tap people you&apos;d like to connect with. It&apos;s mutual — they won&apos;t know
+          unless they tap you too.
         </p>
       </div>
 
       <div className="space-y-3">
-        {attendees.map((attendee) => {
-          const signal = signals.get(attendee.id);
-          const hasYes = signal === true;
-          const hasNo = signal === false;
-
+        {attendees.map((attendee, index) => {
+          const isSelected = selected.has(attendee.id);
           return (
-            <div
+            <button
               key={attendee.id}
-              className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4"
+              onClick={() => toggle(attendee.id)}
+              className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all active:scale-[0.98] ${
+                isSelected ? "border-primary-500 bg-primary-50" : "border-gray-200 bg-white hover:bg-gray-50"
+              }`}
             >
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-[15px] font-semibold text-gray-600">
+                {getInitial(attendee)}
+              </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900">
-                  {getDisplayName(attendee)}
-                </div>
+                <p className="text-[15px] font-medium text-gray-900">{getDisplayName(attendee)}</p>
+                <p className="text-[13px] text-gray-500">Seat {index + 1}</p>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleToggle(attendee.id, true)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
-                    hasYes
-                      ? "border-green-600 bg-green-600 text-white"
-                      : "border-gray-200 bg-white text-gray-400 hover:border-green-200 hover:bg-green-50 hover:text-green-600"
-                  }`}
-                  aria-label="Would dine again"
-                >
+              {isSelected ? (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-500 text-white">
                   <Check className="h-5 w-5" />
-                </button>
-
-                <button
-                  onClick={() => handleToggle(attendee.id, false)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
-                    hasNo
-                      ? "border-red-600 bg-red-600 text-white"
-                      : "border-gray-200 bg-white text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                  }`}
-                  aria-label="Would not dine again"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
+                </div>
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-300 text-gray-400">
+                  <Plus className="h-4 w-4" />
+                </div>
+              )}
+            </button>
           );
         })}
       </div>
 
-      <div className="flex gap-3">
+      <div className="space-y-3">
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="w-full rounded-full bg-primary-500 py-4 text-[15px] font-semibold text-white shadow-soft transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {submitting ? "Submitting..." : "Submit Connections"}
+        </button>
         <button
           onClick={onSkip}
           disabled={submitting}
-          className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50 disabled:opacity-50"
+          className="w-full rounded-full border-2 border-gray-200 bg-white py-4 text-[15px] font-semibold text-gray-900 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Skip
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || signals.size === 0}
-          className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-        >
-          {submitting ? "Submitting..." : "Submit"}
+          No connections tonight
         </button>
       </div>
     </div>

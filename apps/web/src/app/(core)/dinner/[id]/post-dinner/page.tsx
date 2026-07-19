@@ -4,14 +4,17 @@ import { FeedbackFlowSkeleton } from "./components/feedback-flow-skeleton";
 
 interface PostDinnerPageProps {
   params: {
-    dinnerId: string;
+    // Matches the [id] dynamic segment folder name, not "dinnerId" - the
+    // previous version of this file read params.dinnerId, which is always
+    // undefined for this route and broke every fetch in the flow.
+    id: string;
   };
 }
 
 export default function PostDinnerPage({ params }: PostDinnerPageProps) {
   return (
     <Suspense fallback={<FeedbackFlowSkeleton />}>
-      <FeedbackFlow dinnerId={params.dinnerId} />
+      <FeedbackFlow dinnerId={params.id} />
     </Suspense>
   );
 }

@@ -21,6 +21,12 @@ export interface FeedbackSubmitRequest {
   comfortLevel: "FULL" | "MOSTLY" | "LOW";
   wouldDineAgain?: boolean | null;
   notes?: string | null;
+  rating?: number | null;
+  vibeTags?: string[];
+  // Reason category from the Post-Dinner "Report Something" screen. Only
+  // meaningful when comfortLevel === "LOW"; falls back to SAFETY_CONCERN
+  // below when omitted (e.g. requests from older clients).
+  reportReason?: "MADE_UNCOMFORTABLE" | "INAPPROPRIATE_BEHAVIOR" | "SAFETY_CONCERN" | "OTHER" | null;
   personSignals?: Array<{
     targetUserId: string;
     wouldDineAgain: boolean;
@@ -84,6 +90,9 @@ export async function POST(request: NextRequest) {
       comfortLevel: body.comfortLevel,
       wouldDineAgain: body.wouldDineAgain,
       notes: body.notes,
+      rating: body.rating,
+      vibeTags: body.vibeTags,
+      reportReason: body.reportReason,
     });
 
     if (!validation.success) {
@@ -173,6 +182,8 @@ export async function POST(request: NextRequest) {
       comfortLevel: body.comfortLevel,
       wouldDineAgain: body.wouldDineAgain,
       notes: body.notes,
+      rating: body.rating ?? undefined,
+      vibeTags: body.vibeTags ?? undefined,
     });
 
     // Process per-person signals and collect target user IDs for trust events
@@ -249,18 +260,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // "I want to report something" in the Safety step sends wouldDineAgain:
-    // false with LOW comfort (see safety-flag-step.tsx) - creates a
-    // SafetyReport for the Trust & Safety admin queue. The step doesn't
-    // collect which specific person, so this is a table/dinner-level
-    // report (reportedUserId stays unset); reason defaults to
-    // SAFETY_CONCERN since the UI doesn't collect a specific category,
-    // only free text.
+    // "I want to report something" in the Safety Check step sends
+    // wouldDineAgain: false with LOW comfort (see safety-flag-step.tsx) -
+    // creates a SafetyReport for the Trust & Safety admin queue. The step
+    // doesn't collect which specific person, so this is a table/dinner-level
+    // report (reportedUserId stays unset). The dedicated "Report Something"
+    // screen now collects a reason category (reportReason); fall back to
+    // SAFETY_CONCERN for older clients that only send free text.
     if (body.comfortLevel === "LOW" && body.wouldDineAgain === false) {
       await safetyReportRepository.create({
         reporter: { connect: { id: dbUser.id } },
         dinner: { connect: { id: body.dinnerId } },
-        reason: "SAFETY_CONCERN",
+        reason: body.reportReason || "SAFETY_CONCERN",
         reasonDetail: body.notes || null,
       });
     }
