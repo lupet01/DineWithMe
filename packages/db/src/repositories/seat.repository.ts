@@ -58,6 +58,51 @@ export class SeatRepository extends BaseRepository<Seat> {
   }
 
   /**
+   * All confirmed/attended/completed seats across every dinner at a
+   * restaurant, with the guest and dinner details a restaurant admin's
+   * Guests & Bookings screen needs. Filtering by name/status happens
+   * client-side (same pattern as restaurants-table.tsx) - this returns
+   * the full restaurant-scoped set in one query.
+   */
+  async findGuestsByRestaurant(restaurantId: string): Promise<
+    Array<
+      Seat & {
+        confirmedByUser: {
+          id: string;
+          firstName: string | null;
+          lastName: string | null;
+          email: string;
+        } | null;
+        dinner: {
+          id: string;
+          startsAt: Date;
+          theme: { title: string } | null;
+        };
+      }
+    >
+  > {
+    return this.prisma.seat.findMany({
+      where: {
+        status: { in: ["CONFIRMED", "ATTENDED", "COMPLETED"] },
+        dinner: { restaurantId },
+      },
+      include: {
+        confirmedByUser: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        dinner: {
+          select: {
+            id: true,
+            startsAt: true,
+            theme: { select: { title: true } },
+          },
+        },
+      },
+      orderBy: { dinner: { startsAt: "desc" } },
+    });
+  }
+
+  /**
    * Find seats for a specific dinner and user
    */
   async findByDinnerAndUser(dinnerId: string, userId: string): Promise<Seat[]> {
