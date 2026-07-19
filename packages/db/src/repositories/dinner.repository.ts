@@ -115,6 +115,37 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     });
   }
 
+  /**
+   * Most recent dinners for a restaurant (any status) with seat status
+   * counts, for Restaurant Analytics' "Fill Rate - Recent Dinners" list.
+   * Unlike findUpcomingByRestaurantWithSeatCounts this isn't filtered to
+   * SCHEDULED/LIVE - the wireframe's fill-rate list is about dinners that
+   * already happened.
+   */
+  async findRecentByRestaurantWithSeatCounts(
+    restaurantId: string,
+    limit: number
+  ): Promise<
+    Array<
+      Dinner & {
+        theme: { title: string } | null;
+        seats: Array<{ status: string }>;
+        _count: { seats: number };
+      }
+    >
+  > {
+    return this.prisma.dinner.findMany({
+      where: { restaurantId },
+      include: {
+        theme: { select: { title: true } },
+        seats: { select: { status: true } },
+        _count: { select: { seats: true } },
+      },
+      orderBy: { startsAt: "desc" },
+      take: limit,
+    });
+  }
+
   async findMany(): Promise<Dinner[]> {
     return this.prisma.dinner.findMany({
       orderBy: { startsAt: "desc" },
