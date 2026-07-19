@@ -25,14 +25,14 @@ export default async function DinnersPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-900">Dinners</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-3xl font-semibold text-gray-900">Dinners</h1>
+          <p className="text-gray-600 mt-1">
             Manage your upcoming and past dinner events
           </p>
         </div>
         <Link
           href="/admin/dinners/new"
-          className="inline-flex items-center justify-center px-4 py-2.5 text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
+          className="inline-flex w-full items-center justify-center rounded-full bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-primary-600 active:scale-[0.98] sm:w-auto"
         >
           Create Dinner
         </Link>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Restaurant, RestaurantMember, User } from "@prisma/client";
 import { approveRestaurant, pauseRestaurant, reactivateRestaurant } from "../actions";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type RestaurantWithMembers = Restaurant & {
   members: (RestaurantMember & { user: User })[];
@@ -29,16 +30,16 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusTone = (status: string): "warning" | "success" | "danger" | "neutral" => {
     switch (status) {
       case "PENDING":
-        return "bg-yellow-100 text-yellow-800";
+        return "warning";
       case "ACTIVE":
-        return "bg-green-100 text-green-800";
+        return "success";
       case "PAUSED":
-        return "bg-red-100 text-red-800";
+        return "danger";
       default:
-        return "bg-slate-100 text-slate-800";
+        return "neutral";
     }
   };
 
@@ -141,14 +142,14 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
         </div>
       )}
 
-      <tr className="hover:bg-slate-50 transition-colors">
+      <tr className="hover:bg-cream-100 transition-colors">
         {/* Restaurant */}
         <td className="px-6 py-4">
-          <div className="text-sm font-medium text-slate-900">
+          <div className="text-sm font-medium text-gray-900">
             {restaurant.name}
           </div>
           {restaurant.cuisine && (
-            <div className="text-sm text-slate-500">{restaurant.cuisine}</div>
+            <div className="text-sm text-gray-500">{restaurant.cuisine}</div>
           )}
         </td>
 
@@ -156,23 +157,23 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
         <td className="px-6 py-4">
           {owner ? (
             <div>
-              <div className="text-sm text-slate-900">
+              <div className="text-sm text-gray-900">
                 {owner.firstName} {owner.lastName}
               </div>
-              <div className="text-sm text-slate-500">{owner.email}</div>
+              <div className="text-sm text-gray-500">{owner.email}</div>
             </div>
           ) : (
-            <span className="text-sm text-slate-400">No owner</span>
+            <span className="text-sm text-gray-400">No owner</span>
           )}
         </td>
 
         {/* Location */}
         <td className="px-6 py-4">
-          <div className="text-sm text-slate-900">
+          <div className="text-sm text-gray-900">
             {restaurant.city || "Not specified"}
           </div>
           {restaurant.address && (
-            <div className="text-sm text-slate-500 truncate max-w-xs">
+            <div className="text-sm text-gray-500 truncate max-w-xs">
               {restaurant.address}
             </div>
           )}
@@ -180,18 +181,12 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
 
         {/* Status */}
         <td className="px-6 py-4 whitespace-nowrap">
-          <span
-            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-              restaurant.status
-            )}`}
-          >
-            {restaurant.status}
-          </span>
+          <Badge tone={getStatusTone(restaurant.status)}>{restaurant.status}</Badge>
         </td>
 
         {/* Created */}
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-gray-600">
             {formatDate(restaurant.createdAt)}
           </div>
         </td>
@@ -237,7 +232,7 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
             )}
 
             {!canApprove && !canPause && !canReactivate && (
-              <span className="text-xs text-slate-400">No actions</span>
+              <span className="text-xs text-gray-400">No actions</span>
             )}
           </div>
         </td>

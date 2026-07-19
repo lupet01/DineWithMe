@@ -1,5 +1,6 @@
 import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, themeRepository } from "@dinewithme/db";
+import { Card } from "@/components/ui/card";
 import { RestaurantForm } from "./components/restaurant-form";
 import { ImageUpload } from "./components/image-upload";
 import { GalleryManager } from "./components/gallery-manager";
@@ -28,10 +29,10 @@ export default async function RestaurantProfilePage() {
         {/* Onboarding Header */}
         <div className="text-center max-w-2xl mx-auto">
           <div className="text-5xl mb-4">🍽️</div>
-          <h1 className="text-3xl font-semibold text-slate-900">
+          <h1 className="text-3xl font-semibold text-gray-900">
             Welcome to DineWithMe
           </h1>
-          <p className="text-slate-600 mt-2">
+          <p className="text-gray-600 mt-2">
             Let&apos;s set up your restaurant profile to start hosting amazing dining
             experiences
           </p>
@@ -55,10 +56,10 @@ export default async function RestaurantProfilePage() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-semibold text-slate-900">
+        <h1 className="text-3xl font-semibold text-gray-900">
           Restaurant Profile
         </h1>
-        <p className="text-slate-600 mt-1">
+        <p className="text-gray-600 mt-1">
           Manage your restaurant information and settings
         </p>
       </div>
@@ -67,12 +68,12 @@ export default async function RestaurantProfilePage() {
       <RestaurantForm restaurant={restaurant} mode="edit" />
 
       {/* Theme Management */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+      <Card padding="lg" className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-gray-900">
             Table Themes
           </h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             Choose which types of dining experiences you&apos;d like to host
           </p>
         </div>
@@ -82,20 +83,20 @@ export default async function RestaurantProfilePage() {
           allThemes={allThemes}
           enabledThemeIds={enabledThemeIds}
         />
-      </div>
+      </Card>
 
       {/* Media Management */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+      <Card padding="lg" className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Media</h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <h2 className="text-lg font-semibold text-gray-900">Media</h2>
+          <p className="text-sm text-gray-600 mt-1">
             Upload images to showcase your restaurant
           </p>
         </div>
 
         {/* Hero Image */}
         <div>
-          <label className="text-sm font-medium text-slate-700 block mb-2">
+          <label className="text-sm font-medium text-gray-700 block mb-2">
             Hero Image
           </label>
           <ImageUpload
@@ -106,13 +107,13 @@ export default async function RestaurantProfilePage() {
         </div>
 
         {/* Gallery */}
-        <div className="border-t border-slate-200 pt-6">
+        <div className="border-t border-gray-100 pt-6">
           <GalleryManager
             restaurantId={restaurant.id}
             media={restaurantWithMedia?.media || []}
           />
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

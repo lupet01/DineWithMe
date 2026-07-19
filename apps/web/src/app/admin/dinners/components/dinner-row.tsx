@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { DinnerWithRestaurant } from "@dinewithme/db";
+import { Badge } from "@/components/ui/badge";
 import { updateDinnerStatus, cancelDinner } from "../actions";
 
 interface DinnerRowProps {
@@ -47,18 +48,17 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusTone = (status: string): "primary" | "success" | "danger" | "neutral" => {
     switch (status) {
       case "SCHEDULED":
-        return "bg-blue-100 text-blue-800";
+        return "primary";
       case "LIVE":
-        return "bg-green-100 text-green-800";
-      case "COMPLETED":
-        return "bg-slate-100 text-slate-800";
+        return "success";
       case "CANCELLED":
-        return "bg-red-100 text-red-800";
+        return "danger";
+      case "COMPLETED":
       default:
-        return "bg-slate-100 text-slate-800";
+        return "neutral";
     }
   };
 
@@ -101,24 +101,24 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
   const canCancel = dinner.status === "SCHEDULED" || dinner.status === "LIVE";
 
   return (
-    <tr className="hover:bg-slate-50 transition-colors">
+    <tr className="hover:bg-cream-100 transition-colors">
       {/* Date & Time */}
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm font-medium text-slate-900">
+        <div className="text-sm font-medium text-gray-900">
           {formatDate(dinner.startsAt)}
         </div>
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-gray-500">
           {formatTime(dinner.startsAt)} - {formatTime(dinner.endsAt)}
         </div>
       </td>
 
       {/* Theme */}
       <td className="px-6 py-4">
-        <div className="text-sm text-slate-900">
+        <div className="text-sm text-gray-900">
           {dinner.theme?.title || "No theme"}
         </div>
         {dinner.description && (
-          <div className="text-sm text-slate-500 truncate max-w-xs">
+          <div className="text-sm text-gray-500 truncate max-w-xs">
             {dinner.description}
           </div>
         )}
@@ -126,24 +126,18 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
 
       {/* Seats */}
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-slate-900">
+        <div className="text-sm text-gray-900">
           <span className="font-medium">{seatCounts.confirmed}</span>
-          <span className="text-slate-500"> / {dinner.seatCount}</span>
+          <span className="text-gray-500"> / {dinner.seatCount}</span>
         </div>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-gray-500">
           {seatCounts.available} available
         </div>
       </td>
 
       {/* Status */}
       <td className="px-6 py-4 whitespace-nowrap">
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-            dinner.status
-          )}`}
-        >
-          {dinner.status}
-        </span>
+        <Badge tone={getStatusTone(dinner.status)}>{dinner.status}</Badge>
       </td>
 
       {/* Actions */}
@@ -163,7 +157,7 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
             <button
               onClick={() => handleStatusChange("COMPLETED")}
               disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-cream-200 rounded-lg hover:bg-cream-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Complete
             </button>
@@ -180,7 +174,7 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
           )}
 
           {!canMarkLive && !canMarkCompleted && !canCancel && (
-            <span className="text-xs text-slate-400">No actions</span>
+            <span className="text-xs text-gray-400">No actions</span>
           )}
         </div>
       </td>

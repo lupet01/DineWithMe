@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Restaurant, RestaurantMember, User } from "@prisma/client";
+import { Card } from "@/components/ui/card";
+import { Tabs } from "@/components/ui/tabs";
+import { SearchBar } from "@/components/ui/search-bar";
 import { RestaurantRow } from "./restaurant-row";
 
 type RestaurantWithMembers = Restaurant & {
@@ -14,151 +17,116 @@ interface RestaurantsTableProps {
 
 export function RestaurantsTable({ restaurants }: RestaurantsTableProps) {
   const [filter, setFilter] = useState<"all" | "pending" | "active" | "paused">("all");
+  const [search, setSearch] = useState("");
+  const [locationFilter, setLocationFilter] = useState("all");
 
-  // Filter restaurants based on selected filter
-  const filteredRestaurants = restaurants.filter((restaurant) => {
-    if (filter === "all") return true;
-    return restaurant.status === filter.toUpperCase();
-  });
-
-  // Count by status
   const counts = {
     pending: restaurants.filter((r) => r.status === "PENDING").length,
     active: restaurants.filter((r) => r.status === "ACTIVE").length,
     paused: restaurants.filter((r) => r.status === "PAUSED").length,
   };
 
+  const filterTabs = [
+    { value: "all", label: `All (${restaurants.length})` },
+    { value: "pending", label: `Pending (${counts.pending})` },
+    { value: "active", label: `Active (${counts.active})` },
+    { value: "paused", label: `Paused (${counts.paused})` },
+  ];
+
+  const locations = useMemo(() => {
+    const cities = new Set(restaurants.map((r) => r.city).filter(Boolean) as string[]);
+    return Array.from(cities).sort();
+  }, [restaurants]);
+
+  const filteredRestaurants = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return restaurants.filter((restaurant) => {
+      if (filter !== "all" && restaurant.status !== filter.toUpperCase()) {
+        return false;
+      }
+      if (locationFilter !== "all" && restaurant.city !== locationFilter) {
+        return false;
+      }
+      if (query && !restaurant.name.toLowerCase().includes(query)) {
+        return false;
+      }
+      return true;
+    });
+  }, [restaurants, filter, locationFilter, search]);
+
   if (restaurants.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200">
+      <Card>
         <div className="p-12 text-center">
           <div className="text-6xl mb-4">🏪</div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No restaurants yet
           </h3>
-          <p className="text-slate-600">
+          <p className="text-gray-600">
             Restaurants will appear here once they register
           </p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-slate-600">Pending Review</div>
-              <div className="text-2xl font-semibold text-slate-900 mt-1">
-                {counts.pending}
-              </div>
-            </div>
-            <div className="text-3xl">⏳</div>
-          </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs items={filterTabs} value={filter} onChange={(v) => setFilter(v as typeof filter)} />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <SearchBar
+            placeholder="Search by name..."
+            value={search}
+            onValueChange={setSearch}
+            className="sm:w-56"
+          />
+          <select
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="rounded-full border border-gray-100 bg-white px-4 py-3 text-sm text-gray-900 shadow-card focus:outline-none focus:ring-2 focus:ring-primary-200"
+          >
+            <option value="all">All locations</option>
+            {locations.map((city) => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </select>
         </div>
-
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-slate-600">Active</div>
-              <div className="text-2xl font-semibold text-slate-900 mt-1">
-                {counts.active}
-              </div>
-            </div>
-            <div className="text-3xl">✅</div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-slate-600">Paused</div>
-              <div className="text-2xl font-semibold text-slate-900 mt-1">
-                {counts.paused}
-              </div>
-            </div>
-            <div className="text-3xl">⏸️</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto border-b border-slate-200">
-        <button
-          onClick={() => setFilter("all")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            filter === "all"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          All ({restaurants.length})
-        </button>
-        <button
-          onClick={() => setFilter("pending")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            filter === "pending"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          Pending ({counts.pending})
-        </button>
-        <button
-          onClick={() => setFilter("active")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            filter === "active"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          Active ({counts.active})
-        </button>
-        <button
-          onClick={() => setFilter("paused")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-            filter === "paused"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          Paused ({counts.paused})
-        </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <Card padding="none" className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-cream-100 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Restaurant
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Owner
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Location
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Created
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-gray-100">
               {filteredRestaurants.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     No restaurants found for this filter
                   </td>
                 </tr>
@@ -170,7 +138,7 @@ export function RestaurantsTable({ restaurants }: RestaurantsTableProps) {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

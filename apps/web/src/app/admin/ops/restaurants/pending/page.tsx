@@ -2,6 +2,7 @@ import { restaurantRepository } from "@dinewithme/db";
 import { RestaurantsTable } from "../components/restaurants-table";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 export default async function PendingRestaurantsPage() {
   // Fetch only pending restaurants
@@ -13,15 +14,15 @@ export default async function PendingRestaurantsPage() {
       <div className="flex items-center gap-4">
         <Link
           href="/admin/ops/restaurants"
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-cream-200 rounded-lg transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-slate-600" />
+          <ArrowLeft className="h-5 w-5 text-gray-600" />
         </Link>
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-xl font-semibold text-gray-900">
             Pending Restaurant Approvals
           </h2>
-          <p className="text-slate-600 mt-1">
+          <p className="text-gray-600 mt-1">
             {pendingRestaurants.length} restaurant{pendingRestaurants.length !== 1 ? 's' : ''} awaiting approval
           </p>
         </div>
@@ -29,7 +30,7 @@ export default async function PendingRestaurantsPage() {
 
       {/* Empty state */}
       {pendingRestaurants.length === 0 ? (
-        <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
+        <Card padding="lg" className="p-12 text-center">
           <div className="max-w-md mx-auto">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
@@ -46,14 +47,14 @@ export default async function PendingRestaurantsPage() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
               All caught up!
             </h3>
-            <p className="text-slate-600">
+            <p className="text-gray-600">
               There are no pending restaurant applications at the moment.
             </p>
           </div>
-        </div>
+        </Card>
       ) : (
         <RestaurantsTable restaurants={pendingRestaurants} />
       )}
