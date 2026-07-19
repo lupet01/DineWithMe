@@ -674,4 +674,36 @@ export class SeatRepository extends BaseRepository<Seat> {
 
     return { booked, total };
   }
+
+  /**
+   * Restaurant-scoped stats for the admin dashboard: count of currently
+   * booked/attended seats and the number of distinct guests who have ever
+   * held a confirmed seat at this restaurant. Both aggregated in the
+   * database - does not load seat rows into memory.
+   */
+  async getRestaurantStats(
+    restaurantId: string
+  ): Promise<{ activeSeats: number; totalGuests: number }> {
+    const bookedStatuses: SeatStatus[] = ["CONFIRMED", "ATTENDED", "COMPLETED"];
+
+    const [activeSeats, distinctGuests] = await Promise.all([
+      this.prisma.seat.count({
+        where: {
+          status: { in: bookedStatuses },
+          dinner: { restaurantId },
+        },
+      }),
+      this.prisma.seat.findMany({
+        where: {
+          status: { in: bookedStatuses },
+          dinner: { restaurantId },
+          confirmedByUserId: { not: null },
+        },
+        select: { confirmedByUserId: true },
+        distinct: ["confirmedByUserId"],
+      }),
+    ]);
+
+    return { activeSeats, totalGuests: distinctGuests.length };
+  }
 }
