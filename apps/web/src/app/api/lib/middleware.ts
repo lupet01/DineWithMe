@@ -93,7 +93,7 @@ export function withRateLimit(
   config: RateLimitConfig = RateLimitPresets.STANDARD
 ) {
   return async (request: NextRequest, ...args: unknown[]) => {
-    const result = checkRateLimit(request, config);
+    const result = await checkRateLimit(request, config);
 
     // Add rate limit headers to all responses
     const headers = {
