@@ -5,50 +5,105 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchBar } from "@/components/ui/search-bar";
+import { Tabs } from "@/components/ui/tabs";
+
+interface GuestUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
 
 interface Guest {
   id: string;
   status: string;
   dietaryNotes: string | null;
-  confirmedByUser: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string;
-  } | null;
+  confirmedByUser: GuestUser | null;
+  heldByUser: GuestUser | null;
   dinner: {
     id: string;
     startsAt: Date | string;
     theme: { title: string } | null;
   };
+  paymentIntents: Array<{ status: string; amount: number; currency: string }>;
 }
 
 interface GuestsTableProps {
   guests: Guest[];
 }
 
-function statusTone(status: string): "primary" | "success" | "neutral" {
+function statusTone(status: string): "primary" | "success" | "neutral" | "danger" | "warning" {
   if (status === "ATTENDED" || status === "COMPLETED") return "success";
   if (status === "CONFIRMED") return "primary";
+  if (status === "HELD") return "warning";
+  if (status === "CANCELLED" || status === "EXPIRED" || status === "NO_SHOW") return "danger";
   return "neutral";
 }
 
+function paymentBadge(guest: Guest): { label: string; tone: "success" | "neutral" | "warning" } {
+  const intent = guest.paymentIntents[0];
+  if (!intent) {
+    return guest.status === "HELD"
+      ? { label: "Awaiting payment", tone: "warning" }
+      : { label: "—", tone: "neutral" };
+  }
+  if (intent.status === "SUCCEEDED") {
+    return { label: `Paid · ${(intent.amount / 100).toFixed(0)} ${intent.currency}`, tone: "success" };
+  }
+  if (intent.status === "REFUNDED") {
+    return { label: "Refunded", tone: "neutral" };
+  }
+  return { label: "Awaiting payment", tone: "warning" };
+}
+
+const CANCELLED_STATUSES = new Set(["CANCELLED", "EXPIRED", "NO_SHOW"]);
+
+type TabValue = "upcoming" | "past" | "cancelled";
+
+const tabItems = [
+  { value: "upcoming", label: "Upcoming" },
+  { value: "past", label: "Past" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
 export function GuestsTable({ guests }: GuestsTableProps) {
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<TabValue>("upcoming");
+  const [dinnerFilter, setDinnerFilter] = useState("");
+
+  const dinnerOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const guest of guests) {
+      if (!seen.has(guest.dinner.id)) {
+        seen.set(guest.dinner.id, guest.dinner.theme?.title || "Dinner");
+      }
+    }
+    return Array.from(seen.entries());
+  }, [guests]);
+
+  const now = Date.now();
+
+  const byTab = useMemo(() => {
+    return guests.filter((guest) => {
+      const isCancelled = CANCELLED_STATUSES.has(guest.status);
+      const isUpcoming = new Date(guest.dinner.startsAt).getTime() > now;
+      if (tab === "cancelled") return isCancelled;
+      if (isCancelled) return false;
+      return tab === "upcoming" ? isUpcoming : !isUpcoming;
+    });
+  }, [guests, tab, now]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return guests;
-
-    return guests.filter((guest) => {
-      const name = [guest.confirmedByUser?.firstName, guest.confirmedByUser?.lastName]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      const email = guest.confirmedByUser?.email.toLowerCase() ?? "";
+    return byTab.filter((guest) => {
+      if (dinnerFilter && guest.dinner.id !== dinnerFilter) return false;
+      if (!query) return true;
+      const person = guest.confirmedByUser ?? guest.heldByUser;
+      const name = [person?.firstName, person?.lastName].filter(Boolean).join(" ").toLowerCase();
+      const email = person?.email.toLowerCase() ?? "";
       return name.includes(query) || email.includes(query);
     });
-  }, [guests, search]);
+  }, [byTab, search, dinnerFilter]);
 
   if (guests.length === 0) {
     return (
@@ -60,12 +115,27 @@ export function GuestsTable({ guests }: GuestsTableProps) {
 
   return (
     <div className="space-y-4">
-      <SearchBar
-        placeholder="Search by guest name or email..."
-        value={search}
-        onValueChange={setSearch}
-        className="sm:w-72"
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchBar
+          placeholder="Search by guest name or email..."
+          value={search}
+          onValueChange={setSearch}
+          className="sm:w-72"
+        />
+        <select
+          value={dinnerFilter}
+          onChange={(e) => setDinnerFilter(e.target.value)}
+          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
+        >
+          <option value="">All Dinners</option>
+          {dinnerOptions.map(([id, title]) => (
+            <option key={id} value={id}>
+              {title}
+            </option>
+          ))}
+        </select>
+        <Tabs items={tabItems} value={tab} onChange={(v) => setTab(v as TabValue)} />
+      </div>
 
       <Card padding="none" className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -84,30 +154,33 @@ export function GuestsTable({ guests }: GuestsTableProps) {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Payment
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     No guests match your search
                   </td>
                 </tr>
               ) : (
                 filtered.map((guest) => {
+                  const person = guest.confirmedByUser ?? guest.heldByUser;
                   const name =
-                    [guest.confirmedByUser?.firstName, guest.confirmedByUser?.lastName]
-                      .filter(Boolean)
-                      .join(" ") || guest.confirmedByUser?.email || "Unknown guest";
+                    [person?.firstName, person?.lastName].filter(Boolean).join(" ") ||
+                    person?.email ||
+                    "Unknown guest";
+                  const payment = paymentBadge(guest);
 
                   return (
                     <tr key={guest.id} className="hover:bg-cream-100 transition-colors">
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">{name}</div>
-                        {guest.confirmedByUser && (
-                          <div className="text-sm text-gray-500">
-                            {guest.confirmedByUser.email}
-                          </div>
+                        {person && (
+                          <div className="text-sm text-gray-500">{person.email}</div>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -130,6 +203,9 @@ export function GuestsTable({ guests }: GuestsTableProps) {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge tone={statusTone(guest.status)}>{guest.status}</Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge tone={payment.tone}>{payment.label}</Badge>
                       </td>
                     </tr>
                   );

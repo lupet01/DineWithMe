@@ -58,11 +58,15 @@ export class SeatRepository extends BaseRepository<Seat> {
   }
 
   /**
-   * All confirmed/attended/completed seats across every dinner at a
-   * restaurant, with the guest and dinner details a restaurant admin's
-   * Guests & Bookings screen needs. Filtering by name/status happens
-   * client-side (same pattern as restaurants-table.tsx) - this returns
-   * the full restaurant-scoped set in one query.
+   * Every seat that's ever been claimed (held, booked, cancelled, no-show
+   * - anything but untouched AVAILABLE) across every dinner at a
+   * restaurant, with the guest, dinner, and latest payment details a
+   * restaurant admin's Guests & Bookings screen needs (incl. its
+   * Upcoming/Past/Cancelled tabs and Payment column, which need HELD and
+   * CANCELLED rows visible too, not just booked ones). Filtering by
+   * name/status/dinner happens client-side (same pattern as
+   * restaurants-table.tsx) - this returns the full restaurant-scoped set
+   * in one query.
    */
   async findGuestsByRestaurant(restaurantId: string): Promise<
     Array<
@@ -73,21 +77,35 @@ export class SeatRepository extends BaseRepository<Seat> {
           lastName: string | null;
           email: string;
         } | null;
+        heldByUser: {
+          id: string;
+          firstName: string | null;
+          lastName: string | null;
+          email: string;
+        } | null;
         dinner: {
           id: string;
           startsAt: Date;
           theme: { title: string } | null;
         };
+        paymentIntents: Array<{
+          status: string;
+          amount: number;
+          currency: string;
+        }>;
       }
     >
   > {
     return this.prisma.seat.findMany({
       where: {
-        status: { in: ["CONFIRMED", "ATTENDED", "COMPLETED"] },
+        status: { not: "AVAILABLE" },
         dinner: { restaurantId },
       },
       include: {
         confirmedByUser: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        heldByUser: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
         dinner: {
@@ -96,6 +114,11 @@ export class SeatRepository extends BaseRepository<Seat> {
             startsAt: true,
             theme: { select: { title: true } },
           },
+        },
+        paymentIntents: {
+          select: { status: true, amount: true, currency: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
         },
       },
       orderBy: { dinner: { startsAt: "desc" } },
