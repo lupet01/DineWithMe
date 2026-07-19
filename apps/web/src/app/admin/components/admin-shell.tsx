@@ -27,7 +27,9 @@ export function AdminShell({ userRole, userName, children }: AdminShellProps) {
           isOpen={isMobileNavOpen}
           onClose={() => setIsMobileNavOpen(false)}
         />
-        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-8">
+          <div className="mx-auto max-w-7xl">{children}</div>
+        </main>
       </div>
     </div>
   );
