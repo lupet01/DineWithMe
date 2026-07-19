@@ -13,6 +13,7 @@ import { ThemeRepository } from "./theme.repository";
 import { AnalyticsRepository } from "./analytics.repository";
 import { PaymentIntentRepository } from "./payment-intent.repository";
 import { SafetyReportRepository } from "./safety-report.repository";
+import { MenuItemRepository } from "./menu-item.repository";
 
 export const userRepository = new UserRepository(prisma);
 export const restaurantRepository = new RestaurantRepository(prisma);
@@ -28,6 +29,7 @@ export const themeRepository = new ThemeRepository(prisma);
 export const analyticsRepository = new AnalyticsRepository(prisma);
 export const paymentIntentRepository = new PaymentIntentRepository(prisma);
 export const safetyReportRepository = new SafetyReportRepository(prisma);
+export const menuItemRepository = new MenuItemRepository(prisma);
 
 export { BaseRepository } from "./base";
 export { UserRepository } from "./user.repository";
@@ -44,6 +46,7 @@ export { ThemeRepository } from "./theme.repository";
 export { AnalyticsRepository } from "./analytics.repository";
 export { PaymentIntentRepository } from "./payment-intent.repository";
 export { SafetyReportRepository } from "./safety-report.repository";
+export { MenuItemRepository } from "./menu-item.repository";
 export type { RestaurantWithMembers, RestaurantCreateData, RestaurantWithMedia } from "./restaurant.repository";
 export type { DinnerWithRestaurant } from "./dinner.repository";
 export type { AuditLogWithActor } from "./audit-log.repository";

@@ -1,10 +1,11 @@
 import { getAuthUser } from "@/lib/auth/server";
-import { restaurantRepository, themeRepository } from "@dinewithme/db";
+import { restaurantRepository, themeRepository, menuItemRepository } from "@dinewithme/db";
 import { Card } from "@/components/ui/card";
 import { RestaurantForm } from "./components/restaurant-form";
 import { ImageUpload } from "./components/image-upload";
 import { GalleryManager } from "./components/gallery-manager";
 import { ThemeManager } from "./components/theme-manager";
+import { MenuManager } from "./components/menu-manager";
 
 export default async function RestaurantProfilePage() {
   const user = await getAuthUser();
@@ -52,6 +53,9 @@ export default async function RestaurantProfilePage() {
   const enabledThemes = await themeRepository.findByRestaurant(restaurant.id);
   const enabledThemeIds = enabledThemes.map((t) => t.id);
 
+  // Get menu items for this restaurant
+  const menuItems = await menuItemRepository.findByRestaurant(restaurant.id);
+
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -83,6 +87,19 @@ export default async function RestaurantProfilePage() {
           allThemes={allThemes}
           enabledThemeIds={enabledThemeIds}
         />
+      </Card>
+
+      {/* Menu Management */}
+      <Card padding="lg" className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage the dishes diners see in &quot;Tonight&apos;s Menu&quot; and the full
+            menu page
+          </p>
+        </div>
+
+        <MenuManager restaurantId={restaurant.id} menuItems={menuItems} />
       </Card>
 
       {/* Media Management */}

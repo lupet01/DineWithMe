@@ -1,13 +1,30 @@
 "use client";
 
-import { MapPin, Users, Clock, Utensils } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { MapPin, Users, Clock, Utensils, Navigation, Phone } from "lucide-react";
 import type { DinnerDetail } from "@dinewithme/shared";
+import { MenuCourse } from "@prisma/client";
+import {
+  getTonightsMenuPreview,
+  type MenuPreviewItem,
+} from "./menu-preview-actions";
 
 interface DinnerInfoProps {
   dinner: DinnerDetail;
   userHasSeat?: boolean;
   dietaryNotes?: string;
   onDietaryNotesChange?: (value: string) => void;
+}
+
+const COURSE_LABELS: Record<MenuCourse, string> = {
+  [MenuCourse.STARTER]: "Starter",
+  [MenuCourse.MAIN]: "Main",
+  [MenuCourse.DESSERT]: "Dessert",
+};
+
+function formatPrice(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 // ── Reusable icon row matching the app's orange-circle style ──────────────────
@@ -62,6 +79,31 @@ export function DinnerInfo({
       ? "Sold out"
       : `${dinner.seats.available} of ${dinner.seats.total} spots remaining`;
 
+  const [menuPreview, setMenuPreview] = useState<MenuPreviewItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getTonightsMenuPreview(dinner.restaurant.id)
+      .then((items) => {
+        if (!cancelled) setMenuPreview(items);
+      })
+      .catch((error) => {
+        console.error("Failed to load menu preview:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dinner.restaurant.id]);
+
+  const directionsQuery =
+    dinner.restaurant.address ||
+    [dinner.restaurant.name, dinner.restaurant.city].filter(Boolean).join(" ");
+  const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    directionsQuery
+  )}`;
+
   return (
     <div className="space-y-3">
 
@@ -80,6 +122,31 @@ export function DinnerInfo({
             <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
             {dinner.restaurant.address ?? dinner.restaurant.city}
           </p>
+        )}
+
+        {(dinner.restaurant.address || dinner.restaurant.phone) && (
+          <div className="mt-3 flex items-center gap-2">
+            {dinner.restaurant.address && (
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-100"
+              >
+                <Navigation className="h-3.5 w-3.5" />
+                Directions
+              </a>
+            )}
+            {dinner.restaurant.phone && (
+              <a
+                href={`tel:${dinner.restaurant.phone}`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-100"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                Call Restaurant
+              </a>
+            )}
+          </div>
         )}
       </div>
 
@@ -140,13 +207,30 @@ export function DinnerInfo({
         </div>
       </div>
 
-      {/*
-        "Tonight's Menu" is intentionally omitted: there is no MenuItem
-        model yet (blocked on the DB migration - see plan §1/§2), and the
-        previous version hardcoded the same 3 dishes for every dinner with
-        a "View full menu →" button that had no onClick. Showing fabricated
-        menu data was worse than showing nothing.
-      */}
+      {/* Tonight's Menu — up to 3 dishes, one per course, from the restaurant's real menu */}
+      {menuPreview.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <h2 className="text-[17px] font-bold text-gray-900">
+              Tonight&apos;s Menu
+            </h2>
+            <Link
+              href={`/dinner/${dinner.id}/menu`}
+              className="text-xs font-semibold text-primary-600 hover:text-primary-700"
+            >
+              View full menu →
+            </Link>
+          </div>
+          {menuPreview.map((item) => (
+            <InfoRow
+              key={item.id}
+              icon={<Utensils className="h-4 w-4 text-primary-500" />}
+              label={item.name}
+              sublabel={`${COURSE_LABELS[item.course]} · ${formatPrice(item.priceCents)}`}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Dietary Notes — always show pre-booking */}
       {!userHasSeat && (
