@@ -1,29 +1,35 @@
-import { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-type BadgeTone = "primary" | "success" | "warning" | "danger" | "neutral";
+type BadgeVariant = "yellow" | "green" | "red" | "blue" | "purple" | "slate";
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  tone?: BadgeTone;
+interface BadgeProps {
+  children: React.ReactNode;
+  variant: BadgeVariant;
+  className?: string;
 }
 
-const toneClasses: Record<BadgeTone, string> = {
-  primary: "bg-primary-100 text-primary-700",
-  success: "bg-green-100 text-green-700",
-  warning: "bg-amber-100 text-amber-700",
-  danger: "bg-red-100 text-red-700",
-  neutral: "bg-cream-300 text-gray-700",
+// Semantic status colors — intentionally separate from the primary-orange
+// brand accent. These communicate state (pending/active/paused/etc.), not
+// "this is the primary action."
+const variantClasses: Record<BadgeVariant, string> = {
+  yellow: "bg-yellow-100 text-yellow-800",
+  green: "bg-green-100 text-green-700",
+  red: "bg-red-100 text-red-700",
+  blue: "bg-blue-100 text-blue-800",
+  purple: "bg-purple-100 text-purple-700",
+  slate: "bg-cream-300 text-gray-600",
 };
 
-export function Badge({ tone = "neutral", className, ...props }: BadgeProps) {
+export function Badge({ children, variant, className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
-        toneClasses[tone],
+        "inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold",
+        variantClasses[variant],
         className
       )}
-      {...props}
-    />
+    >
+      {children}
+    </span>
   );
 }

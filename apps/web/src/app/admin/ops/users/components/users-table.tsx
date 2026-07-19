@@ -1,99 +1,107 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import type { User } from "@prisma/client";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { SearchBar } from "@/components/ui/search-bar";
+import { UserRow } from "./user-row";
 
 interface UsersTableProps {
   users: User[];
-  flaggedUserIds: string[];
+  currentUserId: string | null;
 }
 
-function roleTone(role: string): "primary" | "neutral" {
-  return role === "PLATFORM_ADMIN" || role === "RESTAURANT_ADMIN" ? "primary" : "neutral";
-}
+type RoleFilter = "all" | "diner" | "restaurant_admin" | "platform_admin";
 
-export function UsersTable({ users, flaggedUserIds }: UsersTableProps) {
-  const [search, setSearch] = useState("");
-  const flaggedSet = useMemo(() => new Set(flaggedUserIds), [flaggedUserIds]);
+export function UsersTable({ users, currentUserId }: UsersTableProps) {
+  const [filter, setFilter] = useState<RoleFilter>("all");
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return users;
-    return users.filter((user) => {
-      const name = [user.firstName, user.lastName].filter(Boolean).join(" ").toLowerCase();
-      return name.includes(query) || user.email.toLowerCase().includes(query);
-    });
-  }, [users, search]);
+  const filteredUsers = users.filter((user) => {
+    if (filter === "all") return true;
+    return user.role === filter.toUpperCase();
+  });
+
+  const counts = {
+    diner: users.filter((u) => u.role === "DINER").length,
+    restaurant_admin: users.filter((u) => u.role === "RESTAURANT_ADMIN").length,
+    platform_admin: users.filter((u) => u.role === "PLATFORM_ADMIN").length,
+  };
+
+  if (users.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200">
+        <div className="p-12 text-center">
+          <div className="text-6xl mb-4">👤</div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">No users yet</h3>
+          <p className="text-slate-600">Users will appear here once they sign up</p>
+        </div>
+      </div>
+    );
+  }
+
+  const tabs: Array<{ key: RoleFilter; label: string; count: number }> = [
+    { key: "all", label: "All", count: users.length },
+    { key: "diner", label: "Diners", count: counts.diner },
+    { key: "restaurant_admin", label: "Restaurant Admins", count: counts.restaurant_admin },
+    { key: "platform_admin", label: "Platform Admins", count: counts.platform_admin },
+  ];
 
   return (
     <div className="space-y-4">
-      <SearchBar
-        placeholder="Search by name or email..."
-        value={search}
-        onValueChange={setSearch}
-        className="sm:w-72"
-      />
+      {/* Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto border-b border-slate-200">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className={`whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              filter === tab.key
+                ? "border-slate-900 text-slate-900"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            {tab.label} ({tab.count})
+          </button>
+        ))}
+      </div>
 
-      <Card padding="none" className="overflow-hidden">
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-cream-100 border-b border-gray-100">
+            <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Name
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
                   Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+                  Change Role
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.length === 0 ? (
+            <tbody className="divide-y divide-slate-200">
+              {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
-                    No users match your search
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                    No users found for this filter
                   </td>
                 </tr>
               ) : (
-                filtered.map((user) => {
-                  const name =
-                    [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
-                  return (
-                    <tr key={user.id} className="hover:bg-cream-100 transition-colors">
-                      <td className="px-6 py-4">
-                        <Link
-                          href={`/admin/ops/users/${user.id}`}
-                          className="text-sm font-medium text-gray-900 hover:text-primary-600"
-                        >
-                          {name}
-                        </Link>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge tone={roleTone(user.role)}>{user.role}</Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {flaggedSet.has(user.id) ? (
-                          <Badge tone="danger">Flagged</Badge>
-                        ) : (
-                          <Badge tone="success">Good standing</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
+                filteredUsers.map((user) => (
+                  <UserRow key={user.id} user={user} currentUserId={currentUserId} />
+                ))
               )}
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

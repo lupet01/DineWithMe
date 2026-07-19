@@ -12,22 +12,26 @@ interface AdminShellProps {
 }
 
 export function AdminShell({ userRole, userName, children }: AdminShellProps) {
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-cream-100">
       <AdminHeader
         userRole={userRole}
         userName={userName}
-        onMenuClick={() => setIsMobileNavOpen(true)}
+        onMenuClick={() => setMobileNavOpen(true)}
       />
+
       <div className="flex">
         <AdminSidebar
           userRole={userRole}
-          isOpen={isMobileNavOpen}
-          onClose={() => setIsMobileNavOpen(false)}
+          isOpen={mobileNavOpen}
+          onClose={() => setMobileNavOpen(false)}
         />
-        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+
+        <main className="flex-1 min-w-0 p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">{children}</div>
+        </main>
       </div>
     </div>
   );
