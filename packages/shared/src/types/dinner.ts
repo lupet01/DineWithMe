@@ -28,6 +28,8 @@ export interface DinnerListItem {
     city: string | null;
     cuisine: string | null;
     heroImageUrl: string | null;
+    latitude: number | null;
+    longitude: number | null;
   };
   seats: {
     total: number;

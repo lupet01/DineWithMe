@@ -81,6 +81,8 @@ export async function GET(request: NextRequest) {
       city: string | null;
       cuisine: string | null;
       heroImageUrl: string | null;
+      latitude: number | null;
+      longitude: number | null;
     }
 
     // Transform to response format with seat calculations
@@ -102,6 +104,8 @@ export async function GET(request: NextRequest) {
           city: restaurant.city,
           cuisine: restaurant.cuisine,
           heroImageUrl: restaurant.heroImageUrl,
+          latitude: restaurant.latitude,
+          longitude: restaurant.longitude,
         },
         seats: {
           total: dinner._count.seats,

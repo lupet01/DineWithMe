@@ -282,6 +282,8 @@ export class DinnerRepository extends BaseRepository<Dinner> {
             address: true,
             cuisine: true,
             heroImageUrl: true,
+            latitude: true,
+            longitude: true,
           },
         },
         theme: {
