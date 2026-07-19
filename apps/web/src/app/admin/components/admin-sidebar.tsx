@@ -15,6 +15,7 @@ import {
   Users,
   Flag,
   CreditCard,
+  TrendingUp,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const restaurantNav = [
   { name: "Restaurant Profile", href: "/admin/restaurant", icon: Store },
   { name: "Dinners", href: "/admin/dinners", icon: Calendar },
   { name: "Guests & Bookings", href: "/admin/guests", icon: ClipboardList },
+  { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
 ];
 
 const platformOpsNav = [

@@ -54,6 +54,22 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     });
   }
 
+  /**
+   * All of a restaurant's dinners with theme titles (for Restaurant
+   * Analytics' theme breakdown) - findByRestaurant intentionally stays
+   * bare (its other callers don't need the join), so this is a separate
+   * method rather than widening that one for every consumer.
+   */
+  async findByRestaurantWithTheme(
+    restaurantId: string
+  ): Promise<Array<Dinner & { theme: { title: string } | null }>> {
+    return this.prisma.dinner.findMany({
+      where: { restaurantId },
+      include: { theme: { select: { title: true } } },
+      orderBy: { startsAt: "desc" },
+    });
+  }
+
   async findUpcomingByRestaurant(restaurantId: string): Promise<Dinner[]> {
     return this.prisma.dinner.findMany({
       where: {

@@ -398,4 +398,19 @@ export class PaymentIntentRepository extends BaseRepository<PaymentIntent> {
 
     return result._sum.amount ?? 0;
   }
+
+  /**
+   * Sum SUCCEEDED payment intents for a single restaurant (for Restaurant
+   * Analytics), joined through Dinner.restaurantId since PaymentIntent has
+   * no restaurantId column of its own. Aggregated in the database - does
+   * not load rows into memory.
+   */
+  async sumSucceededAmountForRestaurant(restaurantId: string): Promise<number> {
+    const result = await this.prisma.paymentIntent.aggregate({
+      where: { status: "SUCCEEDED", dinner: { restaurantId } },
+      _sum: { amount: true },
+    });
+
+    return result._sum.amount ?? 0;
+  }
 }
