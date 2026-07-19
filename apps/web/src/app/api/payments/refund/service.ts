@@ -2,6 +2,7 @@ import { paymentIntentRepository, seatRepository, dinnerRepository } from "@dine
 import { isRefundAllowed } from "@dinewithme/config/src/payment";
 import { createPaystackService } from "@dinewithme/payment";
 import { track } from "@dinewithme/analytics";
+import { emailService } from "@dinewithme/email";
 
 export type RefundReason = "user_cancelled" | "dinner_cancelled";
 
@@ -44,7 +45,7 @@ export async function refundPaymentIntent({
     };
   }
 
-  const dinner = await dinnerRepository.findById(paymentIntent.dinnerId);
+  const dinner = await dinnerRepository.findByIdWithRestaurant(paymentIntent.dinnerId);
   if (!dinner) {
     return { ok: false, error: "Dinner not found", status: 404 };
   }
@@ -135,6 +136,25 @@ export async function refundPaymentIntent({
     reason,
     timestamp: new Date().toISOString(),
   });
+
+  // Best-effort - a failed confirmation email must not undo or fail the
+  // refund itself, which has already succeeded with the provider.
+  try {
+    await emailService.sendRefundConfirmation({
+      userEmail: paymentIntent.user.email,
+      userName: paymentIntent.user.firstName || paymentIntent.user.email,
+      dinnerTitle: dinner.theme?.title || "your dinner",
+      restaurantName: dinner.restaurant.name,
+      refundAmount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+      refundReason:
+        reason === "dinner_cancelled" ? "The dinner was cancelled" : "You cancelled your booking",
+      processingDays: 7,
+      transactionId: paymentIntent.id,
+    });
+  } catch (error) {
+    console.error("Failed to send refund confirmation email:", error);
+  }
 
   return {
     ok: true,

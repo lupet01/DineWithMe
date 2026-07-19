@@ -1,9 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { seatRepository, userRepository, auditLogger } from "@dinewithme/db";
+import { seatRepository, userRepository, dinnerRepository, auditLogger } from "@dinewithme/db";
 import { checkInSchema, verifyCheckInToken } from "@dinewithme/shared";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
+import { emailService } from "@dinewithme/email";
 import { handleApiError } from "../../lib/error-handler";
+
+/**
+ * Best-effort - a failed confirmation email must not fail the check-in
+ * itself, which has already succeeded.
+ */
+async function sendCheckInEmail(userId: string, dinnerId: string, checkedInAt: Date | null) {
+  try {
+    const [user, dinner] = await Promise.all([
+      userRepository.findById(userId),
+      dinnerRepository.findByIdWithRestaurant(dinnerId),
+    ]);
+    if (!user || !dinner) return;
+
+    await emailService.sendCheckInConfirmation({
+      userEmail: user.email,
+      userName: user.firstName || user.email,
+      dinnerTitle: dinner.theme?.title || "your dinner",
+      restaurantName: dinner.restaurant.name,
+      checkInTime: (checkedInAt ?? new Date()).toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+    });
+  } catch (error) {
+    console.error("Failed to send check-in confirmation email:", error);
+  }
+}
 
 /**
  * POST /api/seats/check-in
@@ -136,6 +164,8 @@ async function handleQRCheckIn(token: string) {
         { method: "qr_token" }
       );
 
+      await sendCheckInEmail(seat.confirmedByUserId, result.seat.dinnerId, result.seat.checkedInAt);
+
       return NextResponse.json({
         success: true,
         data: {
@@ -235,6 +265,8 @@ async function handleAuthenticatedCheckIn(body: unknown) {
         result.seat.dinnerId,
         { method: "authenticated" }
       );
+
+      await sendCheckInEmail(user.id, result.seat.dinnerId, result.seat.checkedInAt);
 
       return NextResponse.json({
         success: true,
