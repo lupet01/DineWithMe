@@ -41,7 +41,11 @@ export function ReportsList({ reports }: ReportsListProps) {
           No {filter === "ALL" ? "" : filter.toLowerCase()} reports.
         </div>
       ) : (
-        <div className="space-y-3">
+        // Single column on mobile (matches the wireframe's stacked cards);
+        // 2-up on desktop for density, closer to the wireframe's table
+        // view without duplicating ReportCard's Server Action wiring in a
+        // second, parallel table markup.
+        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
           {filtered.map((report) => (
             <ReportCard key={report.id} report={report} />
           ))}

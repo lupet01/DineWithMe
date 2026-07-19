@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchBar } from "@/components/ui/search-bar";
 import { Tabs } from "@/components/ui/tabs";
+import { RowCard } from "@/components/ui/row-card";
 
 interface GuestUser {
   id: string;
@@ -137,7 +138,45 @@ export function GuestsTable({ guests }: GuestsTableProps) {
         <Tabs items={tabItems} value={tab} onChange={(v) => setTab(v as TabValue)} />
       </div>
 
-      <Card padding="none" className="overflow-hidden">
+      {/* Mobile: stacked cards. Desktop: table below. Same filtered data. */}
+      <div className="space-y-3 md:hidden">
+        {filtered.length === 0 ? (
+          <Card padding="lg" className="text-center text-gray-500">
+            No guests match your search
+          </Card>
+        ) : (
+          filtered.map((guest) => {
+            const person = guest.confirmedByUser ?? guest.heldByUser;
+            const name =
+              [person?.firstName, person?.lastName].filter(Boolean).join(" ") ||
+              person?.email ||
+              "Unknown guest";
+            const payment = paymentBadge(guest);
+            const dinnerDate = new Date(guest.dinner.startsAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
+
+            return (
+              <RowCard
+                key={guest.id}
+                href={`/admin/dinners/${guest.dinner.id}`}
+                title={name}
+                subtitle={`${guest.dinner.theme?.title || "Dinner"} · ${dinnerDate}`}
+                trailing={
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge tone={statusTone(guest.status)}>{guest.status}</Badge>
+                    <Badge tone={payment.tone}>{payment.label}</Badge>
+                  </div>
+                }
+              />
+            );
+          })
+        )}
+      </div>
+
+      <Card padding="none" className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-cream-100 border-b border-gray-100">
