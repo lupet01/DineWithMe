@@ -4,6 +4,7 @@ import { handleApiError } from "../../../lib/error-handler";
 import { getCurrentUser } from "@/lib/auth";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 import { emailService } from "@dinewithme/email";
+import { inngest } from "@/inngest/client";
 
 /**
  * POST /api/seats/[seatId]/confirm
@@ -72,6 +73,18 @@ export async function POST(
         seatId,
         timestamp: new Date().toISOString(),
       });
+
+      // Schedules the real 30-minutes-before reminder (see
+      // src/inngest/functions/dinner-reminder-30-min.ts) - best-effort,
+      // same reasoning as the email below.
+      try {
+        await inngest.send({
+          name: "seat/confirmed",
+          data: { seatId, dinnerId, userId: user.id },
+        });
+      } catch (error) {
+        console.error("Failed to schedule dinner reminder job:", error);
+      }
 
       // Best-effort - a failed confirmation email must not fail the
       // booking itself, which has already succeeded.
