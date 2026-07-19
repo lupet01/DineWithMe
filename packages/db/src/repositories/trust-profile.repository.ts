@@ -356,4 +356,12 @@ export class TrustProfileRepository extends BaseRepository<TrustProfile> {
       lastEvaluatedAt: new Date(),
     });
   }
+
+  async flagUser(userId: string): Promise<TrustProfile> {
+    const profile = await this.getOrCreate(userId);
+    return this.update(profile.id, {
+      flagged: true,
+      lastEvaluatedAt: new Date(),
+    });
+  }
 }
