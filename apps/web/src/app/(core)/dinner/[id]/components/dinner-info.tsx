@@ -140,32 +140,13 @@ export function DinnerInfo({
         </div>
       </div>
 
-      {/* Tonight's Menu */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
-        <h2 className="px-4 pt-4 pb-2 text-[17px] font-bold text-gray-900">
-          Tonight&apos;s Menu
-        </h2>
-        {[
-          { course: "Starter", dish: "Seasonal starter" },
-          { course: "Main", dish: "Chef's signature main" },
-          { course: "Dessert", dish: "House dessert" },
-        ].map(({ course, dish }) => (
-          <div
-            key={course}
-            className="flex items-center gap-3 border-t border-gray-50 px-4 py-3 first:border-0"
-          >
-            <span className="w-14 flex-shrink-0 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              {course}
-            </span>
-            <span className="text-sm text-gray-900">{dish}</span>
-          </div>
-        ))}
-        <div className="border-t border-gray-100 px-4 py-3">
-          <button className="text-sm font-medium text-primary-500">
-            View full menu →
-          </button>
-        </div>
-      </div>
+      {/*
+        "Tonight's Menu" is intentionally omitted: there is no MenuItem
+        model yet (blocked on the DB migration - see plan §1/§2), and the
+        previous version hardcoded the same 3 dishes for every dinner with
+        a "View full menu →" button that had no onClick. Showing fabricated
+        menu data was worse than showing nothing.
+      */}
 
       {/* Dietary Notes — always show pre-booking */}
       {!userHasSeat && (

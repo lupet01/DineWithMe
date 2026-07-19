@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getCommitmentAmount, formatAmount } from "@dinewithme/config/src/payment";
 
 interface DinnerCTAProps {
   dinnerId: string;
@@ -22,6 +23,7 @@ export function DinnerCTA({
 }: DinnerCTAProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const commitmentAmountLabel = formatAmount(getCommitmentAmount(dinnerId));
 
   if (userHasSeat) {
     return (
@@ -108,8 +110,11 @@ export function DinnerCTA({
                 isLoading && "cursor-not-allowed opacity-60"
               )}
             >
-              {isLoading ? "Reserving…" : "Reserve Your Seat"}
+              {isLoading ? "Reserving…" : `Reserve Your Seat — ${commitmentAmountLabel}`}
             </button>
+            <p className="mt-2 text-center text-xs text-gray-500">
+              {commitmentAmountLabel} commitment fee, fully refundable up to 24 hours before the dinner
+            </p>
           </>
         ) : (
           <>
