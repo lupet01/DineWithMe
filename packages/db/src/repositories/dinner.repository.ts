@@ -85,6 +85,36 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     });
   }
 
+  /**
+   * Upcoming (SCHEDULED/LIVE, not-yet-started) dinners for a restaurant
+   * with theme title and seat status counts, for the admin Dashboard's
+   * "Upcoming Dinners" mini-table. Same filter as findUpcomingByRestaurant
+   * but with the includes that table needs, in one query instead of N+1.
+   */
+  async findUpcomingByRestaurantWithSeatCounts(restaurantId: string): Promise<
+    Array<
+      Dinner & {
+        theme: { title: string } | null;
+        seats: Array<{ status: string }>;
+        _count: { seats: number };
+      }
+    >
+  > {
+    return this.prisma.dinner.findMany({
+      where: {
+        restaurantId,
+        status: { in: ["SCHEDULED", "LIVE"] },
+        startsAt: { gte: new Date() },
+      },
+      include: {
+        theme: { select: { title: true } },
+        seats: { select: { status: true } },
+        _count: { select: { seats: true } },
+      },
+      orderBy: { startsAt: "asc" },
+    });
+  }
+
   async findMany(): Promise<Dinner[]> {
     return this.prisma.dinner.findMany({
       orderBy: { startsAt: "desc" },

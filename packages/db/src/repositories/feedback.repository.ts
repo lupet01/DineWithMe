@@ -322,4 +322,40 @@ export class FeedbackRepository extends BaseRepository<Feedback> {
       averageComfortLevel,
     };
   }
+
+  /**
+   * Average dinner rating across all of a restaurant's dinners, for the
+   * restaurant admin Dashboard's "Avg Dinner Rating" stat.
+   *
+   * NOTE: depends on a `Feedback.rating Int?` column that a separate agent
+   * is adding via its own migration and may not exist yet in this branch.
+   * Uses $queryRaw (rather than Prisma's typed aggregate) specifically so
+   * this compiles today regardless of whether that migration/generated
+   * Prisma Client has landed, and swallows the "column does not exist"
+   * failure so the Dashboard degrades to "no ratings yet" instead of
+   * throwing until the migration ships.
+   */
+  async getAverageRatingForRestaurant(
+    restaurantId: string
+  ): Promise<{ average: number; count: number } | null> {
+    try {
+      const rows = await this.prisma.$queryRaw<Array<{ avg: number | null; count: bigint }>>`
+        SELECT AVG(f.rating)::float AS avg, COUNT(f.rating)::bigint AS count
+        FROM feedback f
+        JOIN dinners d ON d.id = f."dinnerId"
+        WHERE d."restaurantId" = ${restaurantId} AND f.rating IS NOT NULL
+      `;
+      const row = rows[0];
+      if (!row || Number(row.count) === 0 || row.avg === null) {
+        return null;
+      }
+      return { average: row.avg, count: Number(row.count) };
+    } catch (error) {
+      console.error(
+        "[FeedbackRepository] getAverageRatingForRestaurant failed - Feedback.rating may not exist yet (pending migration):",
+        error
+      );
+      return null;
+    }
+  }
 }

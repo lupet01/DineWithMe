@@ -413,4 +413,20 @@ export class PaymentIntentRepository extends BaseRepository<PaymentIntent> {
 
     return result._sum.amount ?? 0;
   }
+
+  /**
+   * Sum SUCCEEDED payment intents for a single restaurant created since a
+   * given date (for the restaurant admin Dashboard's "Revenue (30d)"
+   * stat) - same restaurant scoping as sumSucceededAmountForRestaurant,
+   * plus the createdAt lower bound from sumSucceededAmountSince. Aggregated
+   * in the database - does not load rows into memory.
+   */
+  async sumSucceededAmountForRestaurantSince(restaurantId: string, since: Date): Promise<number> {
+    const result = await this.prisma.paymentIntent.aggregate({
+      where: { status: "SUCCEEDED", createdAt: { gte: since }, dinner: { restaurantId } },
+      _sum: { amount: true },
+    });
+
+    return result._sum.amount ?? 0;
+  }
 }
