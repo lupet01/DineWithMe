@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Restaurant, RestaurantMember, User } from "@prisma/client";
 import { approveRestaurant, pauseRestaurant, reactivateRestaurant } from "../actions";
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -194,6 +195,12 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
         {/* Actions */}
         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
           <div className="flex items-center justify-end gap-2">
+            <Link
+              href={`/admin/ops/restaurants/${restaurant.id}`}
+              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-cream-200 rounded-lg hover:bg-cream-300 transition-colors"
+            >
+              View
+            </Link>
             {canApprove && (
               <button
                 onClick={handleApprove}
