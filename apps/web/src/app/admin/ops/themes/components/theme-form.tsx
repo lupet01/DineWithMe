@@ -144,13 +144,12 @@ export function ThemeForm({ mode, themeId, initialValues }: ThemeFormProps) {
       )}
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={isSaving} className="w-auto px-6">
+        <Button type="submit" disabled={isSaving}>
           {isSaving ? "Saving…" : mode === "create" ? "Create Theme" : "Save Changes"}
         </Button>
         <Button
           type="button"
-          variant="secondary"
-          className="w-auto px-6"
+          variant="outline"
           onClick={() => router.push("/admin/ops/themes")}
         >
           Cancel

@@ -583,12 +583,12 @@ isUserOwner(restaurantId, userId): Promise<boolean>
 
 **Configuration**: ✅ COMPLETE
 ```env
-R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_ENDPOINT=https://489968a52516b0840d0dac173858b921.r2.cloudflarestorage.com
 R2_REGION=auto
-R2_ACCESS_KEY_ID=your-r2-access-key-id
-R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_ACCESS_KEY_ID=ecbe34667cb29824fbec79d343cf280c
+R2_SECRET_ACCESS_KEY=993334b9b4fedc6d46034b15d3680fad3531de4a71526ad47470fb8f766a5d18
 R2_BUCKET=dinewithme-media
-R2_PUBLIC_URL=https://pub-xxxxxxxxxxxx.r2.dev
+R2_PUBLIC_URL=https://pub-7f6414896b184fa9800e69582a48c916.r2.dev
 ```
 - All required variables present
 - Cloudflare R2 configuration

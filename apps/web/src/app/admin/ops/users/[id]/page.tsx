@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
 import { ArrowLeft, Calendar } from "lucide-react";
 import {
   userRepository,
@@ -14,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { ActivityFeed, ActivityItem } from "@/components/ui/activity-feed";
 import { FlagUserButton } from "./components/flag-user-button";
+import { RoleSelect } from "./components/role-select";
 
 export default async function UserDetailPage({
   params,
@@ -24,6 +26,9 @@ export default async function UserDetailPage({
   if (!user) {
     notFound();
   }
+
+  const { userId: clerkUserId } = await auth();
+  const viewer = clerkUserId ? await userRepository.findByAuthProviderId(clerkUserId) : null;
 
   const [trustProfile, paymentStats, feedbackStats, seats] = await Promise.all([
     trustProfileRepository.findByUserId(user.id),
@@ -51,6 +56,7 @@ export default async function UserDetailPage({
         <Badge tone={user.role === "PLATFORM_ADMIN" || user.role === "RESTAURANT_ADMIN" ? "primary" : "neutral"}>
           {user.role}
         </Badge>
+        <RoleSelect userId={user.id} currentRole={user.role} isSelf={viewer?.id === user.id} />
         <FlagUserButton userId={user.id} isFlagged={trustProfile?.flagged ?? false} />
       </div>
 
