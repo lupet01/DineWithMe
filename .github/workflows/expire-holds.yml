@@ -1,0 +1,37 @@
+name: Expire Seat Holds
+
+on:
+  schedule:
+    # Runs every minute
+    # Note: GitHub Actions may have 1-2 minute delay
+    - cron: '* * * * *'
+  
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  expire-holds:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Expire held seats
+        run: |
+          echo "Triggering seat hold expiration..."
+          response=$(curl -s -w "\n%{http_code}" "${{ secrets.APP_URL }}/api/cron/expire-holds?token=${{ secrets.CRON_SECRET }}")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+          
+          if [ "$http_code" != "200" ]; then
+            echo "Error: Cron job failed with status $http_code"
+            exit 1
+          fi
+          
+          echo "✅ Cron job completed successfully"
+      
+      - name: Log completion
+        if: always()
+        run: |
+          echo "Job completed at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"

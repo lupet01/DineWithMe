@@ -1,0 +1,34 @@
+{
+  "name": "dinewithme",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "seed": "cd scripts && npm run seed",
+    "migrate:pre-deployment": "tsx scripts/pre-deployment-migration.ts",
+    "test:concurrent-bookings": "vitest run tests/concurrent-bookings.test.ts",
+    "test:user-sync": "echo 'User sync test - manual verification required'",
+    "check:security": "echo 'Security check - verify headers and rate limiting'",
+    "verify:database": "tsx scripts/verify-database.ts"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "tsx": "^4.21.0",
+    "turbo": "^1.12.4",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.38.3",
+    "dotenv": "^17.3.1"
+  }
+}

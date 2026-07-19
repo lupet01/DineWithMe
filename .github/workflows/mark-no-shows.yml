@@ -1,0 +1,27 @@
+name: Mark No-Shows
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  mark-no-shows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark no-shows
+        run: |
+          echo "Marking no-shows at $(date -u +"%Y-%m-%d %H:%M:%S UTC")..."
+          response=$(curl -s -w "\n%{http_code}" "${{ secrets.APP_URL }}/api/cron/mark-no-shows?token=${{ secrets.CRON_SECRET }}")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" != "200" ]; then
+            echo "Error: Cron job failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ Completed successfully"

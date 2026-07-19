@@ -1,0 +1,544 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  DINER
+  RESTAURANT_ADMIN
+  PLATFORM_ADMIN
+}
+
+enum RestaurantMemberRole {
+  OWNER
+  MANAGER
+}
+
+enum RestaurantStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+}
+
+enum RestaurantMediaType {
+  HERO
+  GALLERY
+}
+
+enum DinnerStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum SeatStatus {
+  AVAILABLE
+  HELD
+  CONFIRMED
+  ATTENDED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  NO_SHOW
+  LEFT_EARLY
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  YOCO
+}
+
+enum PaymentStatus {
+  CREATED
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id             String   @id @default(cuid())
+  authProviderId String   @unique
+  email          String   @unique
+  firstName      String?
+  lastName       String?
+  avatarUrl      String?
+  role           Role     @default(DINER)
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  restaurantMemberships RestaurantMember[]
+  auditLogs             AuditLog[]
+  heldSeats             Seat[]             @relation("HeldSeats")
+  confirmedSeats        Seat[]             @relation("ConfirmedSeats")
+  trustEvents           TrustEvent[]
+  authoredFeedback      Feedback[]         @relation("FeedbackAuthor")
+  receivedFeedback      Feedback[]         @relation("FeedbackTarget")
+  mutualInterestsA      MutualInterest[]   @relation("MutualInterestUserA")
+  mutualInterestsB      MutualInterest[]   @relation("MutualInterestUserB")
+  trustProfile          TrustProfile?
+  paymentIntents        PaymentIntent[]
+  themeSignals          UserThemeSignal[]
+
+  @@map("users")
+}
+
+model Restaurant {
+  id           String           @id @default(cuid())
+  name         String
+  description  String?
+  cuisine      String?
+  city         String?
+  address      String?
+  latitude     Float?
+  longitude    Float?
+  phone        String?
+  website      String?
+  heroImageUrl String?
+  status       RestaurantStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  members       RestaurantMember[]
+  media         RestaurantMedia[]
+  dinners       Dinner[]
+  enabledThemes RestaurantEnabledTheme[]
+  dinnerContexts DinnerContext[]
+
+  @@map("restaurants")
+}
+
+model RestaurantMember {
+  id           String               @id @default(cuid())
+  restaurantId String
+  userId       String
+  role         RestaurantMemberRole
+  createdAt    DateTime             @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, userId])
+  @@index([restaurantId])
+  @@index([userId])
+  @@map("restaurant_members")
+}
+
+model RestaurantMedia {
+  id           String              @id @default(cuid())
+  restaurantId String
+  type         RestaurantMediaType
+  url          String
+  key          String // Storage key for deletion
+  createdAt    DateTime            @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([restaurantId, type])
+  @@map("restaurant_media")
+}
+
+model Theme {
+  id                   String   @id @default(cuid())
+  key                  String   @unique // e.g., "tech-innovators", "creative-minds"
+  title                String   // e.g., "Tech Innovators"
+  shortDescription     String   // Brief tagline
+  whatToExpect         String   @db.Text // Detailed description
+  boundaries           String   @db.Text // What's off-limits
+  conversationStarters Json     // Array of starter questions
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  dinners              Dinner[]
+  restaurantThemes     RestaurantEnabledTheme[]
+  dinnerContexts       DinnerContext[]
+  themePerformance     ThemePerformance?
+  userSignals          UserThemeSignal[]
+
+  @@index([key])
+  @@index([isActive])
+  @@map("themes")
+}
+
+model RestaurantEnabledTheme {
+  id           String   @id @default(cuid())
+  restaurantId String
+  themeId      String
+  createdAt    DateTime @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  theme      Theme      @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, themeId])
+  @@index([restaurantId])
+  @@index([themeId])
+  @@map("restaurant_enabled_themes")
+}
+
+model Dinner {
+  id           String       @id @default(cuid())
+  restaurantId String
+  themeId      String
+  startsAt     DateTime
+  endsAt       DateTime
+  description  String?
+  seatCount    Int
+  status       DinnerStatus @default(SCHEDULED)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  restaurant      Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  theme           Theme            @relation(fields: [themeId], references: [id])
+  seats           Seat[]
+  feedback        Feedback[]
+  mutualInterests MutualInterest[]
+  paymentIntents  PaymentIntent[]
+  dinnerContext   DinnerContext?
+
+  @@index([restaurantId])
+  @@index([restaurantId, status])
+  @@index([themeId])
+  @@index([startsAt])
+  @@map("dinners")
+}
+
+model Seat {
+  id                String     @id @default(cuid())
+  dinnerId          String
+  status            SeatStatus @default(AVAILABLE)
+  heldByUserId      String?
+  holdExpiresAt     DateTime?
+  confirmedByUserId String?
+  checkedInAt       DateTime?
+  checkedOutAt      DateTime?
+  dietaryNotes      String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  dinner        Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+  heldByUser    User?  @relation("HeldSeats", fields: [heldByUserId], references: [id], onDelete: SetNull)
+  confirmedByUser User? @relation("ConfirmedSeats", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  paymentIntents PaymentIntent[]
+
+  @@index([dinnerId, status])
+  @@index([heldByUserId])
+  @@index([confirmedByUserId])
+  @@map("seats")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorUserId String
+  actionType String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model TrustEvent {
+  id               String         @id @default(cuid())
+  userId           String
+  type             TrustEventType
+  weight           Float          // Positive or negative impact on trust score
+  sourceDinnerId   String?        // Optional reference to dinner where event occurred
+  metadata         Json?          // Additional context (seatId, feedbackId, etc.)
+  createdAt        DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([sourceDinnerId])
+  @@index([createdAt])
+  @@map("trust_events")
+}
+
+model Feedback {
+  id                String             @id @default(cuid())
+  dinnerId          String
+  authorId          String
+  targetUserId      String?            // Null for table-level feedback
+  overallSentiment  FeedbackSentiment
+  comfortLevel      ComfortLevel
+  wouldDineAgain    Boolean?
+  notes             String?
+  createdAt         DateTime           @default(now())
+
+  dinner Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+  author User   @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  target User?  @relation("FeedbackTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([dinnerId])
+  @@index([authorId])
+  @@index([targetUserId])
+  @@index([dinnerId, authorId])
+  @@map("feedback")
+}
+
+model MutualInterest {
+  id        String   @id @default(cuid())
+  userAId   String
+  userBId   String
+  dinnerId  String
+  createdAt DateTime @default(now())
+
+  userA  User   @relation("MutualInterestUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB  User   @relation("MutualInterestUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  dinner Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId, dinnerId], name: "unique_mutual_interest")
+  @@index([userAId])
+  @@index([userBId])
+  @@index([dinnerId])
+  @@map("mutual_interests")
+}
+
+enum TrustEventType {
+  ATTENDED
+  NO_SHOW
+  LEFT_EARLY
+  POSITIVE_FEEDBACK
+  NEGATIVE_FEEDBACK
+  REPORTED
+  LATE_CANCELLATION
+  CONFIRMED_ATTENDANCE
+  POSITIVE_REVIEW
+  NEGATIVE_REVIEW
+}
+
+enum FeedbackSentiment {
+  GREAT
+  GOOD
+  NEUTRAL
+  UNCOMFORTABLE
+}
+
+enum ComfortLevel {
+  FULL
+  MOSTLY
+  LOW
+}
+
+model TrustProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  trustScore      Float    @default(0.5) // Bounded between 0 and 1, starts at 0.5
+  attendanceRate  Float    @default(1.0) // Percentage of confirmed dinners attended (0-1)
+  flagged         Boolean  @default(false) // True if user has repeated negative signals
+  lastEvaluatedAt DateTime @default(now()) @updatedAt
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([trustScore])
+  @@index([flagged])
+  @@map("trust_profiles")
+}
+
+model PaymentIntent {
+  id                String          @id @default(cuid())
+  userId            String
+  dinnerId          String
+  seatId            String
+  amount            Int             // Amount in cents
+  currency          String          @default("ZAR")
+  provider          PaymentProvider
+  providerReference String?         // Reference from payment provider
+  status            PaymentStatus   @default(CREATED)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dinner Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+  seat   Seat   @relation(fields: [seatId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([dinnerId])
+  @@index([seatId])
+  @@index([status])
+  @@index([userId, status])
+  @@map("payment_intents")
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  externalId  String   @unique // Event ID from payment provider
+  type        String   // Event type (e.g., "charge.success")
+  payload     Json     // Full webhook payload
+  processedAt DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([externalId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("webhook_events")
+}
+
+// ─── Theme Engine Data Collection ────────────────────────────────────────────
+
+enum WeatherCondition {
+  CLEAR
+  CLOUDY
+  RAINY
+  STORMY
+  COLD
+  HOT
+  WINDY
+}
+
+enum DayPeriod {
+  LUNCH      // 11:00 - 15:00
+  DINNER     // 17:00 - 21:00
+  LATE_NIGHT // 21:00+
+}
+
+enum RestaurantType {
+  FINE_DINING
+  CASUAL
+  BISTRO
+  ROOFTOP
+  OUTDOOR
+  PRIVATE_DINING
+  CAFE
+  OTHER
+}
+
+enum PriceTier {
+  BUDGET     // < R200/person
+  MID        // R200-R500/person
+  PREMIUM    // R500+/person
+}
+
+/// Snapshot of contextual data captured when a dinner completes.
+/// This is the core record for the theme engine — every completed dinner
+/// writes one row here. Over time this becomes the training data.
+model DinnerContext {
+  id             String           @id @default(cuid())
+  dinnerId       String           @unique
+  themeId        String
+  restaurantId   String
+
+  // Venue context
+  city           String
+  neighbourhood  String?
+  restaurantType RestaurantType?
+  cuisineType    String?
+  priceTier      PriceTier?
+
+  // Time context
+  dayOfWeek      Int              // 0=Sunday, 6=Saturday
+  dayPeriod      DayPeriod
+  month          Int              // 1-12 for seasonal patterns
+  season         String?          // "summer", "winter", etc.
+
+  // Weather at time of dinner (fetched from API at dinner creation)
+  weatherCondition WeatherCondition?
+  temperatureCelsius Float?
+
+  // Outcome metrics (populated when dinner completes)
+  seatsBooked    Int              @default(0)
+  seatsTotal     Int
+  fillRate       Float?           // seatsBooked / seatsTotal
+  attendanceRate Float?           // actually showed up / confirmed
+  avgFeedbackScore Float?         // 1-5 derived from feedback
+  connectionRate Float?           // % who said they made a meaningful connection
+  wouldReturnRate Float?          // % who said they'd attend again
+  mutualInterestCount Int         @default(0) // how many mutual matches happened
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  dinner         Dinner           @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+  theme          Theme            @relation(fields: [themeId], references: [id])
+  restaurant     Restaurant       @relation(fields: [restaurantId], references: [id])
+
+  @@index([themeId])
+  @@index([restaurantId])
+  @@index([city])
+  @@index([dayOfWeek])
+  @@index([month])
+  @@index([fillRate])
+  @@index([avgFeedbackScore])
+  @@map("dinner_contexts")
+}
+
+/// Aggregated performance stats per theme.
+/// Updated after each dinner completes. Used for quick lookups
+/// without scanning all dinner_contexts.
+model ThemePerformance {
+  id                  String   @id @default(cuid())
+  themeId             String   @unique
+
+  totalDinners        Int      @default(0)
+  totalSeatsBooked    Int      @default(0)
+  avgFillRate         Float?
+  avgAttendanceRate   Float?
+  avgFeedbackScore    Float?
+  avgConnectionRate   Float?
+  avgWouldReturnRate  Float?
+
+  // Breakdown by context (stored as JSON for flexibility)
+  // e.g. { "FINE_DINING": { avgScore: 4.2, count: 12 }, ... }
+  byRestaurantType    Json?
+  byCuisine           Json?
+  byDayOfWeek         Json?
+  byPriceTier         Json?
+  byWeather           Json?
+  byCity              Json?
+
+  lastUpdatedAt       DateTime @default(now()) @updatedAt
+  createdAt           DateTime @default(now())
+
+  theme               Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@index([themeId])
+  @@index([avgFeedbackScore])
+  @@index([avgFillRate])
+  @@map("theme_performance")
+}
+
+/// User-level theme preference signals.
+/// Built from browsing behaviour + attendance history.
+/// Powers personalised theme recommendations.
+model UserThemeSignal {
+  id              String   @id @default(cuid())
+  userId          String
+  themeId         String
+
+  viewCount       Int      @default(0)   // times user viewed this theme's dinner
+  bookingCount    Int      @default(0)   // times user booked this theme
+  attendanceCount Int      @default(0)   // times user actually attended
+  avgRatingGiven  Float?                 // avg score they gave dinners with this theme
+  lastInteractedAt DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme           Theme    @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, themeId])
+  @@index([userId])
+  @@index([themeId])
+  @@index([bookingCount])
+  @@map("user_theme_signals")
+}
