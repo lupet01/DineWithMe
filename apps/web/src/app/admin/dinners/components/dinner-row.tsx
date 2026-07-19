@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import type { DinnerWithRestaurant } from "@dinewithme/db";
 import { Badge } from "@/components/ui/badge";
 import { updateDinnerStatus, cancelDinner } from "../actions";
@@ -143,6 +144,12 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
       {/* Actions */}
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
         <div className="flex items-center justify-end gap-2">
+          <Link
+            href={`/admin/dinners/${dinner.id}`}
+            className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-cream-200 rounded-lg hover:bg-cream-300 transition-colors"
+          >
+            View
+          </Link>
           {canMarkLive && (
             <button
               onClick={() => handleStatusChange("LIVE")}
@@ -171,10 +178,6 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
             >
               Cancel
             </button>
-          )}
-
-          {!canMarkLive && !canMarkCompleted && !canCancel && (
-            <span className="text-xs text-gray-400">No actions</span>
           )}
         </div>
       </td>

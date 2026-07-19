@@ -39,6 +39,7 @@ export const AuditAction = {
   SEAT_NO_SHOW: "seat_no_show",
   SEAT_LEFT_EARLY: "seat_left_early",
   SEAT_EXPIRED: "seat_expired",
+  SEAT_REFUNDED: "seat_refunded",
   
   // Theme actions
   THEME_ENABLED: "theme_enabled",

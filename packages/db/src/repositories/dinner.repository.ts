@@ -348,7 +348,18 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     _count: {
       seats: number;
     };
-    seats: Array<{ status: string }>;
+    seats: Array<{
+      id: string;
+      status: string;
+      dietaryNotes: string | null;
+      checkedInAt: Date | null;
+      confirmedByUser: {
+        id: string;
+        firstName: string | null;
+        lastName: string | null;
+        email: string;
+      } | null;
+    }>;
   }) | null> {
     return this.prisma.dinner.findUnique({
       where: { id },
@@ -379,7 +390,18 @@ export class DinnerRepository extends BaseRepository<Dinner> {
         },
         seats: {
           select: {
+            id: true,
             status: true,
+            dietaryNotes: true,
+            checkedInAt: true,
+            confirmedByUser: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
           },
         },
         _count: {
