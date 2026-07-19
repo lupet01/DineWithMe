@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { paymentIntentRepository, seatRepository, db } from "@dinewithme/db";
+import { paymentIntentRepository, seatRepository, userRepository, db } from "@dinewithme/db";
 import { track } from "@dinewithme/analytics";
+import { notifySeatConfirmed } from "@/lib/notify-seat-confirmed";
 import crypto from "crypto";
 
 /**
@@ -145,6 +146,17 @@ export async function POST(request: NextRequest) {
       try {
         await seatRepository.confirmSeat(paymentIntent.seatId, paymentIntent.userId);
         console.log(`Seat confirmed: ${paymentIntent.seatId}`);
+
+        // Best-effort - notification failures must not fail the webhook,
+        // which needs to return 200 regardless (Paystack retries otherwise).
+        const user = await userRepository.findById(paymentIntent.userId);
+        if (user) {
+          await notifySeatConfirmed({
+            user,
+            seatId: paymentIntent.seatId,
+            dinnerId: paymentIntent.dinnerId,
+          });
+        }
       } catch (error) {
         console.error(`Failed to confirm seat: ${error instanceof Error ? error.message : "Unknown error"}`);
         // Payment succeeded but seat confirmation failed

@@ -7,6 +7,7 @@ import { createPaystackService } from "@dinewithme/payment";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 import { withRateLimit, withCors } from "../../lib/middleware";
 import { RateLimitPresets } from "@/lib/rate-limit";
+import { notifySeatConfirmed } from "@/lib/notify-seat-confirmed";
 
 /**
  * POST /api/bookings/create
@@ -109,14 +110,22 @@ async function handlePOST(request: NextRequest) {
     // Step 2: Calculate commitment amount
     const amount = getCommitmentAmount(dinnerId);
 
-    // If free dinner (amount = 0), no payment needed
+    // If free dinner (amount = 0), no payment needed - confirm the seat
+    // directly instead of leaving it HELD forever, since no PaymentIntent
+    // is ever created for a $0 dinner to drive confirmation another way.
     if (amount === 0) {
+      const confirmedSeat = await seatRepository.confirmSeat(heldSeat.id, user.id, {
+        requirePayment: false,
+      });
+
+      await notifySeatConfirmed({ user, seatId: confirmedSeat.id, dinnerId });
+
       return NextResponse.json({
         success: true,
         data: {
-          seatId: heldSeat.id,
+          seatId: confirmedSeat.id,
           requiresPayment: false,
-          message: "Seat held successfully. No payment required.",
+          message: "Seat confirmed successfully. No payment required.",
         },
       });
     }

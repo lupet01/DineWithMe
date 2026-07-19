@@ -340,22 +340,31 @@ export class SeatRepository extends BaseRepository<Seat> {
    */
   /**
    * Confirm a seat
-   * 
-   * IMPORTANT: This method should ONLY be called by the payment webhook handler.
-   * Direct seat confirmation is not allowed - payment must be completed first.
-   * 
+   *
+   * IMPORTANT: This method should ONLY be called by the payment webhook handler,
+   * or (with requirePayment: false) by the free-dinner booking path where no
+   * PaymentIntent is ever created in the first place.
+   *
    * Requirements:
    * - Seat must be HELD
    * - Seat must be held by the specified user
    * - Hold must not be expired
-   * - Payment must be SUCCEEDED (checked by caller)
-   * 
+   * - Payment must be SUCCEEDED, unless requirePayment is false
+   *
    * @param seatId - ID of the seat to confirm
    * @param userId - ID of the user confirming the seat
+   * @param options.requirePayment - Set false for $0 dinners, which never get a
+   *   PaymentIntent row. Defaults to true so the paid path stays as strict as before.
    * @returns Confirmed seat
    * @throws Error if validation fails
    */
-  async confirmSeat(seatId: string, userId: string): Promise<Seat> {
+  async confirmSeat(
+    seatId: string,
+    userId: string,
+    options: { requirePayment?: boolean } = {}
+  ): Promise<Seat> {
+    const { requirePayment = true } = options;
+
     const seat = await this.findById(seatId);
     if (!seat) {
       throw new Error("Seat not found");
@@ -374,22 +383,24 @@ export class SeatRepository extends BaseRepository<Seat> {
       throw new Error("Seat hold has expired");
     }
 
-    // CRITICAL: Verify payment has succeeded
-    // This check ensures seats can only be confirmed after payment
-    const paymentIntent = await this.prisma.paymentIntent.findFirst({
-      where: { seatId },
-      orderBy: { createdAt: 'desc' }, // Get most recent payment intent
-    });
+    if (requirePayment) {
+      // CRITICAL: Verify payment has succeeded
+      // This check ensures seats can only be confirmed after payment
+      const paymentIntent = await this.prisma.paymentIntent.findFirst({
+        where: { seatId },
+        orderBy: { createdAt: 'desc' }, // Get most recent payment intent
+      });
 
-    if (!paymentIntent) {
-      throw new Error("No payment intent found for this seat. Payment is required to confirm seat.");
-    }
+      if (!paymentIntent) {
+        throw new Error("No payment intent found for this seat. Payment is required to confirm seat.");
+      }
 
-    if (paymentIntent.status !== "SUCCEEDED") {
-      throw new Error(
-        `Payment has not succeeded. Current payment status: ${paymentIntent.status}. ` +
-        `Seats can only be confirmed after successful payment.`
-      );
+      if (paymentIntent.status !== "SUCCEEDED") {
+        throw new Error(
+          `Payment has not succeeded. Current payment status: ${paymentIntent.status}. ` +
+          `Seats can only be confirmed after successful payment.`
+        );
+      }
     }
 
     // Use state machine for transition
