@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { seatRepository, userRepository, auditLogger } from "@dinewithme/db";
+import { seatRepository, userRepository, paymentIntentRepository, auditLogger } from "@dinewithme/db";
 import { cancelSeatSchema } from "@dinewithme/shared";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 import { handleApiError } from "../../lib/error-handler";
+import { refundPaymentIntent } from "../../payments/refund/service";
 
 /**
  * POST /api/seats/cancel
@@ -97,6 +98,29 @@ export async function POST(request: NextRequest) {
         result.seat.dinnerId
       );
 
+      // Cancelling the seat only frees it up - it does not refund the
+      // payment on its own. Attempt a refund for whatever payment was made
+      // for this seat; if the dinner is too close to start for a refund
+      // (a separate, stricter cutoff than the cancellation cutoff itself),
+      // the seat stays cancelled but no refund is issued - the response
+      // reflects the real outcome either way.
+      let refund: { issued: boolean; amount?: number; currency?: string; reason?: string } = {
+        issued: false,
+      };
+      const paymentIntent = await paymentIntentRepository.findBySeat(result.seat.id);
+      if (paymentIntent && paymentIntent.status === "SUCCEEDED") {
+        const refundResult = await refundPaymentIntent({
+          paymentIntentId: paymentIntent.id,
+          reason: "user_cancelled",
+          requestingUserId: user.id,
+          requestingUserRole: user.role,
+        });
+
+        refund = refundResult.ok
+          ? { issued: true, amount: refundResult.amount, currency: refundResult.currency }
+          : { issued: false, reason: refundResult.error };
+      }
+
       return NextResponse.json({
         success: true,
         data: {
@@ -105,6 +129,7 @@ export async function POST(request: NextRequest) {
           status: result.seat.status,
           message: "Seat cancelled successfully",
           hoursUntilDinner: result.policyResult.hoursUntilDinner,
+          refund,
         },
       });
     } catch (error) {

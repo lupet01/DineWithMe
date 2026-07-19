@@ -11,23 +11,36 @@ interface CancelBookingModalProps {
   onClose: () => void;
 }
 
+interface RefundOutcome {
+  issued: boolean;
+  amount?: number;
+  currency?: string;
+  reason?: string;
+}
+
 export function CancelBookingModal({ dinner, isOpen, onClose }: CancelBookingModalProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [refundOutcome, setRefundOutcome] = useState<RefundOutcome | null>(null);
   const [reason, setReason] = useState("");
 
   if (!isOpen) return null;
 
   const startsAt = new Date(dinner.startsAt);
-  const cutoffHours = 6;
+  // Cancellation itself is allowed up to 6h before the dinner, but a refund
+  // is only guaranteed 24h+ out (packages/config/src/payment.ts
+  // refund.cutoffHours) - these are two different cutoffs, not one.
+  const cancelCutoffHours = 6;
+  const refundCutoffHours = 24;
   const deadline = new Date(startsAt);
-  deadline.setHours(deadline.getHours() - cutoffHours);
+  deadline.setHours(deadline.getHours() - refundCutoffHours);
 
   const now = new Date();
   const hoursUntil = (startsAt.getTime() - now.getTime()) / (1000 * 60 * 60);
-  const canCancel = hoursUntil >= cutoffHours;
+  const canCancel = hoursUntil >= cancelCutoffHours;
+  const refundLikely = hoursUntil >= refundCutoffHours;
 
   const deadlineStr = deadline.toLocaleString("en-US", {
     weekday: "short",
@@ -50,8 +63,9 @@ export function CancelBookingModal({ dinner, isOpen, onClose }: CancelBookingMod
       if (!res.ok || !data.success) {
         throw new Error(data.error?.message || "Failed to cancel booking");
       }
+      setRefundOutcome(data.data?.refund ?? null);
       setSuccess(true);
-      setTimeout(() => { onClose(); router.refresh(); }, 1800);
+      setTimeout(() => { onClose(); router.refresh(); }, 2400);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to cancel");
     } finally {
@@ -94,6 +108,15 @@ export function CancelBookingModal({ dinner, isOpen, onClose }: CancelBookingMod
               <p className="mt-1 text-[13px] text-gray-500">
                 Your seat has been released. Hope to see you at another dinner!
               </p>
+              {refundOutcome && (
+                <p className="mt-3 text-[13px] font-medium text-gray-700">
+                  {refundOutcome.issued
+                    ? "A full refund has been issued and should appear in a few business days."
+                    : refundOutcome.reason
+                      ? `No refund was issued: ${refundOutcome.reason}`
+                      : "No refund was issued for this booking."}
+                </p>
+              )}
             </div>
           ) : (
             <>
@@ -119,13 +142,15 @@ export function CancelBookingModal({ dinner, isOpen, onClose }: CancelBookingMod
                 </p>
                 <p className={`mt-1 text-[13px] leading-relaxed ${canCancel ? "text-amber-700" : "text-red-600"}`}>
                   {canCancel
-                    ? `You can cancel for a full refund up to 6 hours before the dinner starts. After that, no refunds are available.`
-                    : `The free cancellation window has passed. Cancellations are no longer accepted within 6 hours of the dinner.`}
+                    ? refundLikely
+                      ? `You can cancel for a full refund up to 24 hours before the dinner starts.`
+                      : `You can still cancel, but the refund window has passed - this cancellation won't be refunded.`
+                    : `Cancellations are no longer accepted within 6 hours of the dinner.`}
                 </p>
-                {canCancel && (
+                {canCancel && refundLikely && (
                   <div className="mt-3 rounded-xl bg-amber-100 px-3 py-2">
                     <p className="text-[12px] font-semibold text-amber-800">
-                      ⏰ Free cancellation until {deadlineStr}
+                      ⏰ Full refund guaranteed until {deadlineStr}
                     </p>
                   </div>
                 )}
