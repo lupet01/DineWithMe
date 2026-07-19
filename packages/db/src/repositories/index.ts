@@ -12,6 +12,7 @@ import { TrustProfileRepository } from "./trust-profile.repository";
 import { ThemeRepository } from "./theme.repository";
 import { AnalyticsRepository } from "./analytics.repository";
 import { PaymentIntentRepository } from "./payment-intent.repository";
+import { SafetyReportRepository } from "./safety-report.repository";
 
 export const userRepository = new UserRepository(prisma);
 export const restaurantRepository = new RestaurantRepository(prisma);
@@ -26,6 +27,7 @@ export const trustProfileRepository = new TrustProfileRepository(prisma);
 export const themeRepository = new ThemeRepository(prisma);
 export const analyticsRepository = new AnalyticsRepository(prisma);
 export const paymentIntentRepository = new PaymentIntentRepository(prisma);
+export const safetyReportRepository = new SafetyReportRepository(prisma);
 
 export { BaseRepository } from "./base";
 export { UserRepository } from "./user.repository";
@@ -41,6 +43,7 @@ export { TrustProfileRepository } from "./trust-profile.repository";
 export { ThemeRepository } from "./theme.repository";
 export { AnalyticsRepository } from "./analytics.repository";
 export { PaymentIntentRepository } from "./payment-intent.repository";
+export { SafetyReportRepository } from "./safety-report.repository";
 export type { RestaurantWithMembers, RestaurantCreateData, RestaurantWithMedia } from "./restaurant.repository";
 export type { DinnerWithRestaurant } from "./dinner.repository";
 export type { AuditLogWithActor } from "./audit-log.repository";
@@ -48,3 +51,4 @@ export type { FeedbackWithRelations } from "./feedback.repository";
 export type { MutualInterestWithRelations } from "./mutual-interest.repository";
 export type { ThemeAnalytics } from "./analytics.repository";
 export type { PaymentIntentWithRelations } from "./payment-intent.repository";
+export type { SafetyReportWithRelations } from "./safety-report.repository";

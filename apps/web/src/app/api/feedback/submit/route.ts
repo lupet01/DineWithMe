@@ -7,7 +7,8 @@ import {
   trustProfileRepository,
   userRepository,
   dinnerRepository,
-  seatRepository
+  seatRepository,
+  safetyReportRepository
 } from "@dinewithme/db";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 import { handleApiError } from "@/app/api/lib/error-handler";
@@ -246,6 +247,22 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+    }
+
+    // "I want to report something" in the Safety step sends wouldDineAgain:
+    // false with LOW comfort (see safety-flag-step.tsx) - creates a
+    // SafetyReport for the Trust & Safety admin queue. The step doesn't
+    // collect which specific person, so this is a table/dinner-level
+    // report (reportedUserId stays unset); reason defaults to
+    // SAFETY_CONCERN since the UI doesn't collect a specific category,
+    // only free text.
+    if (body.comfortLevel === "LOW" && body.wouldDineAgain === false) {
+      await safetyReportRepository.create({
+        reporter: { connect: { id: dbUser.id } },
+        dinner: { connect: { id: body.dinnerId } },
+        reason: "SAFETY_CONCERN",
+        reasonDetail: body.notes || null,
+      });
     }
 
     // Create trust events based on EPIC 5.4 rules
