@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { themeRepository } from "@dinewithme/db";
+import { themeRepository, analyticsRepository } from "@dinewithme/db";
 import { Card } from "@/components/ui/card";
 import { ThemeStatusToggle } from "./components/theme-status-toggle";
 
 export default async function ThemeLibraryPage() {
-  const themes = await themeRepository.findMany();
+  const [themes, enabledCounts, themeAnalytics] = await Promise.all([
+    themeRepository.findMany(),
+    themeRepository.countEnabledRestaurantsByTheme(),
+    analyticsRepository.getThemeAnalytics(),
+  ]);
+
+  const fillRateByTheme = new Map(
+    themeAnalytics.map((t) => [t.themeId, Math.round(t.confirmationRate * 100)])
+  );
 
   return (
     <div className="space-y-6">
@@ -32,22 +40,37 @@ export default async function ThemeLibraryPage() {
       ) : (
         <Card padding="none" className="overflow-hidden">
           <div className="divide-y divide-gray-100">
-            {themes.map((theme) => (
-              <div key={theme.id} className="flex items-center gap-4 p-4">
-                <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/admin/ops/themes/${theme.id}/edit`}
-                    className="text-sm font-semibold text-gray-900 hover:text-primary-600"
-                  >
-                    {theme.title}
-                  </Link>
-                  <p className="mt-0.5 truncate text-sm text-gray-500">
-                    {theme.shortDescription}
-                  </p>
+            {themes.map((theme) => {
+              const enabledCount = enabledCounts[theme.id] ?? 0;
+              const fillRate = fillRateByTheme.get(theme.id);
+              return (
+                <div key={theme.id} className={`flex items-center gap-4 p-4 ${!theme.isActive ? "opacity-60" : ""}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/ops/themes/${theme.id}/edit`}
+                        className="text-sm font-semibold text-gray-900 hover:text-primary-600"
+                      >
+                        {theme.title}
+                      </Link>
+                      {!theme.isActive && (
+                        <span className="rounded-full bg-cream-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                          Archived
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-sm text-gray-500">
+                      {theme.shortDescription}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {enabledCount} restaurant{enabledCount === 1 ? "" : "s"} enabled
+                      {fillRate !== undefined && ` · ${fillRate}% avg fill`}
+                    </p>
+                  </div>
+                  <ThemeStatusToggle themeId={theme.id} isActive={theme.isActive} />
                 </div>
-                <ThemeStatusToggle themeId={theme.id} isActive={theme.isActive} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}

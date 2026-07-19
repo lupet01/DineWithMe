@@ -40,6 +40,23 @@ export class ThemeRepository extends BaseRepository<Theme> {
   }
 
   /**
+   * Count of restaurants that have each theme enabled, keyed by themeId
+   * (for the Theme Library's "N restaurants enabled" adoption stat).
+   * Aggregated in the database via groupBy - does not load rows into memory.
+   */
+  async countEnabledRestaurantsByTheme(): Promise<Record<string, number>> {
+    const grouped = await this.prisma.restaurantEnabledTheme.groupBy({
+      by: ["themeId"],
+      _count: { themeId: true },
+    });
+
+    return grouped.reduce<Record<string, number>>((acc, row) => {
+      acc[row.themeId] = row._count.themeId;
+      return acc;
+    }, {});
+  }
+
+  /**
    * Find themes enabled for a restaurant
    */
   async findByRestaurant(restaurantId: string): Promise<Theme[]> {
