@@ -384,4 +384,18 @@ export class PaymentIntentRepository extends BaseRepository<PaymentIntent> {
 
     return result._sum.amount ?? 0;
   }
+
+  /**
+   * Sum the amount of SUCCEEDED payment intents created since a given
+   * date (for the admin Cockpit's rolling revenue stat). Aggregated in
+   * the database via aggregate() - does not load rows into memory.
+   */
+  async sumSucceededAmountSince(since: Date): Promise<number> {
+    const result = await this.prisma.paymentIntent.aggregate({
+      where: { status: "SUCCEEDED", createdAt: { gte: since } },
+      _sum: { amount: true },
+    });
+
+    return result._sum.amount ?? 0;
+  }
 }

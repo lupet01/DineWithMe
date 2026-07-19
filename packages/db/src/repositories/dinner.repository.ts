@@ -472,4 +472,32 @@ export class DinnerRepository extends BaseRepository<Dinner> {
       })
       .sort((a, b) => b.count - a.count);
   }
+
+  /**
+   * Dinner count and seat fill rate for dinners starting within a date
+   * range (for the admin Cockpit's "this week" stat). Seat counts are
+   * aggregated in the database via count() - does not load dinner or
+   * seat rows into memory.
+   */
+  async getStatsForDateRange(
+    start: Date,
+    end: Date
+  ): Promise<{ dinnerCount: number; totalSeats: number; bookedSeats: number }> {
+    const [dinnerCount, totalSeats, bookedSeats] = await Promise.all([
+      this.prisma.dinner.count({
+        where: { startsAt: { gte: start, lt: end } },
+      }),
+      this.prisma.seat.count({
+        where: { dinner: { startsAt: { gte: start, lt: end } } },
+      }),
+      this.prisma.seat.count({
+        where: {
+          dinner: { startsAt: { gte: start, lt: end } },
+          status: { in: ["CONFIRMED", "ATTENDED", "COMPLETED"] },
+        },
+      }),
+    ]);
+
+    return { dinnerCount, totalSeats, bookedSeats };
+  }
 }
