@@ -4,6 +4,8 @@ export interface DiscoverFilters {
   city?: string;
   theme?: string;
   date?: string;
+  /** Table size (seatCount): an exact number ("4") or "N+" for a minimum ("8+"). */
+  size?: string;
 }
 
 /**
@@ -59,6 +61,7 @@ export async function fetchDinners(
     if (params.theme) queryParams.set("theme", params.theme);
     if (from) queryParams.set("from", from.toISOString());
     if (to) queryParams.set("to", to.toISOString());
+    if (params.size) queryParams.set("size", params.size);
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const response = await fetch(

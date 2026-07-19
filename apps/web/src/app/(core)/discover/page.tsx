@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { themeRepository } from "@dinewithme/db";
 import { DiscoverHeader } from "./components/discover-header";
 import { DinnerList } from "./components/dinner-list";
 import { DinnerListSkeleton } from "./components/dinner-list-skeleton";
@@ -15,8 +16,13 @@ interface DiscoverPageProps {
   };
 }
 
-export default function DiscoverPage({ searchParams }: DiscoverPageProps) {
+export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
   const view = searchParams.view === "map" ? "map" : "list";
+
+  // Fetched server-side (this is a server component) so the FilterSheet -
+  // a client component - can render Theme pills without its own API round trip.
+  const themes = await themeRepository.findActive();
+  const themeOptions = themes.map((t) => ({ key: t.key, title: t.title }));
 
   return (
     <div className="min-h-screen bg-cream-100">
@@ -26,6 +32,7 @@ export default function DiscoverPage({ searchParams }: DiscoverPageProps) {
         currentTheme={searchParams.theme || ""}
         currentDate={searchParams.date || ""}
         currentSize={searchParams.size || ""}
+        themes={themeOptions}
       />
 
       {view === "map" ? (

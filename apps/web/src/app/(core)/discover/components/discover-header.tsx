@@ -6,11 +6,18 @@ import { SlidersHorizontal, X } from "lucide-react";
 import { Tabs } from "@/components/ui/tabs";
 import { FilterSheet } from "@/components/ui/filter-sheet";
 
+interface ThemeOption {
+  key: string;
+  title: string;
+}
+
 interface DiscoverHeaderProps {
   currentView: "list" | "map";
   currentTheme: string;
   currentDate: string;
   currentSize: string;
+  /** Active themes, fetched server-side in discover/page.tsx (this is a client component and can't hit the DB directly). */
+  themes: ThemeOption[];
 }
 
 const datePresets = [
@@ -19,6 +26,16 @@ const datePresets = [
   { value: "tomorrow", label: "Tomorrow" },
   { value: "weekend", label: "This Weekend" },
   { value: "week", label: "This Week" },
+];
+
+// "8+" is a minimum-seats match, wired end-to-end via findPublicDinners'
+// minSeatCount filter; the others are exact seatCount matches.
+const sizePresets = [
+  { value: "", label: "Any size" },
+  { value: "2", label: "2 seats" },
+  { value: "4", label: "4 seats" },
+  { value: "6", label: "6 seats" },
+  { value: "8+", label: "8+ seats" },
 ];
 
 const viewTabs = [
@@ -31,6 +48,7 @@ export function DiscoverHeader({
   currentTheme,
   currentDate,
   currentSize,
+  themes,
 }: DiscoverHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -97,7 +115,7 @@ export function DiscoverHeader({
                 onClick={() => updateParams({ theme: "" })}
                 className="flex items-center gap-1 rounded-full bg-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700"
               >
-                {currentTheme}
+                {themes.find((t) => t.key === currentTheme)?.title ?? currentTheme}
                 <X className="h-3 w-3" />
               </button>
             )}
@@ -137,6 +155,65 @@ export function DiscoverHeader({
                   }}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                     currentDate === preset.value
+                      ? "bg-primary-500 text-white"
+                      : "bg-cream-200 text-gray-700 hover:bg-cream-300"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {themes.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm font-semibold text-gray-900">Theme</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    updateParams({ theme: "" });
+                    setIsFilterOpen(false);
+                  }}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    currentTheme === ""
+                      ? "bg-primary-500 text-white"
+                      : "bg-cream-200 text-gray-700 hover:bg-cream-300"
+                  }`}
+                >
+                  Any theme
+                </button>
+                {themes.map((theme) => (
+                  <button
+                    key={theme.key}
+                    onClick={() => {
+                      updateParams({ theme: theme.key });
+                      setIsFilterOpen(false);
+                    }}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                      currentTheme === theme.key
+                        ? "bg-primary-500 text-white"
+                        : "bg-cream-200 text-gray-700 hover:bg-cream-300"
+                    }`}
+                  >
+                    {theme.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <p className="mb-2 text-sm font-semibold text-gray-900">Table Size</p>
+            <div className="flex flex-wrap gap-2">
+              {sizePresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => {
+                    updateParams({ size: preset.value });
+                    setIsFilterOpen(false);
+                  }}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    currentSize === preset.value
                       ? "bg-primary-500 text-white"
                       : "bg-cream-200 text-gray-700 hover:bg-cream-300"
                   }`}

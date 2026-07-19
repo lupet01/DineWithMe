@@ -266,6 +266,10 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     themeKey?: string;
     from?: Date;
     to?: Date;
+    /** Exact table size (seatCount) match, e.g. from a "4 seats" filter pill. */
+    seatCount?: number;
+    /** Minimum table size (seatCount), e.g. from an "8+ seats" filter pill. Ignored if seatCount is also set. */
+    minSeatCount?: number;
     limit?: number;
     offset?: number;
   }): Promise<Array<DinnerWithRestaurant & {
@@ -299,6 +303,11 @@ export class DinnerRepository extends BaseRepository<Dinner> {
           },
         },
       }),
+      ...(filters?.seatCount
+        ? { seatCount: filters.seatCount }
+        : filters?.minSeatCount
+          ? { seatCount: { gte: filters.minSeatCount } }
+          : {}),
     };
 
     return this.prisma.dinner.findMany({
@@ -355,6 +364,8 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     themeKey?: string;
     from?: Date;
     to?: Date;
+    seatCount?: number;
+    minSeatCount?: number;
   }): Promise<number> {
     const where: Prisma.DinnerWhereInput = {
       status: {
@@ -381,6 +392,11 @@ export class DinnerRepository extends BaseRepository<Dinner> {
           },
         },
       }),
+      ...(filters?.seatCount
+        ? { seatCount: filters.seatCount }
+        : filters?.minSeatCount
+          ? { seatCount: { gte: filters.minSeatCount } }
+          : {}),
     };
 
     return this.prisma.dinner.count({ where });

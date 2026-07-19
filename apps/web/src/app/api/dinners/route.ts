@@ -6,6 +6,22 @@ import { handleApiError } from "../lib/error-handler";
 import type { DinnerListItem } from "@dinewithme/shared";
 
 /**
+ * Parses the "size" query param into an exact or minimum seatCount filter.
+ * "8+" (trailing plus) means "at least 8 seats"; a bare number ("4") means
+ * an exact match. Anything else/invalid is ignored.
+ */
+function parseSizeFilter(size?: string): { seatCount?: number; minSeatCount?: number } {
+  if (!size) return {};
+
+  const isMinimum = size.endsWith("+");
+  const numeric = parseInt(isMinimum ? size.slice(0, -1) : size, 10);
+
+  if (!Number.isFinite(numeric) || numeric <= 0) return {};
+
+  return isMinimum ? { minSeatCount: numeric } : { seatCount: numeric };
+}
+
+/**
  * GET /api/dinners
  * 
  * List public dinners with filters and pagination
@@ -15,6 +31,8 @@ import type { DinnerListItem } from "@dinewithme/shared";
  * - theme: Filter by theme key (case-insensitive)
  * - from: Start date (ISO string)
  * - to: End date (ISO string)
+ * - size: Table size (seatCount). Either an exact number ("4") or "N+" for
+ *   a minimum ("8+")
  * - limit: Number of results per page (default: 50, max: 100)
  * - offset: Number of results to skip (default: 0)
  * 
@@ -47,6 +65,7 @@ export async function GET(request: NextRequest) {
     const theme = searchParams.get("theme") || undefined;
     const fromStr = searchParams.get("from");
     const toStr = searchParams.get("to");
+    const sizeStr = searchParams.get("size") || undefined;
     const limitStr = searchParams.get("limit");
     const offsetStr = searchParams.get("offset");
 
@@ -54,11 +73,15 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(limitStr || "50", 10), 100);
     const offset = Math.max(parseInt(offsetStr || "0", 10), 0);
 
+    const { seatCount, minSeatCount } = parseSizeFilter(sizeStr);
+
     const filters = {
       city,
       themeKey: theme,
       from: fromStr ? new Date(fromStr) : undefined,
       to: toStr ? new Date(toStr) : undefined,
+      seatCount,
+      minSeatCount,
       limit,
       offset,
     };
@@ -71,6 +94,8 @@ export async function GET(request: NextRequest) {
         themeKey: filters.themeKey,
         from: filters.from,
         to: filters.to,
+        seatCount: filters.seatCount,
+        minSeatCount: filters.minSeatCount,
       }),
     ]);
 
@@ -123,6 +148,7 @@ export async function GET(request: NextRequest) {
         theme,
         from: fromStr || undefined,
         to: toStr || undefined,
+        size: sizeStr,
       },
       resultCount: dinnersWithSeats.length,
       totalCount: total,
@@ -140,6 +166,7 @@ export async function GET(request: NextRequest) {
           ...(theme && { theme }),
           ...(fromStr && { from: fromStr }),
           ...(toStr && { to: toStr }),
+          ...(sizeStr && { size: sizeStr }),
         },
         pagination: {
           limit,

@@ -251,6 +251,7 @@ export interface DinnerListViewedEvent {
     theme?: string;
     from?: string;
     to?: string;
+    size?: string;
   };
   resultCount: number;
   totalCount?: number;
