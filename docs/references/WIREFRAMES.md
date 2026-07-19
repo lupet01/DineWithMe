@@ -733,240 +733,213 @@ This document provides detailed ASCII wireframes for all three platforms in the 
 
 ### 3.6 Post-Dinner Feedback Flow (`/dinner/[id]/post-dinner`)
 
-**Step 1: Overall Sentiment**
+**Note:** this section documents the flow as actually shipped in
+`post-dinner/components/feedback-flow.tsx`, not the original mock below it in
+this doc. The step count is dynamic (2-4 steps) rather than a fixed 4 - the
+Safety step only appears when the diner reports low comfort, and the Person
+Signals step only appears when the dinner had other attendees. There's no
+separate "Report Something" screen; reporting is a branch inside the Safety
+step. Progress is shown as a row of pill segments, not a percentage bar.
+
+```
+Step 1: sentiment ──▶ Step 2: comfort ──┬─(if LOW)─▶ Step 3: safety ──┐
+                                          │                             ├─(if attendees exist)─▶ person-signals ──▶ completion
+                                          └──────────(if not LOW)───────┘
+```
+
+**Step 1: Overall Sentiment** (`sentiment-step.tsx`)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  ← Back                                                                  │
+│  [✕]                                              ●━━ ○ ○               │
 │                                                                           │
-│  Share Your Experience                                                   │
-│  First Impressions • Bella's Italian Kitchen                             │
-│                                                                           │
-│  Step 1 of 4                                                             │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
-│                                                                           │
-│  How was your overall experience?                                        │
+│                              🍽️                                        │
+│                     How was your dinner?                                │
+│              Your feedback helps us create better experiences            │
 │                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │                          😊                                      │   │
-│  │                       Positive                                   │   │
-│  │                                                                   │   │
+│  │  😊  Great                                                       │   │
+│  │      Had an amazing time                                         │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │                          😐                                      │   │
-│  │                       Neutral                                    │   │
-│  │                                                                   │   │
+│  │  👍  Good                                                        │   │
+│  │      Enjoyed the experience                                      │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │                          😞                                      │   │
-│  │                       Negative                                   │   │
-│  │                                                                   │   │
+│  │  😐  Neutral                                                     │   │
+│  │      It was okay                                                 │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Step 2: Comfort Level**
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  ← Back                                                                  │
-│                                                                           │
-│  Share Your Experience                                                   │
-│  First Impressions • Bella's Italian Kitchen                             │
-│                                                                           │
-│  Step 2 of 4                                                             │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
-│                                                                           │
-│  How comfortable did you feel?                                           │
-│                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │                    Very Comfortable                              │   │
-│  │  I felt completely at ease and enjoyed the atmosphere            │   │
-│  │                                                                   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │                    Somewhat Comfortable                          │   │
-│  │  I was mostly comfortable with minor awkward moments             │   │
-│  │                                                                   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │                    Neutral                                       │   │
-│  │  Neither comfortable nor uncomfortable                           │   │
-│  │                                                                   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │                    Uncomfortable                                 │   │
-│  │  I felt uneasy or out of place                                   │   │
-│  │                                                                   │   │
+│  │  😟  Uncomfortable                                               │   │
+│  │      Didn't feel right                                           │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Step 3: Person Signals**
+**Step 2: Comfort Level** (`comfort-step.tsx`)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  ← Back                                                                  │
+│  [✕]                                              ●━━ ●━━ ○              │
 │                                                                           │
-│  Share Your Experience                                                   │
-│  First Impressions • Bella's Italian Kitchen                             │
-│                                                                           │
-│  Step 3 of 4                                                             │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
-│                                                                           │
-│  Who would you like to connect with?                                     │
-│  Select people you'd be interested in staying in touch with              │
+│                  How comfortable did you feel?                          │
+│              Your safety and comfort are our top priority               │
 │                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  👤 Sarah Johnson                                    [❤️]        │   │
-│  │  Seat 2                                                          │   │
-│  │                                                                   │   │
+│  │  ✓  Completely comfortable                                       │   │
+│  │     Felt safe and welcome                                        │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  ✓  Mostly comfortable                                           │   │
+│  │     A few minor moments                                          │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  ⚠  Not comfortable                                              │   │
+│  │     Something felt off        ──▶ branches to Safety step        │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Step 3: Safety** (`safety-flag-step.tsx` — only shown when Step 2 = "Not comfortable")
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  [✕]                                              ●━━ ●━━ ●━━ ○          │
+│                                                                           │
+│                              🛡️                                        │
+│                        Did you feel safe?                               │
+│   Your safety matters. This is anonymous and helps us keep the          │
+│                    community safe.                                      │
 │                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  👤 Michael Chen                                     [  ]        │   │
-│  │  Seat 4                                                          │   │
-│  │                                                                   │   │
+│  │  😊  Yes, I felt comfortable                                     │   │
+│  │      Everyone was respectful                                     │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  👤 Emma Williams                                    [❤️]        │   │
-│  │  Seat 5                                                          │   │
-│  │                                                                   │   │
+│  │  😐  It was okay                                                 │   │
+│  │      Nothing concerning but room to improve                      │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  👤 David Brown                                      [  ]        │   │
-│  │  Seat 6                                                          │   │
-│  │                                                                   │   │
+│  │  🚩  I want to report something                                  │   │
+│  │      Something made me uncomfortable ──▶ expands notes below     │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
-│  ℹ️  If they also select you, we'll share contact information            │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+*Tapping "I want to report something" expands in place (no navigation) into
+an optional free-text report:*
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  [✕]                                              ●━━ ●━━ ●━━ ○          │
+│                                                                           │
+│                              🛡️                                        │
+│                       Help us understand                                │
+│         Your feedback is private and helps us improve safety            │
+│                                                                           │
+│  What happened? (optional)                                              │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  Share any details that might help us...                        │   │
+│  │                                                                   │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│  0/1000                                                                  │
 │                                                                           │
 │  ┌───────────────────────────────────────────────────────────────┐     │
 │  │              Continue                                          │     │
+│  └───────────────────────────────────────────────────────────────┘     │
+│  ┌───────────────────────────────────────────────────────────────┐     │
+│  │              Skip                                               │     │
 │  └───────────────────────────────────────────────────────────────┘     │
 │                                                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Step 4: Completion**
+**Step: Person Signals** (`person-signals-step.tsx` — only shown when the
+dinner had other attendees; skipped entirely for a solo/no-show table)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  [✕]                                          ●━━ ●━━ (●━━) ●━━          │
+│                                                                           │
+│                              👥                                         │
+│                Who would you dine with again?                           │
+│              Tap to indicate interest • Completely private              │
+│                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  Sarah Johnson                                    (✓) ( ✕ )      │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  Michael Chen                                     ( ✓ ) ( ✕ )    │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                           │
+│  ┌──────────────┐  ┌─────────────────────────────────────────────┐     │
+│  │     Skip     │  │                   Submit                     │     │
+│  └──────────────┘  └─────────────────────────────────────────────┘     │
+│                                                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+Signals feed mutual-interest matching server-side (a match reveals contact
+info only when both people signal yes) - there's no per-person "Connected!"
+state inside this step itself, unlike the original mock's ❤️ toggle.
+
+**Final: Completion** (`completion-step.tsx` — no progress bar, no step count)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                                                           │
 │                              ✓                                           │
 │                                                                           │
-│                    Thank You!                                            │
-│                                                                           │
-│  Your feedback helps us create better dining experiences                 │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  What Happens Next?                                              │   │
-│  │                                                                   │   │
-│  │  ✓ Your feedback has been recorded                               │   │
-│  │  ✓ Trust score updated                                           │   │
-│  │  • We'll notify you if there are mutual connections              │   │
-│  │  • Check your Connections page in 24 hours                       │   │
-│  │                                                                   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
+│                Thank you for your feedback                              │
+│         Your input helps us create better dining experiences            │
 │                                                                           │
 │  ┌───────────────────────────────────────────────────────────────┐     │
-│  │              View My Connections                               │     │
+│  │              Back to My Dinners                                │     │
 │  └───────────────────────────────────────────────────────────────┘     │
-│                                                                           │
-│  [← Back to My Dinners]                                                  │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
-│                                                                           │
 │                                                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+The shipped completion screen deliberately dropped the original mock's
+"What Happens Next?" checklist and "View My Connections" CTA - mutual
+interest is computed asynchronously server-side, so there's nothing to
+show yet at submit time, and a same-screen link to unconfirmed matches
+would overpromise.
+
 ### 3.7 Connections Page (`/connections`)
+
+**Note:** shipped as documented below (`app/(core)/connections/page.tsx`) - no
+messaging feature exists anywhere in the app, so the original mock's
+"📧 Send Message" button was never buildable as drawn. Each row instead links
+straight to the shared dinner's detail page, which is where a real "what do
+we do next" action already lives.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                                                                           │
-│  ← Connections                                                           │
-│  People you've connected with                                            │
+│  Connections                                                             │
+│  People you'd dine with again                                           │
 │                                                                           │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  👤 Sarah Johnson                                                │   │
-│  │  sarah.j@email.com                                               │   │
-│  │                                                                   │   │
-│  │  Connected at: First Impressions                                 │   │
-│  │  Bella's Italian Kitchen • Feb 25, 2026                          │   │
-│  │                                                                   │   │
-│  │  ┌─────────────────────────────────────────────────────────┐   │   │
-│  │  │  📧 Send Message                                         │   │   │
-│  │  └─────────────────────────────────────────────────────────┘   │   │
-│  │                                                                   │   │
+│  │  👤  Sarah Johnson                                                │   │
+│  │      First Impressions · Feb 25, 2026                            │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  👤  Emma Williams                                                │   │
+│  │      First Impressions · Feb 25, 2026                            │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  👤  Michael Chen                                                 │   │
+│  │      Creative Minds · Jan 15, 2026                                │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 │                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  👤 Emma Williams                                                │   │
-│  │  emma.w@email.com                                                │   │
-│  │                                                                   │   │
-│  │  Connected at: First Impressions                                 │   │
-│  │  Bella's Italian Kitchen • Feb 25, 2026                          │   │
-│  │                                                                   │   │
-│  │  ┌─────────────────────────────────────────────────────────┐   │   │
-│  │  │  📧 Send Message                                         │   │   │
-│  │  └─────────────────────────────────────────────────────────┘   │   │
-│  │                                                                   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
+│  (each row → /dinner/[id] for that shared dinner)                       │
 │                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │  👤 Michael Chen                                                 │   │
-│  │  m.chen@email.com                                                │   │
-│  │                                                                   │   │
-│  │  Connected at: Creative Minds                                    │   │
-│  │  Sushi Palace • Jan 15, 2026                                     │   │
-│  │                                                                   │   │
-│  │  ┌─────────────────────────────────────────────────────────┐   │   │
-│  │  │  📧 Send Message                                         │   │   │
-│  │  └─────────────────────────────────────────────────────────┘   │   │
-│  │                                                                   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
+│  Empty state: "No connections yet - when you and someone else both       │
+│  say you'd dine together again, they'll show up here." + Find a dinner  │
 │                                                                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  [🔍 Discover]  [🍽️ My Dinners]  [🤝 Connections]  [👤 Profile]       │
@@ -1409,6 +1382,9 @@ Safe area padding for iOS devices
 
 ### Flow 3: Post-Dinner Feedback
 
+As shipped (`feedback-flow.tsx`), Safety and Person Signals are conditional,
+not fixed steps 3-4 - see §3.6 for the exact branching:
+
 ```
 1. Attend dinner
    ↓
@@ -1420,21 +1396,23 @@ Safe area padding for iOS devices
    ↓
 5. Click "Leave Feedback"
    ↓
-6. Step 1: Overall sentiment
+6. Step: Overall sentiment
    ↓
-7. Step 2: Comfort level
+7. Step: Comfort level
    ↓
-8. Step 3: Select people to connect with
+8. Step: Safety check — only if comfort was "Not comfortable"
+   (includes an inline "report something" branch, no separate screen)
    ↓
-9. Step 4: Safety flags (if needed)
+9. Step: Who would you dine with again? — only if the dinner had other
+   attendees; skipped entirely otherwise
    ↓
 10. Submit feedback
     ↓
 11. Trust score updated
     ↓
-12. Mutual interests detected
+12. Mutual interests detected asynchronously (server-side)
     ↓
-13. View connections in /connections
+13. View connections in /connections, once matched
 ```
 
 ---
