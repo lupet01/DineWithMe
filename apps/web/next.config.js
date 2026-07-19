@@ -1,3 +1,5 @@
+const { withSentryConfig } = require("@sentry/nextjs");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -83,9 +85,9 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://img.clerk.com https://*.r2.cloudflarestorage.com https://*.r2.dev",
+              "img-src 'self' data: blob: https://img.clerk.com https://*.r2.cloudflarestorage.com https://*.r2.dev https://api.mapbox.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com https://app.posthog.com https://api.posthog.com",
+              "connect-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com https://app.posthog.com https://api.posthog.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://api.mapbox.com https://events.mapbox.com",
               "frame-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
               "worker-src 'self' blob:",
               "object-src 'none'",
@@ -101,4 +103,18 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Wraps the config for Sentry source-map upload + tunneling. Safe with no
+// Sentry org/project/auth-token configured - the plugin just skips the
+// source-map-upload step and logs nothing is uploaded; it does not fail
+// the build.
+module.exports = withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  widenClientFileUpload: true,
+  // Tunnels client Sentry events through our own domain to avoid ad-blockers
+  tunnelRoute: "/monitoring",
+  disableLogger: true,
+  automaticVercelMonitors: true,
+});
