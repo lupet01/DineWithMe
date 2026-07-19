@@ -2,53 +2,102 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Store, Calendar, Shield, BarChart3, Users, X } from "lucide-react";
+import {
+  LayoutDashboard,
+  Store,
+  Calendar,
+  ClipboardList,
+  Shield,
+  Building2,
+  BarChart3,
+  Sparkles,
+  Target,
+  Users,
+  Flag,
+  CreditCard,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Role } from "@dinewithme/shared";
 
-const navigation = [
-  {
-    name: "Dashboard",
-    href: "/admin",
-    icon: LayoutDashboard,
-    roles: [Role.RESTAURANT_ADMIN, Role.PLATFORM_ADMIN],
-  },
-  {
-    name: "Restaurant Profile",
-    href: "/admin/restaurant",
-    icon: Store,
-    roles: [Role.RESTAURANT_ADMIN, Role.PLATFORM_ADMIN],
-  },
-  {
-    name: "Dinners",
-    href: "/admin/dinners",
-    icon: Calendar,
-    roles: [Role.RESTAURANT_ADMIN, Role.PLATFORM_ADMIN],
-  },
-  {
-    name: "Platform Ops",
-    href: "/admin/ops",
-    icon: Shield,
-    roles: [Role.PLATFORM_ADMIN],
-  },
-  {
-    name: "Analytics",
-    href: "/admin/ops/analytics",
-    icon: BarChart3,
-    roles: [Role.PLATFORM_ADMIN],
-  },
-  {
-    name: "Users",
-    href: "/admin/ops/users",
-    icon: Users,
-    roles: [Role.PLATFORM_ADMIN],
-  },
+const restaurantNav = [
+  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Restaurant Profile", href: "/admin/restaurant", icon: Store },
+  { name: "Dinners", href: "/admin/dinners", icon: Calendar },
+  { name: "Guests & Bookings", href: "/admin/guests", icon: ClipboardList },
 ];
+
+const platformOpsNav = [
+  { name: "Cockpit", href: "/admin/ops", icon: Shield },
+  { name: "Restaurants", href: "/admin/ops/restaurants", icon: Building2 },
+  { name: "Analytics", href: "/admin/ops/analytics", icon: BarChart3 },
+  { name: "Themes", href: "/admin/ops/themes", icon: Sparkles },
+  { name: "Theme Performance", href: "/admin/ops/themes/performance", icon: Target },
+  { name: "Users", href: "/admin/ops/users", icon: Users },
+  { name: "Trust & Safety", href: "/admin/ops/trust-safety", icon: Flag },
+  { name: "Billing", href: "/admin/ops/billing", icon: CreditCard },
+];
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+}
 
 interface AdminSidebarProps {
   userRole: Role;
   isOpen?: boolean;
   onClose?: () => void;
+}
+
+function isItemActive(pathname: string | null, href: string) {
+  return (
+    pathname === href ||
+    (href !== "/admin" && href !== "/admin/ops" && pathname?.startsWith(href + "/"))
+  );
+}
+
+function NavSection({
+  title,
+  items,
+  pathname,
+  onNavigate,
+}: {
+  title?: string;
+  items: NavItem[];
+  pathname: string | null;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className="space-y-1">
+      {title ? (
+        <div className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          {title}
+        </div>
+      ) : null}
+      {items.map((item) => {
+        const isActive = isItemActive(pathname, item.href);
+        const Icon = item.icon;
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-white font-semibold text-gray-900 shadow-card"
+                : "text-gray-600 hover:bg-white/60"
+            )}
+          >
+            <Icon className="h-5 w-5" />
+            {item.name}
+          </Link>
+        );
+      })}
+    </div>
+  );
 }
 
 function NavLinks({
@@ -62,33 +111,15 @@ function NavLinks({
 }) {
   return (
     <>
-      {navigation.map((item) => {
-        if (!item.roles.includes(userRole)) {
-          return null;
-        }
-
-        const isActive =
-          pathname === item.href ||
-          (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
-        const Icon = item.icon;
-
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex min-h-[44px] items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors",
-              isActive
-                ? "bg-white text-gray-900 font-semibold shadow-card"
-                : "text-gray-600 hover:bg-white/60"
-            )}
-          >
-            <Icon className="w-5 h-5" />
-            {item.name}
-          </Link>
-        );
-      })}
+      <NavSection items={restaurantNav} pathname={pathname} onNavigate={onNavigate} />
+      {userRole === Role.PLATFORM_ADMIN ? (
+        <NavSection
+          title="Platform Ops"
+          items={platformOpsNav}
+          pathname={pathname}
+          onNavigate={onNavigate}
+        />
+      ) : null}
     </>
   );
 }
