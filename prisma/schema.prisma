@@ -86,31 +86,40 @@ model User {
   trustProfile          TrustProfile?
   paymentIntents        PaymentIntent[]
   themeSignals          UserThemeSignal[]
+  reportsFiled          SafetyReport[]     @relation("ReportsFiled")
+  reportsReceived       SafetyReport[]     @relation("ReportsReceived")
+  reportsReviewed       SafetyReport[]     @relation("ReportsReviewed")
+  verifiedDocuments     ComplianceDocument[]
 
   @@map("users")
 }
 
 model Restaurant {
-  id           String           @id @default(cuid())
-  name         String
-  description  String?
-  cuisine      String?
-  city         String?
-  address      String?
-  latitude     Float?
-  longitude    Float?
-  phone        String?
-  website      String?
-  heroImageUrl String?
-  status       RestaurantStatus @default(PENDING)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id                       String           @id @default(cuid())
+  name                     String
+  description              String?
+  cuisine                  String?
+  city                     String?
+  address                  String?
+  latitude                 Float?
+  longitude                Float?
+  phone                    String?
+  website                  String?
+  heroImageUrl             String?
+  status                   RestaurantStatus @default(PENDING)
+  defaultPricePerSeatCents Int?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
 
-  members       RestaurantMember[]
-  media         RestaurantMedia[]
-  dinners       Dinner[]
-  enabledThemes RestaurantEnabledTheme[]
-  dinnerContexts DinnerContext[]
+  members             RestaurantMember[]
+  media                RestaurantMedia[]
+  dinners              Dinner[]
+  enabledThemes        RestaurantEnabledTheme[]
+  dinnerContexts       DinnerContext[]
+  menuItems            MenuItem[]
+  complianceDocuments  ComplianceDocument[]
+  tables               RestaurantTable[]
+  recurringSeries      RecurringDinnerSeries[]
 
   @@map("restaurants")
 }
@@ -163,6 +172,7 @@ model Theme {
   dinnerContexts       DinnerContext[]
   themePerformance     ThemePerformance?
   userSignals          UserThemeSignal[]
+  recurringSeries      RecurringDinnerSeries[]
 
   @@index([key])
   @@index([isActive])
@@ -185,29 +195,34 @@ model RestaurantEnabledTheme {
 }
 
 model Dinner {
-  id           String       @id @default(cuid())
-  restaurantId String
-  themeId      String
-  startsAt     DateTime
-  endsAt       DateTime
-  description  String?
-  seatCount    Int
-  status       DinnerStatus @default(SCHEDULED)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                String       @id @default(cuid())
+  restaurantId      String
+  themeId           String
+  startsAt          DateTime
+  endsAt            DateTime
+  description       String?
+  seatCount         Int
+  status            DinnerStatus @default(SCHEDULED)
+  pricePerSeatCents Int?
+  seriesId          String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  restaurant      Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  theme           Theme            @relation(fields: [themeId], references: [id])
+  restaurant      Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  theme           Theme                  @relation(fields: [themeId], references: [id])
+  series          RecurringDinnerSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   seats           Seat[]
   feedback        Feedback[]
   mutualInterests MutualInterest[]
   paymentIntents  PaymentIntent[]
   dinnerContext   DinnerContext?
+  safetyReports   SafetyReport[]
 
   @@index([restaurantId])
   @@index([restaurantId, status])
   @@index([themeId])
   @@index([startsAt])
+  @@index([seriesId])
   @@map("dinners")
 }
 
@@ -284,7 +299,12 @@ model Feedback {
 
   dinner Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
   author User   @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  target User?  @relation("FeedbackTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  // Bugfix: was onDelete: Cascade, contradicting the "Null for table-level
+  // feedback" comment above - deleting a targeted user was deleting the
+  // feedback that named them instead of nulling the target, losing data
+  // that should survive account deletion. See the DB migration plan
+  // artifact's §05 for the original finding.
+  target User?  @relation("FeedbackTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
 
   @@index([dinnerId])
   @@index([authorId])
@@ -541,4 +561,164 @@ model UserThemeSignal {
   @@index([themeId])
   @@index([bookingCount])
   @@map("user_theme_signals")
+}
+
+// ─── Menu, Trust & Safety, Compliance, Recurring Dinners, Tables ────────────
+// Added per the DB migration plan artifact (744b324b-3277-4c94-b656-3179f8f1f413).
+// See prisma/migrations/<timestamp>_add_menu_safety_compliance_tables/ for the
+// hand-written migration SQL - this schema change has not been applied to any
+// live database from this session (no DATABASE_URL available here).
+
+enum MenuCourse {
+  STARTER
+  MAIN
+  DESSERT
+}
+
+/// Backs the admin Restaurant Profile "Menu" section. Flat model tied
+/// directly to Restaurant - no separate Menu container, since nothing in
+/// the wireframe implies multiple named menus or menu versioning.
+model MenuItem {
+  id           String     @id @default(cuid())
+  restaurantId String
+  course       MenuCourse
+  name         String
+  description  String?
+  priceCents   Int
+  position     Int        @default(0)
+  isAvailable  Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([restaurantId, course])
+  @@map("menu_items")
+}
+
+enum SafetyReportReason {
+  MADE_UNCOMFORTABLE
+  INAPPROPRIATE_BEHAVIOR
+  SAFETY_CONCERN
+  OTHER
+}
+
+enum SafetyReportStatus {
+  PENDING
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+/// Backs the Trust & Safety review queue. TrustEvent's generic type+Json
+/// metadata isn't enough here - no reporter field, no status/workflow, no
+/// reviewer, and every tab/filter on that screen would mean parsing
+/// reason/status out of JSON.
+model SafetyReport {
+  id             String             @id @default(cuid())
+  reporterId     String
+  reportedUserId String?
+  dinnerId       String?
+  reason         SafetyReportReason
+  reasonDetail   String?
+  status         SafetyReportStatus @default(PENDING)
+  resolution     String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  reporter      User    @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser  User?   @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  dinner        Dinner? @relation(fields: [dinnerId], references: [id], onDelete: SetNull)
+  reviewedBy    User?   @relation("ReportsReviewed", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([dinnerId])
+  @@index([status])
+  @@index([reason])
+  @@index([createdAt])
+  @@map("safety_reports")
+}
+
+enum ComplianceDocType {
+  BUSINESS_REGISTRATION
+  FOOD_SAFETY_CERTIFICATE
+  LIQUOR_LICENSE
+  OTHER
+}
+
+/// Kept deliberately separate from RestaurantMedia: that model assumes
+/// public, always-visible marketing images, while compliance PDFs are
+/// private, admin-only, and need a verification lifecycle. Reusing
+/// RestaurantMedia would need a visibility discriminator and risks a
+/// private legal document leaking into a public gallery query that
+/// doesn't filter by type.
+model ComplianceDocument {
+  id           String            @id @default(cuid())
+  restaurantId String
+  docType      ComplianceDocType
+  fileName     String
+  key          String // R2 storage key, mirrors RestaurantMedia's pattern
+  url          String
+  verifiedAt   DateTime?
+  verifiedById String?
+  createdAt    DateTime          @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  verifiedBy User?      @relation(fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([restaurantId])
+  @@index([restaurantId, docType])
+  @@map("compliance_documents")
+}
+
+/// The "Repeat Weekly" toggle needs a real recurrence record, not a
+/// boolean on Dinner - a flag gives no way to cancel a single occurrence
+/// without breaking the pattern, no way to edit "this one" vs "all future
+/// occurrences," and no clean query for "which dinners came from this
+/// recurrence." Note: this model alone doesn't make dinners appear weekly -
+/// something still has to run the generator job (blocked on the job-queue
+/// infrastructure being wired up, see packages/../inngest).
+model RecurringDinnerSeries {
+  id                String   @id @default(cuid())
+  restaurantId      String
+  themeId           String
+  dayOfWeek         Int      // 0=Sunday..6=Saturday, matches DinnerContext's convention
+  startTime         String   // "19:00", combined with dayOfWeek + endTime at generation time
+  endTime           String
+  seatCount         Int
+  pricePerSeatCents Int?
+  description       String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  theme      Theme      @relation(fields: [themeId], references: [id])
+  dinners    Dinner[]
+
+  @@index([restaurantId])
+  @@index([isActive])
+  @@map("recurring_dinner_series")
+}
+
+/// Restaurant-side table configuration (e.g. "2 four-tops, 1 eight-top") -
+/// not diner party-size booking. Diner-side booking is unaffected: one Seat
+/// row per booking call, exactly as today. Once populated, this is what the
+/// diner-facing "Table Size" filter chip should query against - confirmed
+/// separately that its `size` param is collected in the UI but currently
+/// silently dropped, never forwarded to the dinners API.
+model RestaurantTable {
+  id           String     @id @default(cuid())
+  restaurantId String
+  capacity     Int // seats at this table, e.g. 4, 6, 8
+  count        Int        @default(1) // how many tables of this capacity
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@map("restaurant_tables")
 }
