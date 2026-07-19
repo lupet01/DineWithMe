@@ -12,7 +12,7 @@ jobs:
       - name: Mark no-shows
         run: |
           echo "Marking no-shows at $(date -u +"%Y-%m-%d %H:%M:%S UTC")..."
-          response=$(curl -s -w "\n%{http_code}" "${{ secrets.APP_URL }}/api/cron/mark-no-shows?token=${{ secrets.CRON_SECRET }}")
+          response=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.APP_URL }}/api/cron/mark-no-shows")
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
 
