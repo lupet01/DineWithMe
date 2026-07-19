@@ -91,6 +91,8 @@ export interface UserDinner {
   startsAt: string;
   endsAt: string;
   status: string;
+  /** Count of CONFIRMED/ATTENDED/COMPLETED seats across the whole dinner, not just this user's own seat. */
+  confirmedSeatCount: number;
   restaurant: {
     id: string;
     name: string;

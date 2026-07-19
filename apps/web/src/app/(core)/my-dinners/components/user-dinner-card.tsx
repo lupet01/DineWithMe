@@ -96,7 +96,9 @@ export function UserDinnerCard({ dinner, variant = "upcoming" }: UserDinnerCardP
                 </div>
                 <div className="flex items-center gap-2 text-[13px] text-gray-600">
                   <Users className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                  <span>4 people at table</span>
+                  <span>
+                    {dinner.confirmedSeatCount} {dinner.confirmedSeatCount === 1 ? "person" : "people"} at table
+                  </span>
                 </div>
               </div>
             </div>

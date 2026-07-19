@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@dinewithme/db";
 import { handleApiError } from "@/app/api/lib/error-handler";
+import type { UserDinner } from "@dinewithme/shared";
 
 /**
  * GET /api/users/me/dinners
- * 
+ *
  * Get current user's dinner bookings
- * 
+ *
  * Response:
  * {
  *   "success": true,
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true,
                 city: true,
+                address: true,
                 cuisine: true,
                 heroImageUrl: true,
               },
@@ -68,40 +70,50 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Party size per dinner (how many seats are actually booked at the
+    // table, not just this user's own seat) - one grouped query for every
+    // dinner in this result set rather than one query per card.
+    const dinnerIds = Array.from(new Set(seats.map((seat) => seat.dinnerId)));
+    const seatCounts = dinnerIds.length
+      ? await prisma.seat.groupBy({
+          by: ["dinnerId"],
+          where: {
+            dinnerId: { in: dinnerIds },
+            status: { in: ["CONFIRMED", "ATTENDED", "COMPLETED"] },
+          },
+          _count: { dinnerId: true },
+        })
+      : [];
+    const seatCountByDinnerId = new Map(
+      seatCounts.map((row) => [row.dinnerId, row._count.dinnerId])
+    );
+
     const now = new Date();
 
-    // Split into upcoming and past
+    const toUserDinner = (seat: (typeof seats)[number]): UserDinner => ({
+      id: seat.dinner.id,
+      theme: seat.dinner.theme,
+      description: seat.dinner.description,
+      startsAt: seat.dinner.startsAt.toISOString(),
+      endsAt: seat.dinner.endsAt.toISOString(),
+      status: seat.dinner.status,
+      confirmedSeatCount: seatCountByDinnerId.get(seat.dinnerId) ?? 1,
+      restaurant: seat.dinner.restaurant,
+      seat: {
+        id: seat.id,
+        status: seat.status,
+        confirmedAt: null,
+        checkedInAt: seat.checkedInAt ? seat.checkedInAt.toISOString() : null,
+      },
+    });
+
     const upcoming = seats
       .filter((seat) => new Date(seat.dinner.startsAt) >= now)
-      .map((seat) => ({
-        seatId: seat.id,
-        seatStatus: seat.status,
-        dinner: {
-          id: seat.dinner.id,
-          theme: seat.dinner.theme,
-          description: seat.dinner.description,
-          startsAt: seat.dinner.startsAt.toISOString(),
-          endsAt: seat.dinner.endsAt.toISOString(),
-          status: seat.dinner.status,
-          restaurant: seat.dinner.restaurant,
-        },
-      }));
+      .map(toUserDinner);
 
     const past = seats
       .filter((seat) => new Date(seat.dinner.startsAt) < now)
-      .map((seat) => ({
-        seatId: seat.id,
-        seatStatus: seat.status,
-        dinner: {
-          id: seat.dinner.id,
-          theme: seat.dinner.theme,
-          description: seat.dinner.description,
-          startsAt: seat.dinner.startsAt.toISOString(),
-          endsAt: seat.dinner.endsAt.toISOString(),
-          status: seat.dinner.status,
-          restaurant: seat.dinner.restaurant,
-        },
-      }));
+      .map(toUserDinner);
 
     return NextResponse.json({
       success: true,
