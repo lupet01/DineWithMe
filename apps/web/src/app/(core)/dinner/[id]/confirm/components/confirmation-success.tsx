@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Clock, Users, Ticket, Utensils } from "lucide-react";
+import { MapPin, Clock, Users, Ticket } from "lucide-react";
 import type { DinnerDetail } from "@dinewithme/shared";
 
 interface ConfirmationSuccessProps {
@@ -119,7 +119,7 @@ export function ConfirmationSuccess({ dinner }: ConfirmationSuccessProps) {
         {/* Icebreaker Questions */}
         <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
           <h2 className="px-4 pt-4 pb-2 text-[17px] font-bold text-gray-900">
-            Icebreaker Questions
+            Icebreaker Questions for {dinner.theme.title}
           </h2>
           {dinner.theme.conversationStarters.slice(0, 3).map((q, i) => (
             <div
@@ -132,21 +132,6 @@ export function ConfirmationSuccess({ dinner }: ConfirmationSuccessProps) {
               <p className="text-sm leading-relaxed text-gray-800">{q}</p>
             </div>
           ))}
-        </div>
-
-        {/* Dietary notes */}
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
-          <div className="p-4">
-            <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-gray-900">
-              <Utensils className="h-4 w-4 text-gray-500" />
-              Dietary Notes (Optional)
-            </h2>
-            <textarea
-              placeholder="Any allergies or dietary restrictions?"
-              rows={3}
-              className="w-full rounded-xl border border-gray-200 bg-cream-200 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
-            />
-          </div>
         </div>
 
         {/* What's Next */}
