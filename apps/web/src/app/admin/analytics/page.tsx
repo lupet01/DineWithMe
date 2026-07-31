@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { BreakdownList, type BreakdownRow } from "@/components/ui/breakdown-list";
 import { ProgressList } from "@/components/ui/progress-list";
+import { RevenueRangePicker } from "../components/revenue-range-picker";
+import { rangeToSince } from "../lib/date-range";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const BOOKED_STATUSES = new Set(["CONFIRMED", "ATTENDED", "COMPLETED"]);
 
 const STATUS_COLORS: Record<string, string> = {
@@ -18,7 +19,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 const THEME_PALETTE = ["#FF6B4A", "#E85535", "#FFB4A0", "#7D2514", "#FF8F75"];
 
-export default async function RestaurantAnalyticsPage() {
+export default async function RestaurantAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: { range?: string };
+}) {
   const user = await getAuthUser();
   if (!user) {
     return null;
@@ -38,25 +43,29 @@ export default async function RestaurantAnalyticsPage() {
     );
   }
 
-  const now = new Date();
-  const [dinners, revenue30d, revenue60d, revenue90d, avgRating, recentDinners] =
+  const range = searchParams.range || "30d";
+  const since = rangeToSince(range);
+  const prevWindowMs = Date.now() - since.getTime();
+  const prevSince = new Date(since.getTime() - prevWindowMs);
+
+  const [dinners, dinnersInRange, revenue, prevRevenue, avgRating, recentDinners] =
     await Promise.all([
       dinnerRepository.findByRestaurantWithTheme(restaurant.id),
-      paymentIntentRepository.sumSucceededAmountForRestaurantSince(
-        restaurant.id,
-        new Date(now.getTime() - 30 * DAY_MS)
-      ),
-      paymentIntentRepository.sumSucceededAmountForRestaurantSince(
-        restaurant.id,
-        new Date(now.getTime() - 60 * DAY_MS)
-      ),
-      paymentIntentRepository.sumSucceededAmountForRestaurantSince(
-        restaurant.id,
-        new Date(now.getTime() - 90 * DAY_MS)
-      ),
+      dinnerRepository.findByRestaurantWithSeatCountsSince(restaurant.id, since),
+      paymentIntentRepository.sumSucceededAmountForRestaurantSince(restaurant.id, since),
+      paymentIntentRepository.sumSucceededAmountForRestaurantBetween(restaurant.id, prevSince, since),
       feedbackRepository.getAverageRatingForRestaurant(restaurant.id),
       dinnerRepository.findRecentByRestaurantWithSeatCounts(restaurant.id, 5),
     ]);
+
+  const revenueDeltaPct =
+    prevRevenue > 0 ? Math.round(((revenue - prevRevenue) / prevRevenue) * 100) : null;
+
+  const fillRates = dinnersInRange
+    .filter((d) => d._count.seats > 0)
+    .map((d) => d.seats.filter((s) => BOOKED_STATUSES.has(s.status)).length / d._count.seats);
+  const avgFillRate =
+    fillRates.length > 0 ? fillRates.reduce((a, b) => a + b, 0) / fillRates.length : null;
 
   const statusCounts = dinners.reduce<Record<string, number>>((acc, dinner) => {
     acc[dinner.status] = (acc[dinner.status] ?? 0) + 1;
@@ -86,19 +95,34 @@ export default async function RestaurantAnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Analytics</h1>
-        <p className="text-gray-600 mt-1">{restaurant.name}</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Analytics</h1>
+          <p className="text-gray-600 mt-1">{restaurant.name}&apos;s own performance</p>
+        </div>
+        <RevenueRangePicker current={range} />
       </div>
 
       <StatGrid className="md:grid-cols-4">
-        <StatCard label="Revenue (30d)" value={formatAmount(revenue30d)} />
-        <StatCard label="Revenue (60d)" value={formatAmount(revenue60d)} caption={`${dinners.length} dinners lifetime`} />
-        <StatCard label="Revenue (90d)" value={formatAmount(revenue90d)} />
+        <StatCard
+          label="Revenue"
+          value={formatAmount(revenue)}
+          caption={
+            revenueDeltaPct !== null
+              ? `${revenueDeltaPct >= 0 ? "↑" : "↓"} ${Math.abs(revenueDeltaPct)}% vs prior period`
+              : undefined
+          }
+        />
+        <StatCard label="Dinners Hosted" value={dinnersInRange.length} caption="in selected period" />
+        <StatCard
+          label="Avg Fill Rate"
+          value={avgFillRate !== null ? `${Math.round(avgFillRate * 100)}%` : "—"}
+          caption="in selected period"
+        />
         <StatCard
           label="Avg Dinner Rating"
           value={avgRating ? `${avgRating.average.toFixed(1)} ★` : "—"}
-          caption={avgRating ? `From ${avgRating.count} feedback${avgRating.count === 1 ? "" : "s"}` : "No ratings yet"}
+          caption={avgRating ? `From ${avgRating.count} feedback${avgRating.count === 1 ? "" : "s"}, all-time` : "No ratings yet"}
         />
       </StatGrid>
 

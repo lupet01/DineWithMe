@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar, Flag } from "lucide-react";
 import {
   userRepository,
   trustProfileRepository,
   paymentIntentRepository,
   feedbackRepository,
   seatRepository,
+  safetyReportRepository,
 } from "@dinewithme/db";
 import { formatAmount } from "@dinewithme/config/src/payment";
 import { Card } from "@/components/ui/card";
@@ -30,12 +31,14 @@ export default async function UserDetailPage({
   const { userId: clerkUserId } = await auth();
   const viewer = clerkUserId ? await userRepository.findByAuthProviderId(clerkUserId) : null;
 
-  const [trustProfile, paymentStats, feedbackStats, seats] = await Promise.all([
-    trustProfileRepository.findByUserId(user.id),
-    paymentIntentRepository.getUserPaymentStats(user.id),
-    feedbackRepository.getUserFeedbackStats(user.id),
-    seatRepository.findByUser(user.id),
-  ]);
+  const [trustProfile, paymentStats, feedbackStats, seats, safetyReportsReceived] =
+    await Promise.all([
+      trustProfileRepository.findByUserId(user.id),
+      paymentIntentRepository.getUserPaymentStats(user.id),
+      feedbackRepository.getUserFeedbackStats(user.id),
+      seatRepository.findByUser(user.id),
+      safetyReportRepository.findByReportedUser(user.id),
+    ]);
 
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email;
   const recentSeats = seats.slice(0, 10);
@@ -99,6 +102,68 @@ export default async function UserDetailPage({
             />
           ))}
         </ActivityFeed>
+      </Card>
+
+      <Card padding="none">
+        <div className="p-6 pb-0">
+          <h2 className="text-lg font-semibold text-gray-900">Safety Reports Received</h2>
+        </div>
+        {safetyReportsReceived.length === 0 ? (
+          <p className="p-6 pt-4 text-sm text-gray-500">No safety reports naming this user.</p>
+        ) : (
+          <div className="mt-4 divide-y divide-gray-100">
+            {safetyReportsReceived.map((report) => {
+              const reporterName =
+                [report.reporter.firstName, report.reporter.lastName].filter(Boolean).join(" ") ||
+                report.reporter.email;
+              return (
+                <div key={report.id} className="flex items-start gap-3 px-6 py-4">
+                  <Flag className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="text-gray-900">
+                        Reported by{" "}
+                        <Link
+                          href={`/admin/ops/users/${report.reporter.id}`}
+                          className="font-medium hover:text-primary-600 hover:underline"
+                        >
+                          {reporterName}
+                        </Link>
+                      </span>
+                      <Badge
+                        tone={
+                          report.status === "PENDING"
+                            ? "warning"
+                            : report.status === "ACTIONED"
+                              ? "danger"
+                              : report.status === "REVIEWED"
+                                ? "primary"
+                                : "neutral"
+                        }
+                      >
+                        {report.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {report.reason.replace(/_/g, " ")}
+                      {report.dinner ? ` · ${report.dinner.theme?.title ?? "Dinner"}` : ""}
+                    </p>
+                    {report.reasonDetail && (
+                      <p className="mt-1 text-sm text-gray-500">&ldquo;{report.reasonDetail}&rdquo;</p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      {new Date(report.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
     </div>
   );

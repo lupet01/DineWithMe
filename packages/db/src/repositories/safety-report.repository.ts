@@ -47,6 +47,18 @@ export class SafetyReportRepository extends BaseRepository<SafetyReport> {
     });
   }
 
+  /**
+   * Every report naming this user as the one being reported about, most
+   * recent first - backs User Detail's "Safety Reports Received" card.
+   */
+  async findByReportedUser(userId: string): Promise<SafetyReportWithRelations[]> {
+    return this.prisma.safetyReport.findMany({
+      where: { reportedUserId: userId },
+      include: relationsInclude,
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   async create(data: Prisma.SafetyReportCreateInput): Promise<SafetyReport> {
     return this.prisma.safetyReport.create({ data });
   }

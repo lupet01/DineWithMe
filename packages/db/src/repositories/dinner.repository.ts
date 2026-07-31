@@ -103,8 +103,12 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     return this.prisma.dinner.findMany({
       where: {
         restaurantId,
-        status: { in: ["SCHEDULED", "LIVE"] },
-        startsAt: { gte: new Date() },
+        // A LIVE dinner's startsAt is necessarily in the past (it already
+        // began), so it must be included unconditionally - only a
+        // not-yet-started SCHEDULED dinner needs the future-startsAt
+        // filter. Without this OR, a dinner that just went LIVE would
+        // silently vanish from its own Dashboard's "Upcoming Dinners" list.
+        OR: [{ status: "LIVE" }, { status: "SCHEDULED", startsAt: { gte: new Date() } }],
       },
       include: {
         theme: { select: { title: true } },
@@ -112,6 +116,43 @@ export class DinnerRepository extends BaseRepository<Dinner> {
         _count: { select: { seats: true } },
       },
       orderBy: { startsAt: "asc" },
+    });
+  }
+
+  /**
+   * The restaurant's currently-LIVE dinner, if any, with full seat+guest
+   * detail for the Dashboard's "Live Now" check-in card (§16.11 wireframe).
+   * At most one LIVE dinner is expected per restaurant at a time in
+   * practice, so returning a single dinner (not a list) is deliberate.
+   */
+  async findLiveByRestaurant(restaurantId: string): Promise<
+    | (Dinner & {
+        theme: { title: string } | null;
+        seats: Array<{
+          id: string;
+          status: string;
+          dietaryNotes: string | null;
+          confirmedByUserId: string | null;
+          confirmedByUser: { id: string; firstName: string | null; lastName: string | null } | null;
+        }>;
+      })
+    | null
+  > {
+    return this.prisma.dinner.findFirst({
+      where: { restaurantId, status: "LIVE" },
+      include: {
+        theme: { select: { title: true } },
+        seats: {
+          select: {
+            id: true,
+            status: true,
+            dietaryNotes: true,
+            confirmedByUserId: true,
+            confirmedByUser: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: { startsAt: "desc" },
     });
   }
 
@@ -143,6 +184,35 @@ export class DinnerRepository extends BaseRepository<Dinner> {
       },
       orderBy: { startsAt: "desc" },
       take: limit,
+    });
+  }
+
+  /**
+   * Dinners for a restaurant starting within a window, with seat status
+   * counts - for Restaurant Analytics' range-scoped "Dinners Hosted" /
+   * "Avg Fill Rate" stats (§16.1 wireframe's range picker). Unlike
+   * findRecentByRestaurantWithSeatCounts (a fixed take(5) for the fill-rate
+   * list regardless of range), this is unbounded within the window so the
+   * count and average are accurate for whatever range is selected.
+   */
+  async findByRestaurantWithSeatCountsSince(
+    restaurantId: string,
+    since: Date
+  ): Promise<
+    Array<
+      Dinner & {
+        seats: Array<{ status: string }>;
+        _count: { seats: number };
+      }
+    >
+  > {
+    return this.prisma.dinner.findMany({
+      where: { restaurantId, startsAt: { gte: since } },
+      include: {
+        seats: { select: { status: true } },
+        _count: { select: { seats: true } },
+      },
+      orderBy: { startsAt: "desc" },
     });
   }
 
@@ -440,6 +510,7 @@ export class DinnerRepository extends BaseRepository<Dinner> {
    * @returns Dinner with restaurant and seat information
    */
   async findByIdWithDetails(id: string): Promise<(DinnerWithRestaurant & {
+    meal: { id: string; name: string } | null;
     _count: {
       seats: number;
     };
@@ -454,6 +525,7 @@ export class DinnerRepository extends BaseRepository<Dinner> {
         lastName: string | null;
         email: string;
       } | null;
+      paymentIntents: Array<{ status: string; amount: number }>;
     }>;
   }) | null> {
     return this.prisma.dinner.findUnique({
@@ -483,6 +555,12 @@ export class DinnerRepository extends BaseRepository<Dinner> {
             conversationStarters: true,
           },
         },
+        meal: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         seats: {
           select: {
             id: true,
@@ -496,6 +574,11 @@ export class DinnerRepository extends BaseRepository<Dinner> {
                 lastName: true,
                 email: true,
               },
+            },
+            paymentIntents: {
+              select: { status: true, amount: true },
+              orderBy: { createdAt: "desc" },
+              take: 1,
             },
           },
         },

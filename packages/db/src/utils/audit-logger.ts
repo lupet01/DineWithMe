@@ -18,7 +18,10 @@ export const AuditAction = {
   RESTAURANT_UPDATED: "restaurant_updated",
   RESTAURANT_APPROVED: "restaurant_approved",
   RESTAURANT_PAUSED: "restaurant_paused",
-  
+  RESTAURANT_CLOSURE_REQUESTED: "restaurant_closure_requested",
+  RESTAURANT_CLOSURE_APPROVED: "restaurant_closure_approved",
+  RESTAURANT_CLOSURE_REJECTED: "restaurant_closure_rejected",
+
   // Media actions
   MEDIA_UPLOADED: "media_uploaded",
   MEDIA_DELETED: "media_deleted",
@@ -159,6 +162,42 @@ export const auditLogger = {
     return this.log(
       actorUserId,
       AuditAction.RESTAURANT_PAUSED,
+      AuditEntity.RESTAURANT,
+      restaurantId,
+      metadata
+    );
+  },
+
+  /**
+   * Log a restaurant closure request submitted by its owner
+   */
+  async restaurantClosureRequested(
+    actorUserId: string,
+    restaurantId: string,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    return this.log(
+      actorUserId,
+      AuditAction.RESTAURANT_CLOSURE_REQUESTED,
+      AuditEntity.RESTAURANT,
+      restaurantId,
+      metadata
+    );
+  },
+
+  /**
+   * Log a closure request reviewed by Platform Ops - approved (archives
+   * the restaurant) or rejected (dismissed, restaurant unaffected).
+   */
+  async restaurantClosureReviewed(
+    actorUserId: string,
+    restaurantId: string,
+    approved: boolean,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    return this.log(
+      actorUserId,
+      approved ? AuditAction.RESTAURANT_CLOSURE_APPROVED : AuditAction.RESTAURANT_CLOSURE_REJECTED,
       AuditEntity.RESTAURANT,
       restaurantId,
       metadata

@@ -48,10 +48,10 @@ export function GalleryManager({ restaurantId, media }: GalleryManagerProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-slate-700">
+          <h3 className="text-sm font-medium text-gray-700">
             Gallery Images
           </h3>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             {galleryImages.length} of 10 images
           </p>
         </div>
@@ -65,7 +65,7 @@ export function GalleryManager({ restaurantId, media }: GalleryManagerProps) {
               <img
                 src={image.url}
                 alt="Gallery image"
-                className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                className="w-full h-32 object-cover rounded-lg border border-gray-200"
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
                 <button

@@ -1,5 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { MapPin, Clock, Users, Ticket } from "lucide-react";
 import type { DinnerDetail } from "@dinewithme/shared";
+import { getIcebreakerQuestions } from "./icebreaker-actions";
 
 interface BookedDinnerViewProps {
   dinner: DinnerDetail;
@@ -70,6 +74,24 @@ export function BookedDinnerView({ dinner }: BookedDinnerViewProps) {
   // Generate a simple confirmation code from the dinner id
   const confirmationCode = `DWM-${dinner.id.slice(0, 8).toUpperCase()}`;
 
+  const [icebreakers, setIcebreakers] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getIcebreakerQuestions(dinner.theme.id)
+      .then((questions) => {
+        if (!cancelled) setIcebreakers(questions);
+      })
+      .catch((error) => {
+        console.error("Failed to load icebreaker questions:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dinner.theme.id]);
+
   return (
     <>
       {/* Countdown */}
@@ -112,22 +134,24 @@ export function BookedDinnerView({ dinner }: BookedDinnerViewProps) {
       </div>
 
       {/* Icebreaker Questions */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
-        <h2 className="px-4 pt-4 pb-2 text-[17px] font-bold text-gray-900">
-          Icebreaker Questions for {dinner.theme.title}
-        </h2>
-        {dinner.theme.conversationStarters.slice(0, 3).map((q, i) => (
-          <div
-            key={i}
-            className="flex items-start gap-3 border-t border-gray-50 px-4 py-3 first:border-0"
-          >
-            <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-[11px] font-bold text-primary-500">
-              {i + 1}
+      {icebreakers.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
+          <h2 className="px-4 pt-4 pb-2 text-[17px] font-bold text-gray-900">
+            Icebreaker Questions for {dinner.theme.title}
+          </h2>
+          {icebreakers.map((q, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3 border-t border-gray-50 px-4 py-3 first:border-0"
+            >
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-[11px] font-bold text-primary-500">
+                {i + 1}
+              </div>
+              <p className="text-sm leading-relaxed text-gray-800">{q}</p>
             </div>
-            <p className="text-sm leading-relaxed text-gray-800">{q}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

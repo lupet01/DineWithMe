@@ -15,9 +15,24 @@ const REASON_OPTIONS: ReasonOption[] = [
   { value: "OTHER", label: "Other" },
 ];
 
+const PREFER_NOT_TO_SAY = "__prefer_not_to_say__";
+
+interface ReportAttendee {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
+
 interface ReportStepProps {
-  onSubmit: (reason: SafetyReportReason, details: string) => void;
+  attendees: ReportAttendee[];
+  onSubmit: (reason: SafetyReportReason, details: string, reportedUserId: string | null) => void;
   onBack: () => void;
+}
+
+function displayName(attendee: ReportAttendee): string {
+  const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(" ");
+  return name || attendee.email.split("@")[0] || attendee.email;
 }
 
 /**
@@ -27,14 +42,23 @@ interface ReportStepProps {
  * safety-flag-step sub-view had. SafetyReportReason is a single enum
  * column server-side, so this is a single-select (radio-like) picker even
  * though the tags are visually chips, rather than a true multi-select.
+ *
+ * "Who is this about?" picker: single-select over the dinner's other
+ * attendees, plus an explicit "Someone not at the table / prefer not to
+ * say" option that keeps reportedUserId null. Nothing is pre-selected -
+ * for a safety-report picker specifically, an apparently-pre-chosen name
+ * is a real misread risk, so Submit stays disabled until a reason AND a
+ * who-selection (including "prefer not to say") are both made.
  */
-export function ReportStep({ onSubmit, onBack }: ReportStepProps) {
+export function ReportStep({ attendees, onSubmit, onBack }: ReportStepProps) {
   const [reason, setReason] = useState<SafetyReportReason | null>(null);
   const [details, setDetails] = useState("");
+  const [who, setWho] = useState<string | null>(null);
 
   const handleSubmit = () => {
-    if (!reason) return;
-    onSubmit(reason, details.trim());
+    if (!reason || !who) return;
+    const reportedUserId = who === PREFER_NOT_TO_SAY ? null : who;
+    onSubmit(reason, details.trim(), reportedUserId);
   };
 
   return (
@@ -72,6 +96,43 @@ export function ReportStep({ onSubmit, onBack }: ReportStepProps) {
         </div>
       </div>
 
+      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+        <p className="text-[15px] font-semibold text-gray-900">Who is this about?</p>
+        <div className="mt-3 space-y-2">
+          {attendees.map((attendee) => {
+            const active = who === attendee.id;
+            return (
+              <button
+                key={attendee.id}
+                type="button"
+                onClick={() => setWho(attendee.id)}
+                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                  active ? "border-red-500 bg-red-50" : "border-gray-200 bg-white hover:bg-gray-50"
+                }`}
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-[13px] font-semibold text-gray-600">
+                  {displayName(attendee).charAt(0).toUpperCase()}
+                </div>
+                <span className="text-[14px] font-medium text-gray-900">
+                  {displayName(attendee)}
+                </span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setWho(PREFER_NOT_TO_SAY)}
+            className={`w-full rounded-xl border p-3 text-left text-[14px] font-medium transition-colors ${
+              who === PREFER_NOT_TO_SAY
+                ? "border-red-500 bg-red-50 text-gray-900"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Someone not at the table / prefer not to say
+          </button>
+        </div>
+      </div>
+
       <div>
         <label className="mb-2 block text-[13px] font-semibold text-gray-900">
           Details
@@ -90,7 +151,7 @@ export function ReportStep({ onSubmit, onBack }: ReportStepProps) {
       <div className="space-y-3">
         <button
           onClick={handleSubmit}
-          disabled={!reason}
+          disabled={!reason || !who}
           className="w-full rounded-full bg-red-600 py-4 text-[15px] font-semibold text-white shadow-soft transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Submit Report

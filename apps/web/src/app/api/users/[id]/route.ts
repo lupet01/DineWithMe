@@ -179,7 +179,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 }
 
-// DELETE /api/users/:id - Delete user (Admin only)
+// DELETE /api/users/:id - Soft-delete user (Admin only)
 export async function DELETE(request: NextRequest, context: RouteContext) {
   // Require PLATFORM_ADMIN role
   const authResult = await requireRole([Role.PLATFORM_ADMIN], request);
@@ -217,8 +217,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Delete user
-    await userRepository.delete(id);
+    // Soft-delete: a hard delete cascades onto PaymentIntent/AuditLog/SafetyReport.reporter,
+    // destroying financial, audit, and safety-report history tied to this user
+    await userRepository.update(id, { status: "deleted" });
 
     // Emit analytics event
     await track(AnalyticsEvents.USER_DELETED, {

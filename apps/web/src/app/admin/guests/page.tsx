@@ -36,7 +36,7 @@ export default async function GuestsPage() {
         </p>
       </div>
 
-      <GuestsTable guests={guests} />
+      <GuestsTable guests={guests} restaurantId={restaurant.id} />
     </div>
   );
 }

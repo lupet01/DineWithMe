@@ -39,6 +39,8 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
         return "success";
       case "PAUSED":
         return "danger";
+      case "ARCHIVED":
+        return "neutral";
       default:
         return "neutral";
     }
@@ -146,9 +148,12 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
       <tr className="hover:bg-cream-100 transition-colors">
         {/* Restaurant */}
         <td className="px-6 py-4">
-          <div className="text-sm font-medium text-gray-900">
+          <Link
+            href={`/admin/ops/restaurants/${restaurant.id}`}
+            className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline"
+          >
             {restaurant.name}
-          </div>
+          </Link>
           {restaurant.cuisine && (
             <div className="text-sm text-gray-500">{restaurant.cuisine}</div>
           )}
@@ -157,12 +162,12 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
         {/* Owner */}
         <td className="px-6 py-4">
           {owner ? (
-            <div>
-              <div className="text-sm text-gray-900">
+            <Link href={`/admin/ops/users/${owner.id}`} className="block hover:underline">
+              <div className="text-sm text-gray-900 hover:text-primary-600">
                 {owner.firstName} {owner.lastName}
               </div>
               <div className="text-sm text-gray-500">{owner.email}</div>
-            </div>
+            </Link>
           ) : (
             <span className="text-sm text-gray-400">No owner</span>
           )}
@@ -239,7 +244,9 @@ export function RestaurantRow({ restaurant }: RestaurantRowProps) {
             )}
 
             {!canApprove && !canPause && !canReactivate && (
-              <span className="text-xs text-gray-400">No actions</span>
+              <span className="text-xs text-gray-400">
+                {restaurant.status === "ARCHIVED" ? "Closed" : "No actions"}
+              </span>
             )}
           </div>
         </td>

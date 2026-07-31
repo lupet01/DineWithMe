@@ -8,6 +8,7 @@ import {
   checkInConfirmationTemplate,
   feedbackRequestTemplate,
   refundConfirmationTemplate,
+  teamInviteTemplate,
 } from "./templates";
 import type {
   RestaurantApprovedEmailData,
@@ -18,6 +19,7 @@ import type {
   CheckInConfirmationEmailData,
   FeedbackRequestEmailData,
   RefundConfirmationEmailData,
+  TeamInviteEmailData,
 } from "./templates";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -51,6 +53,37 @@ class EmailService {
       return { success: true };
     } catch (error) {
       console.error("Error sending restaurant approval email:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async sendTeamInvite(data: TeamInviteEmailData): Promise<{ success: boolean; error?: string }> {
+    if (!this.isConfigured()) {
+      console.warn("Email service not configured. Skipping team invite email.");
+      return { success: false, error: "Email service not configured" };
+    }
+
+    try {
+      const { error } = await resend!.emails.send({
+        from: FROM_EMAIL,
+        to: data.inviteeEmail,
+        subject: data.restaurantName
+          ? `You're invited to join ${data.restaurantName} on DineWithMe`
+          : "You're invited to join the DineWithMe platform team",
+        html: teamInviteTemplate(data),
+      });
+
+      if (error) {
+        console.error("Error sending team invite email:", error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error sending team invite email:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

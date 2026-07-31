@@ -4,13 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { createTheme, updateTheme, type ThemeFormInput } from "../actions";
-
-interface ThemeFormProps {
-  mode: "create" | "edit";
-  themeId?: string;
-  initialValues?: ThemeFormInput;
-}
+import { createTheme, type ThemeFormInput } from "../actions";
 
 const emptyValues: ThemeFormInput = {
   key: "",
@@ -21,12 +15,16 @@ const emptyValues: ThemeFormInput = {
   conversationStarters: [],
 };
 
-export function ThemeForm({ mode, themeId, initialValues }: ThemeFormProps) {
+/**
+ * Create-only - editing an existing theme happens on its Theme Profile
+ * page instead (Content section for these same fields, Icebreakers
+ * section for conversationStarters, both real CRUD there rather than a
+ * form resubmit). This form's only job is bootstrapping a brand-new theme.
+ */
+export function ThemeForm() {
   const router = useRouter();
-  const [values, setValues] = useState<ThemeFormInput>(initialValues ?? emptyValues);
-  const [startersText, setStartersText] = useState(
-    (initialValues?.conversationStarters ?? []).join("\n")
-  );
+  const [values, setValues] = useState<ThemeFormInput>(emptyValues);
+  const [startersText, setStartersText] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,10 +40,7 @@ export function ThemeForm({ mode, themeId, initialValues }: ThemeFormProps) {
 
     const payload: ThemeFormInput = { ...values, conversationStarters };
 
-    const result =
-      mode === "create"
-        ? await createTheme(payload)
-        : await updateTheme(themeId!, payload);
+    const result = await createTheme(payload);
 
     setIsSaving(false);
 
@@ -65,7 +60,6 @@ export function ThemeForm({ mode, themeId, initialValues }: ThemeFormProps) {
           <label className="mb-1 block text-sm font-medium text-gray-700">Key</label>
           <input
             required
-            disabled={mode === "edit"}
             value={values.key}
             onChange={(e) => setValues((v) => ({ ...v, key: e.target.value }))}
             placeholder="e.g. tech-innovators"
@@ -145,7 +139,7 @@ export function ThemeForm({ mode, themeId, initialValues }: ThemeFormProps) {
 
       <div className="flex gap-3">
         <Button type="submit" disabled={isSaving}>
-          {isSaving ? "Saving…" : mode === "create" ? "Create Theme" : "Save Changes"}
+          {isSaving ? "Saving…" : "Create Theme"}
         </Button>
         <Button
           type="button"

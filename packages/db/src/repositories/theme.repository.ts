@@ -1,5 +1,7 @@
-import type { Theme, Prisma } from "@prisma/client";
+import type { Theme, ThemePerformance, Prisma } from "@prisma/client";
 import { BaseRepository } from "./base";
+
+export type ThemeWithPerformance = Theme & { themePerformance: ThemePerformance | null };
 
 export class ThemeRepository extends BaseRepository<Theme> {
   /**
@@ -8,6 +10,17 @@ export class ThemeRepository extends BaseRepository<Theme> {
   async findById(id: string): Promise<Theme | null> {
     return this.prisma.theme.findUnique({
       where: { id },
+    });
+  }
+
+  /**
+   * Find theme by ID with its real ThemePerformance row (§16.4/§16.24) -
+   * backs Theme Profile's Performance section.
+   */
+  async findByIdWithPerformance(id: string): Promise<ThemeWithPerformance | null> {
+    return this.prisma.theme.findUnique({
+      where: { id },
+      include: { themePerformance: true },
     });
   }
 
@@ -54,6 +67,19 @@ export class ThemeRepository extends BaseRepository<Theme> {
       acc[row.themeId] = row._count.themeId;
       return acc;
     }, {});
+  }
+
+  /**
+   * Restaurants that have this theme enabled - backs Theme Profile's
+   * "Where It Runs" section.
+   */
+  async findEnabledRestaurants(themeId: string): Promise<Array<{ id: string; name: string }>> {
+    const rows = await this.prisma.restaurantEnabledTheme.findMany({
+      where: { themeId },
+      include: { restaurant: { select: { id: true, name: true } } },
+      orderBy: { restaurant: { name: "asc" } },
+    });
+    return rows.map((r) => r.restaurant);
   }
 
   /**

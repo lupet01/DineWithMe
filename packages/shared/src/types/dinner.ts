@@ -46,6 +46,7 @@ export interface DinnerDetail {
   endsAt: string;
   seatCount: number;
   status: string;
+  pricePerSeatCents: number | null;
   createdAt: string;
   updatedAt: string;
   restaurant: {
@@ -66,6 +67,8 @@ export interface DinnerDetail {
     held: number;
     attended: number;
   };
+  /** DinnerMedia (kind: DINNER_LISTING) URLs, ordered by displayOrder; falls back to the restaurant's hero photo when a dinner has none of its own. Optional so existing API consumers that don't set it (e.g. /api/dinners/:id) aren't broken. */
+  photos?: string[];
 }
 
 export interface DinnerListResponse {

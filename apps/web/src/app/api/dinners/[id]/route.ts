@@ -115,6 +115,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       endsAt: dinner.endsAt.toISOString(),
       seatCount: dinner.seatCount,
       status: dinner.status,
+      pricePerSeatCents: dinner.pricePerSeatCents,
       createdAt: dinner.createdAt.toISOString(),
       updatedAt: dinner.updatedAt.toISOString(),
       restaurant: {

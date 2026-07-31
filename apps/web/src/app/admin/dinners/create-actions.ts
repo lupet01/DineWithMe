@@ -5,6 +5,7 @@ import {
   dinnerRepository,
   restaurantRepository,
   themeRepository,
+  mealRepository,
   auditLogger,
 } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
@@ -17,6 +18,8 @@ export type ActionResult<T = void> =
 interface CreateDinnerInput {
   restaurantId: string;
   themeId: string;
+  mealId?: string;
+  pricePerSeatCents?: number;
   startsAt: string; // ISO string
   endsAt: string; // ISO string
   description?: string;
@@ -116,12 +119,49 @@ export async function createDinner(
       };
     }
 
+    // Meal is optional - verify it belongs to this restaurant if provided
+    if (input.mealId) {
+      const meal = await mealRepository.findById(input.mealId);
+      if (!meal || meal.restaurantId !== input.restaurantId) {
+        return {
+          success: false,
+          error: "Meal not found for this restaurant",
+        };
+      }
+    }
+
+    if (
+      input.pricePerSeatCents !== undefined &&
+      (!Number.isInteger(input.pricePerSeatCents) || input.pricePerSeatCents < 0)
+    ) {
+      return {
+        success: false,
+        error: "Price per seat must be a non-negative amount",
+      };
+    }
+
     // Get restaurant for analytics
     const restaurant = await restaurantRepository.findById(input.restaurantId);
     if (!restaurant) {
       return {
         success: false,
         error: "Restaurant not found",
+      };
+    }
+
+    // Only an approved, currently-active restaurant can create dinners -
+    // the Dashboard's disabled Create Dinner button is a UI hint, this is
+    // the actual enforcement (§16.7 - a restaurant that's PENDING, PAUSED,
+    // or ARCHIVED must not be able to bypass it by calling this directly).
+    if (restaurant.status !== "ACTIVE") {
+      return {
+        success: false,
+        error:
+          restaurant.status === "PENDING"
+            ? "Your restaurant is still awaiting approval"
+            : restaurant.status === "PAUSED"
+              ? "Your restaurant is paused - reactivate it first"
+              : "This restaurant is closed and can no longer create dinners",
       };
     }
 
@@ -133,10 +173,12 @@ export async function createDinner(
       theme: {
         connect: { id: input.themeId },
       },
+      ...(input.mealId ? { meal: { connect: { id: input.mealId } } } : {}),
       startsAt,
       endsAt,
       description: input.description || null,
       seatCount: input.seatCount,
+      pricePerSeatCents: input.pricePerSeatCents ?? null,
       status: "SCHEDULED",
     });
 

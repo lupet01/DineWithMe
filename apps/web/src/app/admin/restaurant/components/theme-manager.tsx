@@ -10,6 +10,8 @@ interface ThemeManagerProps {
   enabledThemeIds: string[];
 }
 
+const PAGE_SIZE = 6;
+
 export function ThemeManager({
   restaurantId,
   allThemes,
@@ -20,6 +22,10 @@ export function ThemeManager({
   );
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(allThemes.length / PAGE_SIZE));
+  const visibleThemes = allThemes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleToggle = async (themeId: string, currentlyEnabled: boolean) => {
     setLoading((prev) => new Set(prev).add(themeId));
@@ -53,93 +59,81 @@ export function ThemeManager({
   };
 
   return (
-    <div className="space-y-4">
+    <div>
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div
+          style={{
+            marginBottom: 12,
+            borderRadius: 12,
+            border: "1px solid var(--red-bg)",
+            background: "var(--red-bg)",
+            padding: "10px 12px",
+          }}
+        >
+          <p style={{ fontSize: 12.5, color: "var(--red-txt)" }}>{error}</p>
         </div>
       )}
 
-      <div className="space-y-3">
-        {allThemes.map((theme) => {
+      <div className="theme-grid">
+        {visibleThemes.map((theme) => {
           const isEnabled = enabled.has(theme.id);
           const isLoading = loading.has(theme.id);
 
           return (
-            <div
-              key={theme.id}
-              className="bg-white border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium text-slate-900">
-                      {theme.title}
-                    </h3>
-                    {isEnabled && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        Enabled
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-slate-600 mb-2">
-                    {theme.shortDescription}
-                  </p>
-                  <details className="text-sm text-slate-600">
-                    <summary className="cursor-pointer text-slate-500 hover:text-slate-700">
-                      View details
-                    </summary>
-                    <div className="mt-2 space-y-2 pl-4 border-l-2 border-slate-200">
-                      <div>
-                        <p className="font-medium text-slate-700">
-                          What to Expect:
-                        </p>
-                        <p className="text-slate-600">{theme.whatToExpect}</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-700">
-                          Boundaries:
-                        </p>
-                        <p className="text-slate-600">{theme.boundaries}</p>
-                      </div>
-                    </div>
-                  </details>
-                </div>
-
-                <button
-                  onClick={() => handleToggle(theme.id, isEnabled)}
-                  disabled={isLoading}
-                  className={`
-                    relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent 
-                    transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2
-                    ${isEnabled ? "bg-green-600" : "bg-slate-200"}
-                    ${isLoading ? "opacity-50 cursor-not-allowed" : ""}
-                  `}
-                  role="switch"
-                  aria-checked={isEnabled}
-                  aria-label={`${isEnabled ? "Disable" : "Enable"} ${theme.title}`}
-                >
-                  <span
-                    className={`
-                      pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 
-                      transition duration-200 ease-in-out
-                      ${isEnabled ? "translate-x-5" : "translate-x-0"}
-                    `}
-                  />
-                </button>
+            <div key={theme.id} className="theme-tile" title={theme.shortDescription}>
+              <div className="theme-tile-body">
+                <div className="theme-tile-name">{theme.title}</div>
+                <div className="theme-tile-desc">{theme.shortDescription}</div>
               </div>
+
+              <button
+                onClick={() => handleToggle(theme.id, isEnabled)}
+                disabled={isLoading}
+                className={`toggle ${isEnabled ? "on" : "off"}`}
+                style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? "not-allowed" : "pointer" }}
+                role="switch"
+                aria-checked={isEnabled}
+                aria-label={`${isEnabled ? "Disable" : "Enable"} ${theme.title}`}
+              >
+                <div className="toggle-dot" />
+              </button>
             </div>
           );
         })}
       </div>
 
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-        <p className="text-sm text-slate-600">
-          <span className="font-medium text-slate-700">Note:</span> Enabled
-          themes will be available when creating new dinners. Disabling a theme
-          won&apos;t affect existing dinners.
-        </p>
-      </div>
+      {totalPages > 1 && (
+        <div className="pager">
+          <button
+            type="button"
+            className="pager-btn pager-arrow"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            aria-label="Previous page"
+          >
+            ‹
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`pager-btn ${n === page ? "active" : ""}`}
+              onClick={() => setPage(n)}
+            >
+              {n}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="pager-btn pager-arrow"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            aria-label="Next page"
+          >
+            ›
+          </button>
+        </div>
+      )}
     </div>
   );
 }

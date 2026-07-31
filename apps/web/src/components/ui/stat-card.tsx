@@ -28,7 +28,7 @@ interface StatGridProps {
 
 export function StatGrid({ children, className }: StatGridProps) {
   return (
-    <div className={cn("grid grid-cols-1 gap-4 md:grid-cols-3", className)}>
+    <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-3", className)}>
       {children}
     </div>
   );

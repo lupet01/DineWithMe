@@ -26,6 +26,13 @@ export class UserRepository extends BaseRepository<User> {
     });
   }
 
+  async findByRole(role: Role): Promise<User[]> {
+    return this.prisma.user.findMany({
+      where: { role },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   async create(data: Prisma.UserCreateInput): Promise<User> {
     return this.prisma.user.create({
       data,

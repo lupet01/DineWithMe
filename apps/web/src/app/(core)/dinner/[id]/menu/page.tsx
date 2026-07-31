@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { dinnerRepository, menuItemRepository } from "@dinewithme/db";
-import { MenuCourse, type MenuItem } from "@prisma/client";
+import { ArrowLeft, ChevronRight } from "lucide-react";
+import { dinnerRepository, mealRepository } from "@dinewithme/db";
+import { MenuCourse } from "@prisma/client";
 
 interface FullMenuPageProps {
   params: {
@@ -23,7 +23,7 @@ const COURSE_ORDER: MenuCourse[] = [
 ];
 
 function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+  return `R${(cents / 100).toFixed(2)}`;
 }
 
 export default async function FullMenuPage({ params }: FullMenuPageProps) {
@@ -33,16 +33,16 @@ export default async function FullMenuPage({ params }: FullMenuPageProps) {
     notFound();
   }
 
-  const menuItems = await menuItemRepository.findAvailableByRestaurant(
-    dinner.restaurant.id
-  );
+  const meal = dinner.mealId ? await mealRepository.findByIdWithCourses(dinner.mealId) : null;
 
   const itemsByCourse = COURSE_ORDER.map((course) => ({
     course,
     label: COURSE_LABELS[course],
-    items: menuItems
-      .filter((item: MenuItem) => item.course === course)
-      .sort((a: MenuItem, b: MenuItem) => a.position - b.position),
+    items:
+      meal?.courses
+        .find((c) => c.courseType === course)
+        ?.options.filter((option) => option.menuItem.isAvailable)
+        .map((option) => option.menuItem) ?? [],
   })).filter((group) => group.items.length > 0);
 
   return (
@@ -64,7 +64,7 @@ export default async function FullMenuPage({ params }: FullMenuPageProps) {
         {itemsByCourse.length === 0 ? (
           <div className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-card">
             <p className="text-sm text-gray-500">
-              This restaurant hasn&apos;t published a menu yet.
+              This restaurant hasn&apos;t published a menu for this dinner yet.
             </p>
           </div>
         ) : (
@@ -78,22 +78,29 @@ export default async function FullMenuPage({ params }: FullMenuPageProps) {
                   {label}
                 </h2>
                 <div className="divide-y divide-gray-50">
-                  {items.map((item: MenuItem) => (
-                    <div key={item.id} className="px-4 py-3">
-                      <div className="flex items-start justify-between gap-3">
+                  {items.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/dinner/${params.id}/menu/${item.id}`}
+                      className="flex items-start justify-between gap-3 px-4 py-3 transition-colors hover:bg-cream-100"
+                    >
+                      <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-900">
                           {item.name}
                         </p>
-                        <p className="flex-shrink-0 text-sm font-semibold text-gray-700">
+                        {item.description && (
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-700">
                           {formatPrice(item.priceCents)}
                         </p>
+                        <ChevronRight className="h-4 w-4 text-gray-300" />
                       </div>
-                      {item.description && (
-                        <p className="mt-0.5 text-xs text-gray-500">
-                          {item.description}
-                        </p>
-                      )}
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>

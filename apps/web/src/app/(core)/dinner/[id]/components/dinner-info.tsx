@@ -23,10 +23,6 @@ const COURSE_LABELS: Record<MenuCourse, string> = {
   [MenuCourse.DESSERT]: "Dessert",
 };
 
-function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
 // ── Reusable icon row matching the app's orange-circle style ──────────────────
 function InfoRow({
   icon,
@@ -84,7 +80,7 @@ export function DinnerInfo({
   useEffect(() => {
     let cancelled = false;
 
-    getTonightsMenuPreview(dinner.restaurant.id)
+    getTonightsMenuPreview(dinner.id)
       .then((items) => {
         if (!cancelled) setMenuPreview(items);
       })
@@ -95,7 +91,7 @@ export function DinnerInfo({
     return () => {
       cancelled = true;
     };
-  }, [dinner.restaurant.id]);
+  }, [dinner.id]);
 
   const directionsQuery =
     dinner.restaurant.address ||
@@ -226,7 +222,7 @@ export function DinnerInfo({
               key={item.id}
               icon={<Utensils className="h-4 w-4 text-primary-500" />}
               label={item.name}
-              sublabel={`${COURSE_LABELS[item.course]} · ${formatPrice(item.priceCents)}`}
+              sublabel={COURSE_LABELS[item.course]}
             />
           ))}
         </div>

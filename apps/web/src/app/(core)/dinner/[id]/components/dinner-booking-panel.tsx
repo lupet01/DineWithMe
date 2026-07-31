@@ -47,6 +47,7 @@ export function DinnerBookingPanel({
 
       <DinnerCTA
         dinnerId={dinner.id}
+        pricePerSeatCents={dinner.pricePerSeatCents}
         hasSeatsAvailable={hasSeatsAvailable}
         seatsAvailable={seatsAvailable}
         userHasSeat={userHasSeat}

@@ -3,28 +3,49 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Restaurant } from "@dinewithme/db";
-import { createRestaurant, updateRestaurant } from "../actions";
-import type { CreateRestaurantInput } from "@dinewithme/shared";
+import { updateRestaurant } from "../actions";
+import type { UpdateRestaurantInput } from "@dinewithme/shared";
 
 interface RestaurantFormProps {
-  restaurant?: Restaurant | null;
-  mode: "create" | "edit";
+  restaurant: Restaurant;
 }
 
-export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
+const CUISINE_OPTIONS = [
+  "Italian",
+  "Japanese",
+  "French",
+  "Indian",
+  "Mexican",
+  "Mediterranean",
+  "Fusion",
+  "South African",
+];
+
+/**
+ * Edit-only - the initial create flow is its own 4-step
+ * RestaurantOnboardingWizard now (§16.1), with a Verification step this
+ * flat form was never meant to grow.
+ */
+export function RestaurantForm({ restaurant }: RestaurantFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-  const [formData, setFormData] = useState<CreateRestaurantInput>({
-    name: restaurant?.name || "",
-    description: restaurant?.description || "",
-    cuisine: restaurant?.cuisine || "",
-    city: restaurant?.city || "",
-    address: restaurant?.address || "",
-    phone: restaurant?.phone || "",
-    website: restaurant?.website || "",
+  const initialCuisines = (restaurant.cuisine || "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const [cuisines, setCuisines] = useState<string[]>(initialCuisines);
+
+  const [formData, setFormData] = useState<UpdateRestaurantInput>({
+    name: restaurant.name || "",
+    description: restaurant.description || "",
+    cuisine: restaurant.cuisine || "",
+    city: restaurant.city || "",
+    address: restaurant.address || "",
+    phone: restaurant.phone || "",
+    website: restaurant.website || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,10 +54,7 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
     setFieldErrors({});
 
     startTransition(async () => {
-      const result =
-        mode === "create"
-          ? await createRestaurant(formData)
-          : await updateRestaurant(restaurant!.id, formData);
+      const result = await updateRestaurant(restaurant.id, formData);
 
       if (result.success) {
         router.refresh();
@@ -54,7 +72,6 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear field error when user starts typing
     if (fieldErrors[name]) {
       setFieldErrors((prev: Record<string, string[]>) => {
         const newErrors = { ...prev };
@@ -64,42 +81,39 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
     }
   };
 
+  const toggleCuisine = (option: string) => {
+    setCuisines((prev) => {
+      const next = prev.includes(option) ? prev.filter((c) => c !== option) : [...prev, option];
+      setFormData((f) => ({ ...f, cuisine: next.join(", ") }));
+      return next;
+    });
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Error Alert */}
+    <form onSubmit={handleSubmit}>
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <div className="text-red-600 text-xl">⚠️</div>
-            <div>
-              <div className="font-medium text-red-900">Error</div>
-              <div className="text-sm text-red-700 mt-1">{error}</div>
-            </div>
-          </div>
+        <div
+          style={{
+            marginBottom: 16,
+            borderRadius: 12,
+            border: "1px solid var(--red-bg)",
+            background: "var(--red-bg)",
+            padding: "12px 14px",
+          }}
+        >
+          <p style={{ fontSize: 13, color: "var(--red-txt)" }}>{error}</p>
         </div>
       )}
 
-      {/* Basic Information */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Basic Information
-          </h2>
-          <p className="text-sm text-slate-600 mt-1">
-            {mode === "create"
-              ? "Tell us about your restaurant"
-              : "Update your restaurant's public profile"}
-          </p>
-        </div>
-
-        <div className="space-y-6">
-          {/* Restaurant Name */}
+      {/* Business Details */}
+      <div style={{ marginBottom: 4 }}>
+        <div className="group-label">BUSINESS DETAILS</div>
+      </div>
+      <div className="card card-pad" style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label
-              htmlFor="name"
-              className="text-sm font-medium text-slate-700 block mb-2"
-            >
-              Restaurant Name <span className="text-red-500">*</span>
+            <label htmlFor="name" className="field-label">
+              Restaurant Name <span className="req">*</span>
             </label>
             <input
               type="text"
@@ -107,22 +121,16 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              className="field-input field-cap"
               placeholder="e.g., The Gourmet Kitchen"
               required
               disabled={isPending}
             />
-            {fieldErrors.name && (
-              <p className="text-sm text-red-600 mt-1">{fieldErrors.name[0]}</p>
-            )}
+            {fieldErrors.name && <p className="field-error">{fieldErrors.name[0]}</p>}
           </div>
 
-          {/* Description */}
           <div>
-            <label
-              htmlFor="description"
-              className="text-sm font-medium text-slate-700 block mb-2"
-            >
+            <label htmlFor="description" className="field-label">
               Description
             </label>
             <textarea
@@ -130,49 +138,39 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              rows={4}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-none"
+              rows={3}
+              className="field-input ta"
               placeholder="Describe your restaurant's atmosphere, specialties, and what makes it unique..."
               disabled={isPending}
             />
-            {fieldErrors.description && (
-              <p className="text-sm text-red-600 mt-1">
-                {fieldErrors.description[0]}
-              </p>
-            )}
+            {fieldErrors.description && <p className="field-error">{fieldErrors.description[0]}</p>}
           </div>
 
-          {/* Cuisine and City */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label
-                htmlFor="cuisine"
-                className="text-sm font-medium text-slate-700 block mb-2"
-              >
-                Cuisine Type
-              </label>
-              <input
-                type="text"
-                id="cuisine"
-                name="cuisine"
-                value={formData.cuisine}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                placeholder="e.g., Italian, French, Japanese"
-                disabled={isPending}
-              />
-              {fieldErrors.cuisine && (
-                <p className="text-sm text-red-600 mt-1">
-                  {fieldErrors.cuisine[0]}
-                </p>
-              )}
+          <div>
+            <label className="field-label">
+              Cuisine Type{" "}
+              <span style={{ color: "var(--t3)", fontWeight: 400 }}>(multi-select)</span>
+            </label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {CUISINE_OPTIONS.map((option) => (
+                <span
+                  key={option}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => !isPending && toggleCuisine(option)}
+                  className={`chip-select ${cuisines.includes(option) ? "selected" : ""}`}
+                >
+                  {option}
+                  {cuisines.includes(option) ? " ✕" : ""}
+                </span>
+              ))}
             </div>
+            {fieldErrors.cuisine && <p className="field-error">{fieldErrors.cuisine[0]}</p>}
+          </div>
 
+          <div className="field-grid-2">
             <div>
-              <label
-                htmlFor="city"
-                className="text-sm font-medium text-slate-700 block mb-2"
-              >
+              <label htmlFor="city" className="field-label">
                 City
               </label>
               <input
@@ -181,61 +179,41 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                className="field-input"
                 placeholder="e.g., Cape Town"
                 disabled={isPending}
               />
-              {fieldErrors.city && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.city[0]}</p>
-              )}
+              {fieldErrors.city && <p className="field-error">{fieldErrors.city[0]}</p>}
             </div>
-          </div>
 
-          {/* Address */}
-          <div>
-            <label
-              htmlFor="address"
-              className="text-sm font-medium text-slate-700 block mb-2"
-            >
-              Address
-            </label>
-            <input
-              type="text"
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-              placeholder="e.g., 123 Main Street"
-              disabled={isPending}
-            />
-            {fieldErrors.address && (
-              <p className="text-sm text-red-600 mt-1">
-                {fieldErrors.address[0]}
-              </p>
-            )}
+            <div>
+              <label htmlFor="address" className="field-label">
+                Address
+              </label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="field-input"
+                placeholder="e.g., 123 Main Street"
+                disabled={isPending}
+              />
+              {fieldErrors.address && <p className="field-error">{fieldErrors.address[0]}</p>}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Contact Information */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Contact Information
-          </h2>
-          <p className="text-sm text-slate-600 mt-1">
-            How can guests reach you?
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Phone */}
+      <div className="group-label" style={{ marginTop: 24 }}>
+        CONTACT INFORMATION
+      </div>
+      <div className="card card-pad" style={{ marginBottom: 20 }}>
+        <div className="field-grid-2">
           <div>
-            <label
-              htmlFor="phone"
-              className="text-sm font-medium text-slate-700 block mb-2"
-            >
+            <label htmlFor="phone" className="field-label">
               Phone Number
             </label>
             <input
@@ -244,21 +222,15 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              className="field-input"
               placeholder="e.g., +27 21 123 4567"
               disabled={isPending}
             />
-            {fieldErrors.phone && (
-              <p className="text-sm text-red-600 mt-1">{fieldErrors.phone[0]}</p>
-            )}
+            {fieldErrors.phone && <p className="field-error">{fieldErrors.phone[0]}</p>}
           </div>
 
-          {/* Website */}
           <div>
-            <label
-              htmlFor="website"
-              className="text-sm font-medium text-slate-700 block mb-2"
-            >
+            <label htmlFor="website" className="field-label">
               Website
             </label>
             <input
@@ -267,39 +239,27 @@ export function RestaurantForm({ restaurant, mode }: RestaurantFormProps) {
               name="website"
               value={formData.website}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              className="field-input"
               placeholder="e.g., https://yourrestaurant.com"
               disabled={isPending}
             />
-            {fieldErrors.website && (
-              <p className="text-sm text-red-600 mt-1">
-                {fieldErrors.website[0]}
-              </p>
-            )}
+            {fieldErrors.website && <p className="field-error">{fieldErrors.website[0]}</p>}
           </div>
         </div>
       </div>
 
       {/* Form Actions */}
-      <div className="flex flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-end">
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
         <button
           type="button"
           onClick={() => router.back()}
-          className="w-full sm:w-auto px-6 py-2.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+          className="btn btn-outline"
           disabled={isPending}
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isPending}
-        >
-          {isPending
-            ? "Saving..."
-            : mode === "create"
-            ? "Create Restaurant"
-            : "Save Changes"}
+        <button type="submit" className="btn btn-primary" disabled={isPending}>
+          {isPending ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </form>

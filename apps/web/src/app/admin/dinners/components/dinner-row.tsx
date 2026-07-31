@@ -49,10 +49,10 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
     });
   };
 
-  const getStatusTone = (status: string): "primary" | "success" | "danger" | "neutral" => {
+  const getStatusTone = (status: string): "info" | "success" | "danger" | "neutral" => {
     switch (status) {
       case "SCHEDULED":
-        return "primary";
+        return "info";
       case "LIVE":
         return "success";
       case "CANCELLED":

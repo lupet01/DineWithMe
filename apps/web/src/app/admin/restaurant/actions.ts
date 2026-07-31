@@ -5,8 +5,9 @@ import { restaurantRepository, auditLogger } from "@dinewithme/db";
 import {
   createRestaurantSchema,
   updateRestaurantSchema,
+  operatingHoursSchema,
 } from "@dinewithme/shared";
-import type { CreateRestaurantInput, UpdateRestaurantInput } from "@dinewithme/shared";
+import type { CreateRestaurantInput, UpdateRestaurantInput, OperatingHours } from "@dinewithme/shared";
 import { requireAuthUser } from "@/lib/auth/server";
 import { track, trackServerSide, AnalyticsEvents } from "@dinewithme/analytics";
 
@@ -60,6 +61,11 @@ export async function createRestaurant(
         phone: data.phone || null,
         website: data.website || null,
         heroImageUrl: data.heroImageUrl || null,
+        registrationNumber: data.registrationNumber,
+        googleBusinessUrl: data.googleBusinessUrl || null,
+        instagramHandle: data.instagramHandle || null,
+        facebookUrl: data.facebookUrl || null,
+        referralSource: data.referralSource || null,
       },
       user.id
     );
@@ -140,6 +146,16 @@ export async function updateRestaurant(
       };
     }
 
+    // Archived is permanent and read-only (§16.7) - the Profile page
+    // doesn't even render an edit form once archived, but this is the
+    // actual enforcement in case this action is ever called directly.
+    if (currentRestaurant.status === "ARCHIVED") {
+      return {
+        success: false,
+        error: "This restaurant is closed and its profile can no longer be edited",
+      };
+    }
+
     // Track which fields were updated
     const updatedFields = Object.keys(data).filter(
       (key) => data[key as keyof typeof data] !== undefined
@@ -157,6 +173,11 @@ export async function updateRestaurant(
       ...(data.phone !== undefined && { phone: data.phone || null }),
       ...(data.website !== undefined && { website: data.website || null }),
       ...(data.heroImageUrl !== undefined && { heroImageUrl: data.heroImageUrl || null }),
+      ...(data.registrationNumber !== undefined && { registrationNumber: data.registrationNumber || null }),
+      ...(data.googleBusinessUrl !== undefined && { googleBusinessUrl: data.googleBusinessUrl || null }),
+      ...(data.instagramHandle !== undefined && { instagramHandle: data.instagramHandle || null }),
+      ...(data.facebookUrl !== undefined && { facebookUrl: data.facebookUrl || null }),
+      ...(data.referralSource !== undefined && { referralSource: data.referralSource || null }),
     });
 
     // Emit analytics event
@@ -186,6 +207,62 @@ export async function updateRestaurant(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update restaurant",
+    };
+  }
+}
+
+/**
+ * Restaurant Profile's Operating Hours card - its own "Save Hours" button,
+ * separate save action from the Business Details/Contact Information form
+ * (§6.2 wireframe), same pattern as ApplicationInfoCard's independent save.
+ */
+export async function updateOperatingHours(
+  restaurantId: string,
+  hours: OperatingHours
+): Promise<ActionResult> {
+  try {
+    const user = await requireAuthUser();
+
+    const validationResult = operatingHoursSchema.safeParse(hours);
+    if (!validationResult.success) {
+      return { success: false, error: "Invalid operating hours" };
+    }
+
+    const isOwner = await restaurantRepository.isUserOwner(restaurantId, user.id);
+    if (!isOwner) {
+      return {
+        success: false,
+        error: "You do not have permission to edit this restaurant",
+      };
+    }
+
+    const currentRestaurant = await restaurantRepository.findById(restaurantId);
+    if (!currentRestaurant) {
+      return { success: false, error: "Restaurant not found" };
+    }
+    if (currentRestaurant.status === "ARCHIVED") {
+      return {
+        success: false,
+        error: "This restaurant is closed and its profile can no longer be edited",
+      };
+    }
+
+    await restaurantRepository.update(restaurantId, {
+      operatingHours: validationResult.data,
+    });
+
+    await auditLogger.restaurantUpdated(user.id, restaurantId, {
+      fields: ["operatingHours"],
+      changes: { operatingHours: validationResult.data },
+    });
+
+    revalidatePath("/admin/restaurant");
+
+    return { success: true, data: undefined };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save operating hours",
     };
   }
 }

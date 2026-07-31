@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { seatRepository, paymentIntentRepository, dinnerRepository, auditLogger } from "@dinewithme/db";
 import { handleApiError } from "../../lib/error-handler";
 import { getCurrentUser } from "@/lib/auth";
-import { getCommitmentAmount } from "@dinewithme/config/src/payment";
+import { getCheckoutAmount } from "@dinewithme/config/src/payment";
 import { createPaystackService } from "@dinewithme/payment";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 import { withRateLimit, withCors } from "../../lib/middleware";
@@ -107,8 +107,8 @@ async function handlePOST(request: NextRequest) {
       throw error;
     }
 
-    // Step 2: Calculate commitment amount
-    const amount = getCommitmentAmount(dinnerId);
+    // Step 2: Calculate checkout amount (food price + booking fee)
+    const amount = getCheckoutAmount(dinner);
 
     // If free dinner (amount = 0), no payment needed - confirm the seat
     // directly instead of leaving it HELD forever, since no PaymentIntent

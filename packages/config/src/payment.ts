@@ -6,10 +6,23 @@
 
 export const paymentConfig = {
   /**
-   * Commitment amount in cents (ZAR)
+   * Commitment amount in cents (ZAR) - fallback charge for a dinner that
+   * has no Dinner.pricePerSeatCents set yet (legacy dinners predating the
+   * Meals/pricing system, §16.5/§16.6). Real, priced dinners use
+   * getCheckoutAmount() instead, which charges the actual food price.
    * Default: R50.00
    */
   commitmentAmount: 5000,
+
+  /**
+   * Platform booking fee in cents (ZAR), charged on top of the food price
+   * for every priced dinner - the platform keeps all of this, none of it
+   * flows into a restaurant's Payout (§16.5). Named for the first time as
+   * a separate line item on the Payment Portal ("Food R450" + "Booking fee
+   * R25" = "Total R475"); every price shown before checkout is food-only.
+   * Default: R25.00
+   */
+  bookingFeeCents: 2500,
 
   /**
    * Default currency
@@ -54,7 +67,7 @@ export const paymentConfig = {
 
 /**
  * Get commitment amount for a dinner
- * 
+ *
  * @param dinnerId - Dinner ID (for future dynamic pricing)
  * @returns Amount in cents
  */
@@ -65,13 +78,38 @@ export function getCommitmentAmount(dinnerId?: string): number {
 }
 
 /**
- * Format amount for display
- * 
+ * The real amount a diner is charged at checkout: food price + booking
+ * fee (§16.5). Falls back to the flat commitmentAmount for a dinner with
+ * no pricePerSeatCents set - legacy dinners created before Meals/pricing
+ * existed, or a restaurant that hasn't priced a dinner yet, still need to
+ * be bookable rather than blocked.
+ *
+ * @param dinner - object with the dinner's pricePerSeatCents (null if unset)
+ * @returns Amount in cents
+ */
+export function getCheckoutAmount(dinner: { pricePerSeatCents: number | null }): number {
+  if (dinner.pricePerSeatCents == null) {
+    return paymentConfig.commitmentAmount;
+  }
+  return dinner.pricePerSeatCents + paymentConfig.bookingFeeCents;
+}
+
+/**
+ * Format amount for display - thousands-grouped, cents only shown when
+ * non-zero (matches the wireframe's "R 8,100" / "R 450" convention rather
+ * than always forcing two decimal places).
+ *
  * @param amountInCents - Amount in cents
- * @returns Formatted string (e.g., "R75.00")
+ * @returns Formatted string (e.g., "R 8,100", "R 75.50")
  */
 export function formatAmount(amountInCents: number): string {
-  return `R${(amountInCents / 100).toFixed(2)}`;
+  const rands = amountInCents / 100;
+  const hasCents = amountInCents % 100 !== 0;
+  const formatted = rands.toLocaleString("en-US", {
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
+  return `R ${formatted}`;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth/server";
-import { restaurantRepository, themeRepository } from "@dinewithme/db";
+import { restaurantRepository, themeRepository, restaurantGalleryItemRepository, mealRepository } from "@dinewithme/db";
 import { DinnerForm } from "../components/dinner-form";
 
 export default async function NewDinnerPage() {
@@ -18,23 +18,36 @@ export default async function NewDinnerPage() {
     redirect("/admin/restaurant");
   }
 
+  // Only an active restaurant can create dinners - matches the check in
+  // create-actions.ts's createDinner (§16.7). Redirects to the Dashboard
+  // rather than rendering a form that will just fail on submit.
+  if (restaurant.status !== "ACTIVE") {
+    redirect("/admin");
+  }
+
   // Get enabled themes for this restaurant
   const enabledThemes = await themeRepository.findByRestaurant(restaurant.id);
+
+  // Get the restaurant's photo pool for the Listing Photos picker
+  const galleryItems = await restaurantGalleryItemRepository.findByRestaurant(restaurant.id);
+
+  // Get the restaurant's active Meals for the Meal dropdown
+  const meals = (await mealRepository.findByRestaurant(restaurant.id)).filter((m) => m.isActive);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-semibold text-slate-900">
+        <h1 className="text-3xl font-semibold text-gray-900">
           Create New Dinner
         </h1>
-        <p className="text-slate-600 mt-1">
+        <p className="text-gray-600 mt-1">
           Schedule a new dining experience for your guests
         </p>
       </div>
 
       {/* Form */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <DinnerForm
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
@@ -43,6 +56,15 @@ export default async function NewDinnerPage() {
             key: t.key,
             title: t.title,
             shortDescription: t.shortDescription,
+          }))}
+          photoPool={galleryItems.map((item) => ({
+            id: item.mediaAsset.id,
+            url: item.mediaAsset.url,
+          }))}
+          meals={meals.map((m) => ({
+            id: m.id,
+            name: m.name,
+            suggestedPricePerSeatCents: m.suggestedPricePerSeatCents,
           }))}
         />
       </div>

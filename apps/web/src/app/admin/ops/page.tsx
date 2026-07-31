@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, FileClock, Store, Palette, TrendingUp } from "lucide-react";
+import { AlertCircle, FileClock, Store, Palette } from "lucide-react";
 import {
   restaurantRepository,
   dinnerRepository,
@@ -148,18 +148,6 @@ export default async function CockpitPage() {
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-900">Theme Library</div>
-              </div>
-            </Link>
-
-            <Link
-              href="/admin/ops/themes/performance"
-              className="flex items-center gap-3 rounded-lg border border-gray-100 p-3 text-left transition-colors hover:border-primary-200 hover:bg-cream-100"
-            >
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-100">
-                <TrendingUp className="h-4 w-4 text-primary-600" />
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">Theme Performance</div>
               </div>
             </Link>
           </div>

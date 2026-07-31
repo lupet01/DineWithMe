@@ -8,6 +8,7 @@ import { getCommitmentAmount, formatAmount } from "@dinewithme/config/src/paymen
 
 interface DinnerCTAProps {
   dinnerId: string;
+  pricePerSeatCents: number | null;
   hasSeatsAvailable: boolean;
   seatsAvailable: number;
   userHasSeat?: boolean;
@@ -16,6 +17,7 @@ interface DinnerCTAProps {
 
 export function DinnerCTA({
   dinnerId,
+  pricePerSeatCents,
   hasSeatsAvailable,
   seatsAvailable,
   userHasSeat = false,
@@ -23,7 +25,12 @@ export function DinnerCTA({
 }: DinnerCTAProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const commitmentAmountLabel = formatAmount(getCommitmentAmount(dinnerId));
+  // Every price shown before checkout is food-only, with the booking fee
+  // only named as a line item once checkout actually happens (§16.6) - a
+  // dinner with no price set yet falls back to the flat commitment-fee
+  // framing, matching what getCheckoutAmount() actually charges in that case.
+  const hasRealPrice = pricePerSeatCents != null;
+  const priceLabel = hasRealPrice ? formatAmount(pricePerSeatCents) : formatAmount(getCommitmentAmount());
 
   if (userHasSeat) {
     return (
@@ -110,10 +117,12 @@ export function DinnerCTA({
                 isLoading && "cursor-not-allowed opacity-60"
               )}
             >
-              {isLoading ? "Reserving…" : `Reserve Your Seat — ${commitmentAmountLabel}`}
+              {isLoading ? "Reserving…" : `Reserve Your Seat — ${priceLabel}`}
             </button>
             <p className="mt-2 text-center text-xs text-gray-500">
-              {commitmentAmountLabel} commitment fee, fully refundable up to 24 hours before the dinner
+              {hasRealPrice
+                ? "+ booking fee at checkout, fully refundable up to 24 hours before the dinner"
+                : `${priceLabel} commitment fee, fully refundable up to 24 hours before the dinner`}
             </p>
           </>
         ) : (

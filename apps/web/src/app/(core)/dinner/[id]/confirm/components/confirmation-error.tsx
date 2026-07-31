@@ -17,9 +17,9 @@ export function ConfirmationError({
   const isAlreadyConfirmed = error.toLowerCase().includes("not held");
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream-100">
       {/* Error Header */}
-      <div className="bg-gradient-to-b from-red-50 to-gray-50 px-4 py-12 text-center">
+      <div className="bg-gradient-to-b from-red-50 to-cream-100 px-4 py-12 text-center">
         <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
           <XCircle className="h-12 w-12 text-red-600" />
         </div>
@@ -95,7 +95,7 @@ export function ConfirmationError({
           {isExpiredError || isAlreadyConfirmed ? (
             <button
               onClick={onBackToDinner}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary-500 px-6 py-3 text-base font-semibold text-white shadow-soft transition-colors hover:bg-primary-600 active:scale-[0.98]"
             >
               <ArrowLeft className="h-5 w-5" />
               <span>Back to Dinner</span>
@@ -103,7 +103,7 @@ export function ConfirmationError({
           ) : (
             <button
               onClick={onRetry}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-primary-500 px-6 py-3 text-base font-semibold text-white shadow-soft transition-colors hover:bg-primary-600 active:scale-[0.98]"
             >
               <RefreshCw className="h-5 w-5" />
               <span>Try Again</span>
@@ -114,7 +114,7 @@ export function ConfirmationError({
           {!isExpiredError && !isAlreadyConfirmed && (
             <button
               onClick={onBackToDinner}
-              className="w-full rounded-xl border border-gray-200 bg-white px-6 py-3 text-base font-medium text-gray-900 transition-colors hover:bg-gray-50"
+              className="w-full rounded-full border-2 border-gray-200 bg-white px-6 py-3 text-base font-medium text-gray-900 transition-colors hover:bg-gray-50 active:scale-[0.98]"
             >
               Back to Dinner
             </button>

@@ -10,35 +10,16 @@ import { Role } from "@dinewithme/shared";
 import { getStorage } from "@dinewithme/storage";
 import { revalidatePath } from "next/cache";
 import type { ComplianceDocType } from "@prisma/client";
+import {
+  COMPLIANCE_DOC_TYPES,
+  ALLOWED_COMPLIANCE_CONTENT_TYPES,
+} from "@/lib/compliance-document";
 
 interface ActionResult<T = void> {
   success: boolean;
   data?: T;
   error?: string;
 }
-
-// Prisma generates ComplianceDocType as a value-level enum too, but the rest
-// of this codebase (see restaurant.repository.ts's updateStatus) prefers
-// plain string-literal unions over importing generated enums as values, so
-// this stays consistent with that convention.
-const COMPLIANCE_DOC_TYPES: ComplianceDocType[] = [
-  "BUSINESS_REGISTRATION",
-  "FOOD_SAFETY_CERTIFICATE",
-  "LIQUOR_LICENSE",
-  "OTHER",
-];
-
-// PDFs and scanned images cover the realistic set of compliance document
-// formats (business registration certificates, food safety certs, liquor
-// licenses) - mirrors the image-only allowlist in /api/uploads/sign but
-// widened to include application/pdf.
-const ALLOWED_CONTENT_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -70,7 +51,7 @@ export async function requestComplianceUploadUrl(
     return { success: false, error: authResult.error };
   }
 
-  if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
+  if (!ALLOWED_COMPLIANCE_CONTENT_TYPES.includes(contentType)) {
     return { success: false, error: "Unsupported file type. Upload a PDF, JPG, PNG, or WEBP." };
   }
 
@@ -177,6 +158,86 @@ export async function deleteComplianceDocument(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to delete document",
+    };
+  }
+}
+
+/**
+ * Mark a compliance document verified.
+ */
+export async function verifyComplianceDocument(
+  documentId: string,
+  restaurantId: string
+): Promise<ActionResult> {
+  const authResult = await requirePlatformAdmin();
+  if ("error" in authResult) {
+    return { success: false, error: authResult.error };
+  }
+
+  try {
+    const document = await complianceDocumentRepository.findById(documentId);
+    if (!document || document.restaurantId !== restaurantId) {
+      return { success: false, error: "Document not found" };
+    }
+
+    await complianceDocumentRepository.update(documentId, {
+      verifiedAt: new Date(),
+      verifiedBy: { connect: { id: authResult.dbUser.id } },
+      rejectedAt: null,
+      rejectionReason: null,
+    });
+
+    revalidatePath(`/admin/ops/restaurants/${restaurantId}`);
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to verify document",
+    };
+  }
+}
+
+/**
+ * Reject a compliance document with a reason. The restaurant re-uploads a
+ * corrected or renewed document from their own side - there's no separate
+ * "resubmit" action, it's the same self-serve upload flow appearing again
+ * as a new row.
+ */
+export async function rejectComplianceDocument(
+  documentId: string,
+  restaurantId: string,
+  reason: string
+): Promise<ActionResult> {
+  const authResult = await requirePlatformAdmin();
+  if ("error" in authResult) {
+    return { success: false, error: authResult.error };
+  }
+
+  if (!reason.trim()) {
+    return { success: false, error: "A rejection reason is required" };
+  }
+
+  try {
+    const document = await complianceDocumentRepository.findById(documentId);
+    if (!document || document.restaurantId !== restaurantId) {
+      return { success: false, error: "Document not found" };
+    }
+
+    await complianceDocumentRepository.update(documentId, {
+      rejectedAt: new Date(),
+      rejectionReason: reason.trim(),
+      verifiedAt: null,
+      verifiedBy: { disconnect: true },
+    });
+
+    revalidatePath(`/admin/ops/restaurants/${restaurantId}`);
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to reject document",
     };
   }
 }

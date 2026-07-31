@@ -3,16 +3,19 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Calendar, Globe, MapPin, Phone } from "lucide-react";
 import {
   restaurantRepository,
+  restaurantClosureRequestRepository,
   dinnerRepository,
   paymentIntentRepository,
   themeRepository,
   complianceDocumentRepository,
 } from "@dinewithme/db";
 import { formatAmount } from "@dinewithme/config/src/payment";
+import { toWhatsAppLink } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { RestaurantStatusActions } from "./components/restaurant-status-actions";
+import { ClosureRequestReview } from "./components/closure-request-review";
 import { ComplianceDocuments } from "./components/compliance-documents";
 
 // No per-restaurant fee schedule exists anywhere in the schema or config
@@ -26,10 +29,11 @@ const STATUS_TONE: Record<string, "warning" | "success" | "danger" | "neutral"> 
   PENDING: "warning",
   ACTIVE: "success",
   PAUSED: "danger",
+  ARCHIVED: "neutral",
 };
 
-const DINNER_STATUS_TONE: Record<string, "warning" | "success" | "danger" | "neutral"> = {
-  SCHEDULED: "warning",
+const DINNER_STATUS_TONE: Record<string, "info" | "success" | "danger" | "neutral"> = {
+  SCHEDULED: "info",
   LIVE: "success",
   COMPLETED: "neutral",
   CANCELLED: "danger",
@@ -50,13 +54,15 @@ export default async function RestaurantDetailPage({
 }) {
   const restaurantId = params.id;
 
-  const [restaurant, dinners, revenue, enabledThemes, complianceDocuments] = await Promise.all([
-    restaurantRepository.findByIdWithMembers(restaurantId),
-    dinnerRepository.findByRestaurantWithTheme(restaurantId),
-    paymentIntentRepository.sumSucceededAmountForRestaurant(restaurantId),
-    themeRepository.findByRestaurant(restaurantId),
-    complianceDocumentRepository.findByRestaurant(restaurantId),
-  ]);
+  const [restaurant, dinners, revenue, enabledThemes, complianceDocuments, pendingClosureRequest] =
+    await Promise.all([
+      restaurantRepository.findByIdWithMembers(restaurantId),
+      dinnerRepository.findByRestaurantWithTheme(restaurantId),
+      paymentIntentRepository.sumSucceededAmountForRestaurant(restaurantId),
+      themeRepository.findByRestaurant(restaurantId),
+      complianceDocumentRepository.findByRestaurant(restaurantId),
+      restaurantClosureRequestRepository.findPendingByRestaurant(restaurantId),
+    ]);
 
   if (!restaurant) {
     notFound();
@@ -65,6 +71,7 @@ export default async function RestaurantDetailPage({
   const owner = restaurant.members.find((m) => m.role === "OWNER")?.user;
   const platformFees = Math.round(revenue * ILLUSTRATIVE_PLATFORM_FEE_RATE);
   const recentDinners = dinners.slice(0, 15);
+  const whatsAppLink = toWhatsAppLink(restaurant.phone);
 
   return (
     <div className="space-y-6">
@@ -83,12 +90,31 @@ export default async function RestaurantDetailPage({
           </p>
         </div>
         <Badge tone={STATUS_TONE[restaurant.status] ?? "neutral"}>{restaurant.status}</Badge>
+        {whatsAppLink && (
+          <a
+            href={whatsAppLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+          >
+            Message Owner (WhatsApp)
+          </a>
+        )}
         <RestaurantStatusActions
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
           status={restaurant.status}
         />
       </div>
+
+      {/* Closure Request Review */}
+      {pendingClosureRequest && (
+        <ClosureRequestReview
+          requestId={pendingClosureRequest.id}
+          reason={pendingClosureRequest.reason}
+          requestedAt={pendingClosureRequest.createdAt}
+        />
+      )}
 
       {/* Profile Summary */}
       <Card padding="lg">
@@ -100,10 +126,13 @@ export default async function RestaurantDetailPage({
             </div>
             <div className="mt-1 text-sm text-gray-900">
               {owner ? (
-                <>
+                <Link
+                  href={`/admin/ops/users/${owner.id}`}
+                  className="hover:text-primary-600 hover:underline"
+                >
                   {owner.firstName} {owner.lastName}
                   <div className="text-gray-500">{owner.email}</div>
-                </>
+                </Link>
               ) : (
                 <span className="text-gray-400">No owner</span>
               )}

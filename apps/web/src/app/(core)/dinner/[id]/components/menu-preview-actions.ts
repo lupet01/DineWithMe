@@ -1,38 +1,47 @@
 "use server";
 
-import { menuItemRepository } from "@dinewithme/db";
+import { dinnerRepository, mealRepository } from "@dinewithme/db";
 import { MenuCourse } from "@prisma/client";
 
 export interface MenuPreviewItem {
   id: string;
   course: MenuCourse;
   name: string;
-  priceCents: number;
 }
 
+const COURSE_ORDER = [MenuCourse.STARTER, MenuCourse.MAIN, MenuCourse.DESSERT];
+
 /**
- * Returns up to 3 available menu items for a restaurant - one per course
- * (Starter, Main, Dessert), in that order, where the restaurant has one
- * available. Backs the "Tonight's Menu" preview card on the dinner detail
- * page; the full list lives at /dinner/[id]/menu.
+ * Returns up to 3 dishes from the dinner's assigned Meal - one per course
+ * (Starter, Main, Dessert), in that order, wherever that course has at
+ * least one option. Backs the "Tonight's Menu" preview card on the dinner
+ * detail page; the full list (all options per course, with photos) lives
+ * at /dinner/[id]/menu. No price here by design (§16.22) - the only price
+ * a diner ever sees is the single per-seat total.
  */
-export async function getTonightsMenuPreview(
-  restaurantId: string
-): Promise<MenuPreviewItem[]> {
-  const items = await menuItemRepository.findAvailableByRestaurant(restaurantId);
+export async function getTonightsMenuPreview(dinnerId: string): Promise<MenuPreviewItem[]> {
+  const dinner = await dinnerRepository.findById(dinnerId);
+  if (!dinner?.mealId) {
+    return [];
+  }
+
+  const meal = await mealRepository.findByIdWithCourses(dinner.mealId);
+  if (!meal) {
+    return [];
+  }
 
   const preview: MenuPreviewItem[] = [];
-  for (const course of [MenuCourse.STARTER, MenuCourse.MAIN, MenuCourse.DESSERT]) {
-    const item = items.find((i) => i.course === course);
-    if (item) {
+  for (const courseType of COURSE_ORDER) {
+    const course = meal.courses.find((c) => c.courseType === courseType);
+    const firstOption = course?.options[0];
+    if (firstOption) {
       preview.push({
-        id: item.id,
-        course: item.course,
-        name: item.name,
-        priceCents: item.priceCents,
+        id: firstOption.menuItem.id,
+        course: courseType,
+        name: firstOption.menuItem.name,
       });
     }
   }
 
-  return preview.slice(0, 3);
+  return preview;
 }

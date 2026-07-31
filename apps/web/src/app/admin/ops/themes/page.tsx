@@ -48,7 +48,7 @@ export default async function ThemeLibraryPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/admin/ops/themes/${theme.id}/edit`}
+                        href={`/admin/ops/themes/${theme.id}`}
                         className="text-sm font-semibold text-gray-900 hover:text-primary-600"
                       >
                         {theme.title}

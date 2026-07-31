@@ -132,7 +132,7 @@ export function ImageUpload({
           <img
             src={preview}
             alt={type === "hero" ? "Hero image" : "Gallery image"}
-            className="w-full h-48 object-cover rounded-lg border border-slate-200"
+            className="w-full h-48 object-cover rounded-lg border border-gray-200"
           />
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
             <button
@@ -149,20 +149,20 @@ export function ImageUpload({
           type="button"
           onClick={handleClick}
           disabled={uploading}
-          className="w-full h-48 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary-300 hover:bg-cream-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {uploading ? (
             <>
-              <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-              <span className="text-sm text-slate-600">Uploading...</span>
+              <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+              <span className="text-sm text-gray-600">Uploading...</span>
             </>
           ) : (
             <>
-              <ImagePlus className="w-8 h-8 text-slate-400" />
-              <span className="text-sm text-slate-600">
+              <ImagePlus className="w-8 h-8 text-gray-400" />
+              <span className="text-sm text-gray-600">
                 Click to upload {type === "hero" ? "hero" : "gallery"} image
               </span>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-gray-400">
                 PNG, JPG, WEBP up to 5MB
               </span>
             </>

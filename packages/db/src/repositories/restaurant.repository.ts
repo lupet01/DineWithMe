@@ -158,9 +158,41 @@ export class RestaurantRepository extends BaseRepository<Restaurant> {
   }
 
   /**
+   * Adds an already-existing User to a restaurant's team - used by Accept
+   * Invite once the invitee has a real User row (see TeamInvite's own
+   * doc comment for why an invite can't create one up front). No-ops if
+   * the user is already a member rather than throwing the unique
+   * constraint error, since an invite can be accepted at most once but
+   * this stays safe to call defensively.
+   */
+  async addMember(
+    restaurantId: string,
+    userId: string,
+    role: "OWNER" | "MANAGER"
+  ): Promise<RestaurantMember> {
+    const existing = await this.getUserRole(restaurantId, userId);
+    if (existing) return existing;
+
+    return this.prisma.restaurantMember.create({
+      data: { restaurantId, userId, role },
+    });
+  }
+
+  /**
+   * Removes a team member. Deliberately cannot remove an OWNER through
+   * this path - the Team screen's remove action only ever targets
+   * MANAGER rows, protecting a restaurant from being left ownerless.
+   */
+  async removeMember(restaurantId: string, memberUserId: string): Promise<void> {
+    await this.prisma.restaurantMember.deleteMany({
+      where: { restaurantId, userId: memberUserId, role: "MANAGER" },
+    });
+  }
+
+  /**
    * Update restaurant status
    */
-  async updateStatus(id: string, status: "PENDING" | "ACTIVE" | "PAUSED"): Promise<Restaurant> {
+  async updateStatus(id: string, status: "PENDING" | "ACTIVE" | "PAUSED" | "ARCHIVED"): Promise<Restaurant> {
     return this.prisma.restaurant.update({
       where: { id },
       data: {
@@ -171,17 +203,47 @@ export class RestaurantRepository extends BaseRepository<Restaurant> {
   }
 
   /**
-   * Approve a restaurant (set status to ACTIVE)
+   * Approve a restaurant (set status to ACTIVE) - also used to reactivate
+   * a PAUSED restaurant, clearing pausedAt either way (a no-op if it was
+   * already null, e.g. the PENDING -> ACTIVE approval path).
    */
   async approve(id: string): Promise<Restaurant> {
-    return this.updateStatus(id, "ACTIVE");
+    return this.prisma.restaurant.update({
+      where: { id },
+      data: { status: "ACTIVE", pausedAt: null, updatedAt: new Date() },
+    });
   }
 
   /**
-   * Pause a restaurant (set status to PAUSED)
+   * Pause a restaurant (set status to PAUSED) - self-serve and instantly
+   * reversible via approve(), unlike archive() (§16.7).
    */
   async pause(id: string): Promise<Restaurant> {
-    return this.updateStatus(id, "PAUSED");
+    return this.prisma.restaurant.update({
+      where: { id },
+      data: { status: "PAUSED", pausedAt: new Date(), updatedAt: new Date() },
+    });
+  }
+
+  /**
+   * Permanently closes a restaurant - only ever called from an approved
+   * RestaurantClosureRequest, never directly from a button (§4.5.5).
+   */
+  async archive(id: string): Promise<Restaurant> {
+    return this.updateStatus(id, "ARCHIVED");
+  }
+
+  /**
+   * Marks the Dashboard's one-time "You're Live!" moment as shown. Called
+   * client-side on actual display, not on approval - mirrors the icebreaker
+   * usage-tracking pattern of only recording a signal when it's genuinely
+   * been seen, not merely become eligible.
+   */
+  async markLiveMomentSeen(id: string): Promise<Restaurant> {
+    return this.prisma.restaurant.update({
+      where: { id },
+      data: { liveMomentSeenAt: new Date() },
+    });
   }
 
   /**
@@ -217,6 +279,7 @@ export class RestaurantRepository extends BaseRepository<Restaurant> {
       PENDING: 0,
       ACTIVE: 0,
       PAUSED: 0,
+      ARCHIVED: 0,
     };
 
     for (const result of results) {

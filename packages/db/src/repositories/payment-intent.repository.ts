@@ -429,4 +429,28 @@ export class PaymentIntentRepository extends BaseRepository<PaymentIntent> {
 
     return result._sum.amount ?? 0;
   }
+
+  /**
+   * Sum SUCCEEDED payment intents for a restaurant within a bounded
+   * window - used to compute the prior-period comparison for the
+   * Dashboard's revenue range picker (§16.11 wireframe's "vs prior
+   * period" caption). `until` is exclusive so back-to-back windows never
+   * double-count a payment created exactly on the boundary.
+   */
+  async sumSucceededAmountForRestaurantBetween(
+    restaurantId: string,
+    since: Date,
+    until: Date
+  ): Promise<number> {
+    const result = await this.prisma.paymentIntent.aggregate({
+      where: {
+        status: "SUCCEEDED",
+        createdAt: { gte: since, lt: until },
+        dinner: { restaurantId },
+      },
+      _sum: { amount: true },
+    });
+
+    return result._sum.amount ?? 0;
+  }
 }

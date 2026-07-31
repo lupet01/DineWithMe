@@ -1,0 +1,400 @@
+/*
+ * Ported (tokens + component classes) from the "DineWithMe — Admin &
+ * Platform-Ops Wireframe (Unified)" artifact, so admin pages match the
+ * wireframe instead of being re-derived by eye into Tailwind utilities.
+ * Scoped under .dine-admin so nothing here leaks into diner-facing pages,
+ * which have their own (already-shipped) styling.
+ *
+ * Responsive system: CONTAINER queries (@container), not viewport @media
+ * queries. .dine-admin itself is the query container (container-type:
+ * inline-size below). This means every "desktop vs mobile" rule here
+ * responds to the actual rendered width of the admin shell, not the
+ * browser window — correct behavior if this shell is ever embedded
+ * narrower than the viewport, and also the only reliable way to verify
+ * the mobile layout in an environment where the real browser viewport
+ * can't be resized: shrink .dine-admin's own width and every rule below
+ * re-evaluates exactly as it would on a real phone.
+ */
+
+.dine-admin {
+  --p: #FF6B3D;
+  --p2: #E85A2E;
+  --p-tint: rgba(255, 107, 61, 0.08);
+  --p-glow: rgba(255, 107, 61, 0.28);
+  --bg: #FDFBF7;
+  --bg2: #F7F4EF;
+  --bg3: #EFECE5;
+  --white: #ffffff;
+  --bdr: rgba(0, 0, 0, 0.07);
+  --bdr2: rgba(0, 0, 0, 0.12);
+  --text: #1c1c1e;
+  --t2: #6b7280;
+  --t3: #9ca3af;
+  --yellow-bg: #fef9c3; --yellow-txt: #a16207;
+  --yellow-bdr: #fde68a; --yellow-txt2: #78350f;
+  --green-bg: #dcfce7; --green-txt: #16a34a;
+  --red-bg: #fee2e2; --red-txt: #dc2626;
+  --blue-bg: #dbeafe; --blue-txt: #1e40af;
+  --purple-bg: #f3e8ff; --purple-txt: #7e22ce;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-3: 0 10px 20px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.06);
+  --shadow-4: 0 24px 48px -8px rgba(0, 0, 0, 0.20), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  container-type: inline-size;
+}
+
+.dine-admin * {
+  box-sizing: border-box;
+}
+
+/* ── Shell: topbar ── */
+.dine-admin .d-topbar {
+  height: 54px;
+  background: rgba(250, 249, 247, 0.97);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--bdr);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+@container (min-width: 768px) {
+  .dine-admin .d-topbar { height: 58px; padding: 0 22px; }
+}
+.dine-admin .d-logo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dine-admin .d-logo-mark {
+  width: 26px; height: 26px; border-radius: 8px; background: var(--p); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; color: var(--white);
+}
+.dine-admin .d-logo-text { font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: -0.2px; white-space: nowrap; }
+.dine-admin .d-logo-chip { font-size: 10px; font-weight: 600; color: var(--t2); background: var(--bg2); padding: 3px 9px; border-radius: 20px; flex-shrink: 0; }
+.dine-admin .d-logo-chip.purple { color: var(--purple-txt); background: var(--purple-bg); }
+.dine-admin .d-user { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.dine-admin .d-user-name { font-size: 12px; font-weight: 600; color: var(--text); text-align: right; }
+.dine-admin .d-user-role { font-size: 11px; color: var(--t3); text-align: right; }
+.dine-admin .d-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #3d2b1f, #5c3d28); flex-shrink: 0; }
+.dine-admin .m-hamburger,
+.dine-admin .m-icon-btn {
+  width: 32px; height: 32px; border-radius: 10px; background: var(--bg2);
+  display: flex; align-items: center; justify-content: center; color: var(--t2); flex-shrink: 0; cursor: pointer; border: none;
+}
+@container (min-width: 768px) {
+  .dine-admin .m-hamburger { display: none; }
+}
+
+/* ── Shell: body / sidebar ── */
+.dine-admin .d-body { display: flex; }
+.dine-admin .d-sidebar {
+  width: 216px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--bdr);
+  padding: 16px 12px; min-height: calc(100vh - 54px);
+}
+@container (min-width: 768px) {
+  .dine-admin .d-sidebar { min-height: calc(100vh - 58px); }
+}
+.dine-admin .d-nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
+  font-size: 13px; font-weight: 500; color: var(--t2); margin-bottom: 3px; text-decoration: none;
+  transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
+}
+.dine-admin a.d-nav-item:hover { background: rgba(255, 255, 255, 0.6); }
+.dine-admin .d-nav-item.active { background: var(--white); color: var(--text); font-weight: 700; box-shadow: var(--shadow-3); }
+.dine-admin .d-nav-item.disabled { opacity: 0.4; cursor: not-allowed; }
+.dine-admin .d-nav-item.onboarding-active { color: var(--p); font-weight: 700; }
+.dine-admin .d-nav-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dine-admin .d-nav-icon svg { width: 16px; height: 16px; }
+.dine-admin .d-nav-group { font-size: 10.5px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: .06em; padding: 14px 12px 6px; }
+.dine-admin .d-nav-divider { height: 1px; background: var(--bdr); margin: 8px 14px; }
+
+.dine-admin .d-main { flex: 1; padding: 16px 14px 28px; min-width: 0; }
+@container (min-width: 768px) {
+  .dine-admin .d-main { padding: 28px 32px; }
+}
+
+/* ── Shared atoms ── */
+.dine-admin .pg-title { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.4px; }
+@container (min-width: 768px) { .dine-admin .pg-title { font-size: 30px; } }
+.dine-admin .pg-sub { font-size: 12px; color: var(--t3); margin-top: 4px; }
+@container (min-width: 768px) { .dine-admin .pg-sub { font-size: 13px; } }
+
+/* Flatter, quieter card — macOS Settings relies on background contrast and
+   a near-invisible hairline, not a heavy border + drop shadow, to separate
+   a grouped box from the page behind it. */
+.dine-admin .card { background: var(--white); border: 1px solid var(--bdr); border-radius: 14px; box-shadow: var(--shadow-1); }
+.dine-admin .card-pad { padding: 16px; }
+@container (min-width: 768px) { .dine-admin .card-pad { padding: 18px 20px; } }
+.dine-admin .card-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.dine-admin .card-title-sub { font-size: 12.5px; color: var(--t3); margin-top: 3px; }
+
+/* ── Group label — macOS/iOS Settings' own convention: a small, quiet,
+   tracked-out caption sits ABOVE its rounded group, not a bold title
+   crammed inside it. Explanatory copy (if any) goes below the group as a
+   footnote instead of a subtitle inside it. ── */
+.dine-admin .group-label {
+  font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--t2);
+  margin: 0 4px 8px;
+}
+.dine-admin .group-footnote {
+  font-size: 12px; color: var(--t3); margin: 8px 4px 0; line-height: 1.45;
+}
+.dine-admin .group-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 13px 0; border-bottom: 1px solid var(--bdr);
+}
+.dine-admin .group-row:last-child { border-bottom: none; }
+
+.dine-admin .field-label { font-size: 13px; font-weight: 500; color: var(--t2); display: block; margin-bottom: 6px; }
+.dine-admin .field-input {
+  width: 100%; padding: 10px 13px; border: 1px solid var(--bdr); border-radius: 12px; font-size: 13px; color: var(--text);
+  background: var(--bg2); font-family: inherit;
+  transition: border-color var(--dur-base) var(--ease), background var(--dur-base) var(--ease);
+}
+.dine-admin .field-input:focus { outline: none; border-color: var(--p); background: var(--white); }
+.dine-admin .field-input::placeholder { color: var(--t3); }
+.dine-admin .field-input.ta { resize: none; }
+.dine-admin .field-input:disabled { opacity: 0.6; cursor: not-allowed; }
+.dine-admin .field-grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@container (min-width: 640px) { .dine-admin .field-grid-2 { grid-template-columns: 1fr 1fr; gap: 16px; } }
+.dine-admin .req { color: var(--red-txt); }
+.dine-admin .field-error { margin-top: 6px; font-size: 12px; color: var(--red-txt); }
+
+.dine-admin .upload-dropzone {
+  border: 1.5px dashed var(--bdr2); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer;
+  transition: border-color var(--dur-base) var(--ease), background var(--dur-base) var(--ease);
+}
+.dine-admin .upload-dropzone:hover { border-color: var(--p); background: var(--p-tint); }
+.dine-admin .upload-dropzone.has-file { border-style: solid; border-color: var(--green-txt); background: var(--green-bg); }
+
+.dine-admin .range-picker { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 10px; flex-shrink: 0; transition: background var(--dur-base) var(--ease); }
+.dine-admin .range-picker:hover { background: var(--bg2); }
+.dine-admin .range-picker svg { color: var(--t3); flex-shrink: 0; width: 13px; height: 13px; }
+.dine-admin .range-picker select { appearance: none; background: transparent; border: none; font-size: 12px; font-weight: 600; color: var(--t2); cursor: pointer; font-family: inherit; padding: 0; }
+.dine-admin .range-picker select:focus { outline: none; }
+.dine-admin .range-picker-chevron { font-size: 8px; color: var(--t3); margin-left: -2px; }
+
+.dine-admin .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 20px;
+  border-radius: 50px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-base) var(--ease), background var(--dur-base) var(--ease);
+  font-family: inherit;
+}
+.dine-admin .btn:active { transform: scale(0.97); }
+.dine-admin .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.dine-admin .btn-primary { background: linear-gradient(135deg, var(--p), var(--p2)); color: white; box-shadow: 0 8px 20px -4px var(--p-glow); }
+.dine-admin .btn-primary:hover:not(:disabled) { box-shadow: 0 12px 28px -6px var(--p-glow); }
+.dine-admin .btn-outline { background: var(--white); border: 1.5px solid var(--bdr2); color: var(--text); }
+.dine-admin .btn-outline:hover:not(:disabled) { background: var(--bg2); }
+.dine-admin .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 50px; }
+.dine-admin .btn-green { background: var(--green-bg); color: var(--green-txt); }
+.dine-admin .btn-red { background: var(--red-bg); color: var(--red-txt); }
+.dine-admin .btn-block { width: 100%; }
+
+.dine-admin .badge { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 9999px; font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; }
+.dine-admin .badge-yellow { background: var(--yellow-bg); color: var(--yellow-txt); }
+.dine-admin .badge-green { background: var(--green-bg); color: var(--green-txt); }
+.dine-admin .badge-red { background: var(--red-bg); color: var(--red-txt); }
+.dine-admin .badge-blue { background: var(--blue-bg); color: var(--blue-txt); }
+.dine-admin .badge-slate { background: var(--bg3); color: var(--t2); }
+.dine-admin .badge-purple { background: var(--purple-bg); color: var(--purple-txt); }
+.dine-admin .badge-tint { background: var(--p-tint); color: var(--p); border: 1px solid var(--p); }
+
+.dine-admin .chip-select {
+  display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+  letter-spacing: .01em; white-space: nowrap; cursor: pointer; border: 1px solid transparent; background: var(--bg3); color: var(--t2);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.dine-admin .chip-select.selected { background: var(--p-tint); color: var(--p); border-color: var(--p); }
+
+.dine-admin .stat-grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@container (min-width: 640px) { .dine-admin .stat-grid-4 { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
+.dine-admin .stat-card { background: var(--white); border: 1px solid var(--bdr); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-2); }
+.dine-admin .stat-label { font-size: 12px; color: var(--t3); margin-bottom: 5px; font-weight: 500; }
+.dine-admin .stat-value { font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.1; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+.dine-admin .stat-sub { font-size: 11px; color: var(--t3); margin-top: 4px; }
+
+.dine-admin .breakdown-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--bdr); }
+.dine-admin .breakdown-row:last-child { border-bottom: none; }
+.dine-admin .breakdown-label { font-size: 13px; color: var(--t2); }
+.dine-admin .breakdown-value { font-size: 14px; font-weight: 700; color: var(--text); text-align: right; }
+
+.dine-admin .alert { border-radius: 20px; padding: 14px 16px; display: flex; gap: 10px; align-items: flex-start; }
+.dine-admin .alert-yellow { background: var(--yellow-bg); border: 1px solid var(--yellow-bdr); }
+.dine-admin .alert-slate { background: var(--bg2); border: 1px solid var(--bdr); }
+.dine-admin .alert-icon { font-size: 15px; margin-top: 1px; flex-shrink: 0; }
+.dine-admin .alert-title { color: var(--yellow-txt2); font-weight: 700; font-size: 12.5px; }
+.dine-admin .alert-body { color: var(--yellow-txt); font-size: 12.5px; margin-top: 2px; line-height: 1.4; }
+.dine-admin .alert-slate .alert-title { color: var(--text); }
+.dine-admin .alert-slate .alert-body { color: var(--t2); }
+
+.dine-admin .activity-item { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--bdr); }
+.dine-admin .activity-item:last-child { border-bottom: none; }
+.dine-admin .activity-icon { width: 30px; height: 30px; border-radius: 9px; background: var(--bg2); color: var(--t2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.dine-admin .activity-text { font-size: 13px; color: var(--text); }
+.dine-admin .activity-time { font-size: 11.5px; color: var(--t3); margin-top: 2px; }
+
+.dine-admin .quick-link {
+  display: flex; align-items: center; gap: 10px; background: var(--white); border: 1px solid var(--bdr); border-radius: 16px;
+  padding: 12px; box-shadow: var(--shadow-2); cursor: pointer; text-decoration: none;
+  transition: box-shadow var(--dur-base) var(--ease), transform var(--dur-base) var(--ease);
+}
+.dine-admin .quick-link:hover { box-shadow: var(--shadow-3); transform: translateY(-1px); }
+.dine-admin .quick-link-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--p-tint); color: var(--p); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dine-admin .quick-link-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.dine-admin .quick-link-sub { font-size: 11.5px; color: var(--t3); line-height: 1.4; }
+
+.dine-admin .dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dine-admin .dtable thead { background: var(--bg2); }
+.dine-admin .dtable th { text-align: left; padding: 10px 18px; font-size: 10.5px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--bdr); }
+.dine-admin .dtable th.r { text-align: right; }
+.dine-admin .dtable td { padding: 11px 18px; border-bottom: 1px solid var(--bdr); vertical-align: top; }
+.dine-admin .dtable tr:last-child td { border-bottom: none; }
+.dine-admin .dtable tr.row-live { background: var(--bg2); }
+.dine-admin .dtable tr:hover { background: var(--bg2); }
+.dine-admin .td-strong { font-weight: 600; color: var(--text); }
+.dine-admin .td-muted { color: var(--t3); font-size: 12px; margin-top: 1px; }
+.dine-admin .td-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.dine-admin .table-wrap { background: var(--white); border: 1px solid var(--bdr); border-radius: 20px; overflow: hidden; }
+.dine-admin .table-scroll { overflow-x: auto; }
+
+.dine-admin .row-card { background: var(--white); border: 1px solid var(--bdr); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-2); }
+.dine-admin .row-card + .row-card { margin-top: 10px; }
+.dine-admin .rc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.dine-admin .rc-title { font-size: 14.5px; font-weight: 700; color: var(--text); }
+.dine-admin .rc-sub { font-size: 12px; color: var(--t3); margin-top: 2px; }
+.dine-admin .rc-meta { font-size: 12px; color: var(--t2); margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+.dine-admin .rc-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+.dine-admin .live-guest-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--bdr); border-radius: 12px; }
+
+.dine-admin .toggle { width: 42px; height: 24px; border-radius: 9999px; position: relative; flex-shrink: 0; transition: background var(--dur-base) var(--ease); cursor: pointer; border: none; padding: 0; }
+.dine-admin .toggle.on { background: var(--green-txt); }
+.dine-admin .toggle.off { background: var(--bg3); }
+.dine-admin .toggle-dot { position: absolute; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: var(--shadow-2); transition: left var(--dur-base) var(--ease), right var(--dur-base) var(--ease); }
+.dine-admin .toggle.on .toggle-dot { right: 2px; }
+.dine-admin .toggle.off .toggle-dot { left: 2px; }
+
+.dine-admin .tabs { display: flex; gap: 3px; overflow-x: auto; background: var(--bg2); border-radius: 50px; padding: 4px; width: fit-content; }
+.dine-admin .tab { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--t2); border-radius: 50px; white-space: nowrap; cursor: pointer; border: none; background: none; transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease); }
+.dine-admin .tab.active { color: var(--text); background: var(--white); box-shadow: var(--shadow-3); }
+
+.dine-admin .progress-track { flex: 1; background: var(--bg3); border-radius: 9999px; height: 8px; overflow: hidden; }
+.dine-admin .progress-fill { height: 100%; background: linear-gradient(90deg, var(--p), #ff8f6b); border-radius: 9999px; }
+
+.dine-admin .gallery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@container (min-width: 768px) { .dine-admin .gallery-grid { grid-template-columns: repeat(3, 1fr); } }
+.dine-admin .gallery-tile { height: 86px; border-radius: 14px; background: linear-gradient(150deg,#3d2b1f,#5c3d28); }
+.dine-admin .gallery-tile.add { background: none; border: 2px dashed var(--bdr2); display: flex; align-items: center; justify-content: center; color: var(--t3); font-size: 20px; cursor: pointer; }
+.dine-admin .hero-upload { height: 122px; border-radius: 20px; background: linear-gradient(150deg,#3d2b1f,#5c3d28); position: relative; overflow: hidden; }
+@container (min-width: 768px) { .dine-admin .hero-upload { height: 152px; } }
+.dine-admin .hero-upload-caption { position: absolute; bottom: 10px; left: 12px; color: rgba(255,255,255,.9); font-size: 11px; font-weight: 600; }
+
+.dine-admin .hours-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
+.dine-admin .hours-day-label { width: 88px; flex-shrink: 0; font-size: 12.5px; color: var(--text); }
+.dine-admin .hours-time-input { width: 84px; flex-shrink: 0; text-align: center; }
+.dine-admin .hours-sep { color: var(--t3); font-size: 12px; flex-shrink: 0; }
+.dine-admin .hours-closed-label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--t2); margin-left: auto; white-space: nowrap; }
+@container (max-width: 380px) {
+  .dine-admin .hours-day-label { width: 100%; font-weight: 600; }
+  .dine-admin .hours-closed-label { margin-left: 0; }
+}
+
+/* ── Profile header — real presence, not a thin banner. Taller cover,
+   bigger avatar with a visible ring, stats promoted to their own card
+   (reusing the Dashboard's stat-card pattern) instead of a cramped row
+   under a hairline divider. ── */
+.dine-admin .profile-cover { height: 130px; position: relative; }
+@container (min-width: 640px) { .dine-admin .profile-cover { height: 168px; } }
+.dine-admin .profile-avatar {
+  width: 76px; height: 76px; border-radius: 20px; border: 5px solid var(--white);
+  margin-top: -38px; box-shadow: var(--shadow-3), 0 0 0 1px var(--bdr);
+}
+@container (min-width: 640px) { .dine-admin .profile-avatar { width: 92px; height: 92px; margin-top: -46px; } }
+
+/* Field width discipline — short single-value fields shouldn't stretch
+   edge-to-edge in a wide card just because the container is wide. */
+.dine-admin .field-cap { max-width: 420px; }
+
+/* ── Table Themes — compact grid + minimal numbered pager. No redundant
+   "Enabled" badge duplicating what the toggle already shows; hairline
+   dividers instead of a shadow per tile so the set reads as one surface. ── */
+.dine-admin .theme-grid { display: grid; grid-template-columns: 1fr; gap: 1px; background: var(--bdr); border: 1px solid var(--bdr); border-radius: 16px; overflow: hidden; }
+@container (min-width: 560px) { .dine-admin .theme-grid { grid-template-columns: 1fr 1fr; } }
+.dine-admin .theme-tile { background: var(--white); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background var(--dur-fast) var(--ease); }
+.dine-admin .theme-tile:hover { background: var(--bg2); }
+.dine-admin .theme-tile-body { min-width: 0; }
+.dine-admin .theme-tile-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.dine-admin .theme-tile-desc { font-size: 12px; color: var(--t3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.dine-admin .pager { display: flex; align-items: center; justify-content: center; gap: 2px; margin-top: 18px; }
+.dine-admin .pager-btn {
+  min-width: 26px; height: 26px; padding: 0 4px; border-radius: 50%; border: none;
+  background: transparent; color: var(--t3); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit;
+  font-variant-numeric: tabular-nums; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.dine-admin .pager-btn:hover:not(:disabled):not(.active) { background: var(--bg2); color: var(--t2); }
+.dine-admin .pager-btn.active { background: var(--text); color: var(--white); font-weight: 700; }
+.dine-admin .pager-btn:disabled { opacity: .3; cursor: not-allowed; background: none; }
+.dine-admin .pager-arrow { color: var(--t3); }
+
+/* ── Compliance Documents — file-manager tile treatment (Drive/Dropbox
+   style) instead of plain bordered rows: icon-forward, status as a corner
+   badge, filename truncated to one line. ── */
+.dine-admin .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@container (min-width: 480px) { .dine-admin .doc-grid { grid-template-columns: repeat(2, 1fr); } }
+.dine-admin .doc-tile { position: relative; background: var(--white); border: 1px solid var(--bdr); border-radius: 16px; padding: 14px; box-shadow: var(--shadow-1); transition: box-shadow var(--dur-base) var(--ease); }
+.dine-admin .doc-tile:hover { box-shadow: var(--shadow-2); }
+.dine-admin .doc-tile-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--bg2); color: var(--t2); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.dine-admin .doc-tile-icon.verified { background: var(--green-bg); color: var(--green-txt); }
+.dine-admin .doc-tile-icon.rejected { background: var(--red-bg); color: var(--red-txt); }
+.dine-admin .doc-tile-icon.pending { background: var(--yellow-bg); color: var(--yellow-txt); }
+.dine-admin .doc-tile-name { font-size: 12.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 24px; }
+.dine-admin .doc-tile-meta { font-size: 11px; color: var(--t3); margin-top: 3px; }
+.dine-admin .doc-tile-delete { position: absolute; top: 12px; right: 12px; width: 24px; height: 24px; border-radius: 8px; }
+.dine-admin .doc-tile-rejection { font-size: 11px; color: var(--red-txt); margin-top: 6px; line-height: 1.4; }
+
+.dine-admin .onboarding-progress { display: none; align-items: center; gap: 6px; margin-bottom: 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; flex-wrap: wrap; justify-content: center; }
+@container (min-width: 768px) { .dine-admin .onboarding-progress { display: flex; } }
+.dine-admin .onboarding-progress .step-done,
+.dine-admin .onboarding-progress .step-current { color: var(--p); }
+.dine-admin .onboarding-progress .step-pending { color: var(--t3); }
+.dine-admin .onboarding-progress .step-sep { color: var(--t3); }
+
+.dine-admin .onboarding-dots { display: flex; gap: 6px; margin-bottom: 14px; justify-content: center; }
+@container (min-width: 768px) { .dine-admin .onboarding-dots { display: none; } }
+.dine-admin .onboarding-dot { width: 20px; height: 4px; border-radius: 2px; background: var(--bg3); }
+.dine-admin .onboarding-dot.filled { background: var(--p); }
+
+.dine-admin .onboarding-wrap { display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
+@container (min-width: 768px) { .dine-admin .onboarding-wrap { padding-top: 32px; } }
+.dine-admin .onboarding-card { width: 100%; max-width: 640px; }
+.dine-admin .onboarding-emoji { font-size: 38px; margin-bottom: 10px; }
+@container (min-width: 768px) { .dine-admin .onboarding-emoji { font-size: 44px; margin-bottom: 12px; } }
+.dine-admin .only-mobile { display: block; }
+.dine-admin .only-desktop { display: none; }
+.dine-admin .only-mobile-flex { display: flex; }
+.dine-admin .only-desktop-flex { display: none; }
+@container (min-width: 768px) {
+  .dine-admin .only-mobile,
+  .dine-admin .only-mobile-flex { display: none; }
+  .dine-admin .only-desktop { display: block; }
+  .dine-admin .only-desktop-flex { display: flex; }
+}
+
+.dine-admin .section-block-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+
+.dine-admin .onboarding-confirm {
+  width: 100%; max-width: 520px; margin: 40px auto; border-radius: 16px; background: var(--white);
+  box-shadow: var(--shadow-2); border: 1px solid var(--bdr); padding: 32px 24px; text-align: center;
+}

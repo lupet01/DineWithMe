@@ -8,4 +8,5 @@ export type {
   CheckInConfirmationEmailData,
   FeedbackRequestEmailData,
   RefundConfirmationEmailData,
+  TeamInviteEmailData,
 } from "./templates";

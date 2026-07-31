@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { formatAmount } from "@dinewithme/config/src/payment";
 import { Badge } from "@/components/ui/badge";
+import { GuestQuickView } from "@/app/admin/components/guest-quick-view";
 import { checkInGuest, refundSeat } from "../actions";
 
 interface Seat {
@@ -15,12 +18,29 @@ interface Seat {
     lastName: string | null;
     email: string;
   } | null;
+  paymentIntents: Array<{ status: string; amount: number }>;
+}
+
+function paymentBadge(seat: Seat): { label: string; tone: "success" | "neutral" | "warning" } {
+  const intent = seat.paymentIntents[0];
+  if (!intent) {
+    return { label: "—", tone: "neutral" };
+  }
+  if (intent.status === "SUCCEEDED") {
+    return { label: `Paid · ${formatAmount(intent.amount)}`, tone: "success" };
+  }
+  if (intent.status === "REFUNDED") {
+    return { label: "Refunded", tone: "neutral" };
+  }
+  return { label: "Awaiting payment", tone: "warning" };
 }
 
 interface GuestRowProps {
   dinnerId: string;
+  restaurantId: string;
   seat: Seat;
   canRefund: boolean;
+  isPlatformAdmin: boolean;
 }
 
 function statusTone(status: string): "primary" | "success" | "neutral" {
@@ -29,8 +49,15 @@ function statusTone(status: string): "primary" | "success" | "neutral" {
   return "neutral";
 }
 
-export function GuestRow({ dinnerId, seat, canRefund }: GuestRowProps) {
+export function GuestRow({
+  dinnerId,
+  restaurantId,
+  seat,
+  canRefund,
+  isPlatformAdmin,
+}: GuestRowProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   const guest = seat.confirmedByUser;
   const name = guest
@@ -67,14 +94,42 @@ export function GuestRow({ dinnerId, seat, canRefund }: GuestRowProps) {
   return (
     <tr className="hover:bg-cream-100 transition-colors">
       <td className="px-6 py-4">
-        <div className="text-sm font-medium text-gray-900">{name}</div>
+        {guest && isPlatformAdmin ? (
+          <Link
+            href={`/admin/ops/users/${guest.id}`}
+            className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline"
+          >
+            {name}
+          </Link>
+        ) : guest ? (
+          <button
+            type="button"
+            onClick={() => setQuickViewOpen(true)}
+            className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline"
+          >
+            {name}
+          </button>
+        ) : (
+          <div className="text-sm font-medium text-gray-900">{name}</div>
+        )}
         {guest && <div className="text-sm text-gray-500">{guest.email}</div>}
+        {guest && !isPlatformAdmin && (
+          <GuestQuickView
+            open={quickViewOpen}
+            onClose={() => setQuickViewOpen(false)}
+            restaurantId={restaurantId}
+            guest={guest}
+          />
+        )}
       </td>
       <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
         {seat.dietaryNotes || "—"}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <Badge tone={statusTone(seat.status)}>{seat.status}</Badge>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <Badge tone={paymentBadge(seat).tone}>{paymentBadge(seat).label}</Badge>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
         <div className="flex items-center justify-end gap-2">

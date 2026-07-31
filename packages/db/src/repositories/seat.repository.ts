@@ -126,6 +126,43 @@ export class SeatRepository extends BaseRepository<Seat> {
   }
 
   /**
+   * A user's confirmed bookings at one specific restaurant — the query that
+   * makes the Guest Quick View's gatekeeping real: scoped by
+   * (confirmedByUserId, dinner.restaurantId) together, so it is structurally
+   * incapable of returning another restaurant's booking history for this
+   * guest.
+   */
+  async findByUserAndRestaurant(
+    userId: string,
+    restaurantId: string
+  ): Promise<
+    Array<{
+      status: SeatStatus;
+      dietaryNotes: string | null;
+      dinner: { id: string; startsAt: Date; theme: { title: string } | null };
+    }>
+  > {
+    return this.prisma.seat.findMany({
+      where: {
+        confirmedByUserId: userId,
+        dinner: { restaurantId },
+      },
+      select: {
+        status: true,
+        dietaryNotes: true,
+        dinner: {
+          select: {
+            id: true,
+            startsAt: true,
+            theme: { select: { title: true } },
+          },
+        },
+      },
+      orderBy: { dinner: { startsAt: "desc" } },
+    });
+  }
+
+  /**
    * Find seats for a specific dinner and user
    */
   async findByDinnerAndUser(dinnerId: string, userId: string): Promise<Seat[]> {

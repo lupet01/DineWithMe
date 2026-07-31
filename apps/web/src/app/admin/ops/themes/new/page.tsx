@@ -14,7 +14,7 @@ export default function NewThemePage() {
         </Link>
         <h2 className="text-xl font-semibold text-gray-900">New Theme</h2>
       </div>
-      <ThemeForm mode="create" />
+      <ThemeForm />
     </div>
   );
 }

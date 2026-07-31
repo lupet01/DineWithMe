@@ -31,6 +31,7 @@ interface FeedbackData {
   rating?: number;
   vibeTags?: VibeTag[];
   reportReason?: SafetyReportReason;
+  reportedUserId?: string | null;
   personSignals?: Array<{
     targetUserId: string;
     wouldDineAgain: boolean;
@@ -202,10 +203,15 @@ export function FeedbackFlow({ dinnerId }: FeedbackFlowProps) {
     }
   };
 
-  const handleReportSubmit = (reason: SafetyReportReason, details: string) => {
+  const handleReportSubmit = (
+    reason: SafetyReportReason,
+    details: string,
+    reportedUserId: string | null
+  ) => {
     const updated = {
       ...feedbackData,
       reportReason: reason,
+      reportedUserId,
       notes: details || feedbackData.notes || null,
     };
     setFeedbackData(updated);
@@ -245,6 +251,7 @@ export function FeedbackFlow({ dinnerId }: FeedbackFlowProps) {
           rating: data.rating,
           vibeTags: data.vibeTags,
           reportReason: data.reportReason,
+          reportedUserId: data.reportedUserId,
           personSignals: data.personSignals,
         }),
       });
@@ -341,7 +348,11 @@ export function FeedbackFlow({ dinnerId }: FeedbackFlowProps) {
         )}
 
         {currentStep === "report" && (
-          <ReportStep onSubmit={handleReportSubmit} onBack={handleReportBack} />
+          <ReportStep
+            attendees={attendees}
+            onSubmit={handleReportSubmit}
+            onBack={handleReportBack}
+          />
         )}
 
         {currentStep === "connections" && (

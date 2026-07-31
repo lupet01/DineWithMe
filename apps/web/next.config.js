@@ -83,7 +83,15 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+              // 'unsafe-eval' is required in dev only - Next.js Fast Refresh's
+              // runtime evals module wrappers on every hot reload, and without
+              // it the eval throws and silently kills client hydration for the
+              // whole page (not just a console warning - confirmed via testing
+              // that no client component responds to input at all when this is
+              // missing in dev). Production never gets 'unsafe-eval'.
+              `script-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com${
+                process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""
+              }`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://img.clerk.com https://*.r2.cloudflarestorage.com https://*.r2.dev https://api.mapbox.com",
               "font-src 'self' data:",

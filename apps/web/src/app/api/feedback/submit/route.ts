@@ -27,6 +27,10 @@ export interface FeedbackSubmitRequest {
   // meaningful when comfortLevel === "LOW"; falls back to SAFETY_CONCERN
   // below when omitted (e.g. requests from older clients).
   reportReason?: "MADE_UNCOMFORTABLE" | "INAPPROPRIATE_BEHAVIOR" | "SAFETY_CONCERN" | "OTHER" | null;
+  // Who the report is about, from the "Report Something" screen's attendee
+  // picker. Never trusted as-is - cross-checked below against this dinner's
+  // actual confirmed attendees before being written to the SafetyReport.
+  reportedUserId?: string | null;
   personSignals?: Array<{
     targetUserId: string;
     wouldDineAgain: boolean;
@@ -268,11 +272,21 @@ export async function POST(request: NextRequest) {
     // screen now collects a reason category (reportReason); fall back to
     // SAFETY_CONCERN for older clients that only send free text.
     if (body.comfortLevel === "LOW" && body.wouldDineAgain === false) {
+      // Never trust body.reportedUserId as-is - only accept it if it names
+      // someone who actually had a confirmed seat at this exact dinner.
+      const isRealAttendee =
+        !!body.reportedUserId &&
+        body.reportedUserId !== dbUser.id &&
+        dinner.seats.some((seat) => seat.confirmedByUser?.id === body.reportedUserId);
+
       await safetyReportRepository.create({
         reporter: { connect: { id: dbUser.id } },
         dinner: { connect: { id: body.dinnerId } },
         reason: body.reportReason || "SAFETY_CONCERN",
         reasonDetail: body.notes || null,
+        ...(isRealAttendee
+          ? { reportedUser: { connect: { id: body.reportedUserId! } } }
+          : {}),
       });
     }
 

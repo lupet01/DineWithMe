@@ -13,6 +13,61 @@ export interface RestaurantRejectedEmailData {
   supportEmail: string;
 }
 
+export interface TeamInviteEmailData {
+  inviteeEmail: string;
+  inviterName: string;
+  /** Restaurant name for a restaurant invite; omitted for a platform invite */
+  restaurantName?: string;
+  role: string;
+  acceptUrl: string;
+  expiresAt: string;
+}
+
+export function teamInviteTemplate(data: TeamInviteEmailData): string {
+  const context = data.restaurantName
+    ? `join <strong>${data.restaurantName}</strong>'s team on DineWithMe as a ${data.role}`
+    : `join the DineWithMe platform team as a ${data.role}`;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Invited</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">You're Invited</h1>
+  </div>
+
+  <div style="background: white; padding: 40px 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+    <p style="font-size: 16px; margin-bottom: 20px;">Hi,</p>
+
+    <p style="font-size: 16px; margin-bottom: 30px;">
+      <strong>${data.inviterName}</strong> has invited you to ${context}.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.acceptUrl}" style="display: inline-block; background: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+        Accept Invite
+      </a>
+    </div>
+
+    <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+      This invite expires on ${data.expiresAt}. If you weren't expecting this, you can safely ignore this email.
+    </p>
+
+    <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">
+      Best regards,<br>
+      <strong>The DineWithMe Team</strong>
+    </p>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
 export function restaurantApprovedTemplate(data: RestaurantApprovedEmailData): string {
   return `
 <!DOCTYPE html>

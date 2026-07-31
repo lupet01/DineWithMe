@@ -13,6 +13,7 @@
     "clean": "rm -rf .turbo node_modules"
   },
   "dependencies": {
+    "@dinewithme/config": "*",
     "@prisma/client": "^5.9.1"
   },
   "devDependencies": {

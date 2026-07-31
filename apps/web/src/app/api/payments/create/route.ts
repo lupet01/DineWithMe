@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { seatRepository, paymentIntentRepository, dinnerRepository } from "@dinewithme/db";
 import { handleApiError } from "../../lib/error-handler";
 import { getCurrentUser } from "@/lib/auth";
-import { getCommitmentAmount } from "@dinewithme/config/src/payment";
+import { getCheckoutAmount } from "@dinewithme/config/src/payment";
 import { createPaystackService } from "@dinewithme/payment";
 import { track } from "@dinewithme/analytics";
 import { withRateLimit, withCors } from "../../lib/middleware";
@@ -102,8 +102,8 @@ async function handlePOST(request: NextRequest) {
       );
     }
 
-    // Calculate commitment amount
-    const amount = getCommitmentAmount(dinner.id);
+    // Calculate checkout amount (food price + booking fee)
+    const amount = getCheckoutAmount(dinner);
 
     // Create payment intent
     const paymentIntent = await paymentIntentRepository.createPaymentIntent({

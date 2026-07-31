@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import { dinnerRepository, seatRepository } from "@dinewithme/db";
+import { dinnerRepository, seatRepository, dinnerMediaRepository } from "@dinewithme/db";
 import { getCurrentUser } from "@/lib/auth";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 import type { DinnerDetail, ThemeDetail } from "@dinewithme/shared";
@@ -40,6 +40,13 @@ async function fetchDinnerDetail(dinnerId: string): Promise<DinnerDetail | null>
     const restaurant = dinner.restaurant as Restaurant;
     const theme = dinner.theme as ThemeDetail;
 
+    const listingPhotos = await dinnerMediaRepository.findByDinner(dinner.id, "DINNER_LISTING");
+    const photos = listingPhotos.length > 0
+      ? listingPhotos.map((item) => item.mediaAsset.url)
+      : restaurant.heroImageUrl
+        ? [restaurant.heroImageUrl]
+        : [];
+
     // Transform to expected format
     return {
       id: dinner.id,
@@ -49,6 +56,7 @@ async function fetchDinnerDetail(dinnerId: string): Promise<DinnerDetail | null>
       endsAt: dinner.endsAt.toISOString(),
       seatCount: dinner.seatCount,
       status: dinner.status,
+      pricePerSeatCents: dinner.pricePerSeatCents,
       createdAt: dinner.createdAt.toISOString(),
       updatedAt: dinner.updatedAt.toISOString(),
       restaurant: {
@@ -69,6 +77,7 @@ async function fetchDinnerDetail(dinnerId: string): Promise<DinnerDetail | null>
         held: heldCount,
         attended: 0,
       },
+      photos,
     };
   } catch (error) {
     console.error("Error fetching dinner detail:", error);
@@ -116,7 +125,7 @@ export async function DinnerDetailContent({
     <div className="min-h-screen bg-cream-100 pb-36">
       {/* Hero — fades into cream background */}
       <DinnerHero
-        heroImageUrl={dinner.restaurant.heroImageUrl}
+        photos={dinner.photos ?? []}
         theme={dinner.theme.title}
         status={dinner.status}
       />

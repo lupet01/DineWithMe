@@ -1,7 +1,12 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { restaurantRepository, userRepository, auditLogger } from "@dinewithme/db";
+import {
+  restaurantRepository,
+  restaurantClosureRequestRepository,
+  userRepository,
+  auditLogger,
+} from "@dinewithme/db";
 import { revalidatePath } from "next/cache";
 import { track } from "@dinewithme/analytics";
 import { AnalyticsEvents } from "@dinewithme/analytics";
@@ -12,6 +17,21 @@ interface ActionResult<T = void> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+async function requirePlatformAdmin() {
+  const { userId: clerkUserId } = await auth();
+  if (!clerkUserId) {
+    throw new Error("Unauthorized");
+  }
+  const dbUser = await userRepository.findByAuthProviderId(clerkUserId);
+  if (!dbUser) {
+    throw new Error("User not found");
+  }
+  if (dbUser.role !== Role.PLATFORM_ADMIN) {
+    throw new Error("Only platform admins can perform this action");
+  }
+  return dbUser;
 }
 
 /**
@@ -195,6 +215,98 @@ export async function reactivateRestaurant(restaurantId: string): Promise<Action
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to reactivate restaurant",
+    };
+  }
+}
+
+/**
+ * Approves a restaurant's closure request - the only path that ever
+ * archives a restaurant (§4.5.5). Permanent; there is no un-archive.
+ */
+export async function approveClosureRequest(requestId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePlatformAdmin();
+
+    const request = await restaurantClosureRequestRepository.findById(requestId);
+    if (!request) {
+      return { success: false, error: "Closure request not found" };
+    }
+    if (request.status !== "PENDING") {
+      return { success: false, error: "This request has already been reviewed" };
+    }
+
+    const restaurant = await restaurantRepository.findById(request.restaurantId);
+    if (!restaurant) {
+      return { success: false, error: "Restaurant not found" };
+    }
+
+    await restaurantClosureRequestRepository.update(requestId, {
+      status: "APPROVED",
+      reviewedBy: { connect: { id: admin.id } },
+      reviewedAt: new Date(),
+    });
+    await restaurantRepository.archive(restaurant.id);
+
+    track(AnalyticsEvents.RESTAURANT_ARCHIVED, {
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      archivedBy: admin.id,
+      reason: request.reason,
+      timestamp: new Date().toISOString(),
+    });
+    await auditLogger.restaurantClosureReviewed(admin.id, restaurant.id, true, {
+      restaurantName: restaurant.name,
+      requestId,
+      reason: request.reason,
+    });
+
+    revalidatePath("/admin/ops/restaurants");
+    revalidatePath(`/admin/ops/restaurants/${restaurant.id}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error approving closure request:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to approve closure request",
+    };
+  }
+}
+
+/**
+ * Rejects a closure request - dismissed, restaurant status untouched. The
+ * owner can submit a new request later.
+ */
+export async function rejectClosureRequest(requestId: string): Promise<ActionResult> {
+  try {
+    const admin = await requirePlatformAdmin();
+
+    const request = await restaurantClosureRequestRepository.findById(requestId);
+    if (!request) {
+      return { success: false, error: "Closure request not found" };
+    }
+    if (request.status !== "PENDING") {
+      return { success: false, error: "This request has already been reviewed" };
+    }
+
+    await restaurantClosureRequestRepository.update(requestId, {
+      status: "REJECTED",
+      reviewedBy: { connect: { id: admin.id } },
+      reviewedAt: new Date(),
+    });
+
+    await auditLogger.restaurantClosureReviewed(admin.id, request.restaurantId, false, {
+      requestId,
+      reason: request.reason,
+    });
+
+    revalidatePath("/admin/ops/restaurants");
+    revalidatePath(`/admin/ops/restaurants/${request.restaurantId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error rejecting closure request:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to reject closure request",
     };
   }
 }

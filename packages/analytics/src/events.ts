@@ -23,6 +23,7 @@ export const AnalyticsEvents = {
   RESTAURANT_MEDIA_DELETED: "restaurant_media_deleted",
   RESTAURANT_APPROVED: "restaurant_approved",
   RESTAURANT_PAUSED: "restaurant_paused",
+  RESTAURANT_ARCHIVED: "restaurant_archived",
 
   // Dinner events
   DINNER_CREATED: "dinner_created",
@@ -194,6 +195,14 @@ export interface RestaurantPausedEvent {
   restaurantName: string;
   pausedBy: string;
   pauserEmail: string;
+  reason?: string;
+  timestamp: string;
+}
+
+export interface RestaurantArchivedEvent {
+  restaurantId: string;
+  restaurantName: string;
+  archivedBy: string;
   reason?: string;
   timestamp: string;
 }
@@ -558,6 +567,7 @@ export interface AnalyticsEventMap {
   [AnalyticsEvents.RESTAURANT_MEDIA_DELETED]: RestaurantMediaDeletedEvent;
   [AnalyticsEvents.RESTAURANT_APPROVED]: RestaurantApprovedEvent;
   [AnalyticsEvents.RESTAURANT_PAUSED]: RestaurantPausedEvent;
+  [AnalyticsEvents.RESTAURANT_ARCHIVED]: RestaurantArchivedEvent;
   [AnalyticsEvents.DINNER_CREATED]: DinnerCreatedEvent;
   [AnalyticsEvents.DINNER_CREATED_WITH_THEME]: DinnerCreatedWithThemeEvent;
   [AnalyticsEvents.DINNER_CANCELLED]: DinnerCancelledEvent;

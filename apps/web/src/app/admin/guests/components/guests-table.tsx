@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { formatAmount } from "@dinewithme/config/src/payment";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchBar } from "@/components/ui/search-bar";
 import { Tabs } from "@/components/ui/tabs";
 import { RowCard } from "@/components/ui/row-card";
+import { GuestQuickView } from "@/app/admin/components/guest-quick-view";
 
 interface GuestUser {
   id: string;
@@ -31,6 +33,7 @@ interface Guest {
 
 interface GuestsTableProps {
   guests: Guest[];
+  restaurantId: string;
 }
 
 function statusTone(status: string): "primary" | "success" | "neutral" | "danger" | "warning" {
@@ -49,7 +52,7 @@ function paymentBadge(guest: Guest): { label: string; tone: "success" | "neutral
       : { label: "—", tone: "neutral" };
   }
   if (intent.status === "SUCCEEDED") {
-    return { label: `Paid · ${(intent.amount / 100).toFixed(0)} ${intent.currency}`, tone: "success" };
+    return { label: `Paid · ${formatAmount(intent.amount)}`, tone: "success" };
   }
   if (intent.status === "REFUNDED") {
     return { label: "Refunded", tone: "neutral" };
@@ -61,16 +64,11 @@ const CANCELLED_STATUSES = new Set(["CANCELLED", "EXPIRED", "NO_SHOW"]);
 
 type TabValue = "upcoming" | "past" | "cancelled";
 
-const tabItems = [
-  { value: "upcoming", label: "Upcoming" },
-  { value: "past", label: "Past" },
-  { value: "cancelled", label: "Cancelled" },
-];
-
-export function GuestsTable({ guests }: GuestsTableProps) {
+export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabValue>("upcoming");
   const [dinnerFilter, setDinnerFilter] = useState("");
+  const [quickViewGuest, setQuickViewGuest] = useState<GuestUser | null>(null);
 
   const dinnerOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -84,15 +82,35 @@ export function GuestsTable({ guests }: GuestsTableProps) {
 
   const now = Date.now();
 
-  const byTab = useMemo(() => {
-    return guests.filter((guest) => {
-      const isCancelled = CANCELLED_STATUSES.has(guest.status);
-      const isUpcoming = new Date(guest.dinner.startsAt).getTime() > now;
-      if (tab === "cancelled") return isCancelled;
-      if (isCancelled) return false;
-      return tab === "upcoming" ? isUpcoming : !isUpcoming;
-    });
-  }, [guests, tab, now]);
+  const matchesTab = (guest: Guest, t: TabValue) => {
+    const isCancelled = CANCELLED_STATUSES.has(guest.status);
+    const isUpcoming = new Date(guest.dinner.startsAt).getTime() > now;
+    if (t === "cancelled") return isCancelled;
+    if (isCancelled) return false;
+    return t === "upcoming" ? isUpcoming : !isUpcoming;
+  };
+
+  const tabCounts = useMemo(
+    () => ({
+      upcoming: guests.filter((g) => matchesTab(g, "upcoming")).length,
+      past: guests.filter((g) => matchesTab(g, "past")).length,
+      cancelled: guests.filter((g) => matchesTab(g, "cancelled")).length,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [guests, now]
+  );
+
+  const tabItems = [
+    { value: "upcoming", label: `Upcoming (${tabCounts.upcoming})` },
+    { value: "past", label: `Past (${tabCounts.past})` },
+    { value: "cancelled", label: `Cancelled (${tabCounts.cancelled})` },
+  ];
+
+  const byTab = useMemo(
+    () => guests.filter((guest) => matchesTab(guest, tab)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [guests, tab, now]
+  );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -161,9 +179,27 @@ export function GuestsTable({ guests }: GuestsTableProps) {
             return (
               <RowCard
                 key={guest.id}
-                href={`/admin/dinners/${guest.dinner.id}`}
-                title={name}
-                subtitle={`${guest.dinner.theme?.title || "Dinner"} · ${dinnerDate}`}
+                title={
+                  person ? (
+                    <button
+                      type="button"
+                      onClick={() => setQuickViewGuest(person)}
+                      className="text-left hover:text-primary-600 hover:underline"
+                    >
+                      {name}
+                    </button>
+                  ) : (
+                    name
+                  )
+                }
+                subtitle={
+                  <Link
+                    href={`/admin/dinners/${guest.dinner.id}`}
+                    className="hover:text-primary-600 hover:underline"
+                  >
+                    {guest.dinner.theme?.title || "Dinner"} · {dinnerDate}
+                  </Link>
+                }
                 trailing={
                   <div className="flex flex-col items-end gap-1">
                     <Badge tone={statusTone(guest.status)}>{guest.status}</Badge>
@@ -217,7 +253,17 @@ export function GuestsTable({ guests }: GuestsTableProps) {
                   return (
                     <tr key={guest.id} className="hover:bg-cream-100 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{name}</div>
+                        {person ? (
+                          <button
+                            type="button"
+                            onClick={() => setQuickViewGuest(person)}
+                            className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline"
+                          >
+                            {name}
+                          </button>
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900">{name}</div>
+                        )}
                         {person && (
                           <div className="text-sm text-gray-500">{person.email}</div>
                         )}
@@ -254,6 +300,15 @@ export function GuestsTable({ guests }: GuestsTableProps) {
           </table>
         </div>
       </Card>
+
+      {quickViewGuest && (
+        <GuestQuickView
+          open
+          onClose={() => setQuickViewGuest(null)}
+          restaurantId={restaurantId}
+          guest={quickViewGuest}
+        />
+      )}
     </div>
   );
 }

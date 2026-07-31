@@ -23,11 +23,35 @@ enum RestaurantStatus {
   PENDING
   ACTIVE
   PAUSED
+  /// Permanent closure - historical dinners/seats/payments survive for
+  /// diners' booking history and financial records; distinct from PAUSED,
+  /// which is temporary and self-reversible. Reached only via an approved
+  /// RestaurantClosureRequest, never a direct status write (§4.5.5/§16.7).
+  ARCHIVED
 }
 
 enum RestaurantMediaType {
   HERO
   GALLERY
+}
+
+enum RestaurantGalleryRole {
+  HERO
+  GALLERY
+  FEATURED
+}
+
+enum DinnerMediaKind {
+  DINNER_LISTING
+  PAST_DINNER_HIGHLIGHT
+  PAST_DINNER_PRIVATE
+}
+
+enum DinnerMediaPromotionStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum DinnerStatus {
@@ -90,6 +114,9 @@ model User {
   reportsReceived       SafetyReport[]     @relation("ReportsReceived")
   reportsReviewed       SafetyReport[]     @relation("ReportsReviewed")
   verifiedDocuments     ComplianceDocument[]
+  teamInvitesSent       TeamInvite[]
+  closureRequestsMade     RestaurantClosureRequest[] @relation("ClosureRequestedBy")
+  closureRequestsReviewed RestaurantClosureRequest[] @relation("ClosureReviewedBy")
 
   @@map("users")
 }
@@ -111,17 +138,101 @@ model Restaurant {
   createdAt                DateTime         @default(now())
   updatedAt                DateTime         @updatedAt
 
+  // Payout destination (§16.5). bankAccountNumber is stored AES-256-GCM
+  // encrypted (see packages/db/src/utils/encryption.ts) - never queried,
+  // filtered, or indexed on, only decrypted for display/payout processing.
+  // bankDetailsVerifiedAt is cleared to null by the update path itself any
+  // time bank details change, so a changed account can never silently
+  // inherit a stale verification - only a fresh Platform Ops verify action
+  // sets it again. Never save-and-verify in the same step.
+  bankName                 String?
+  bankAccountNumber        String?
+  bankAccountHolderName    String?
+  bankDetailsVerifiedAt    DateTime?
+
+  // Onboarding Step 3 - Verification (§16.1). registrationNumber is
+  // required at signup going forward (a real business filing is hard for
+  // spam to fake); the rest are optional anti-spam/attribution signals.
+  // All nullable so restaurants approved before this column existed don't
+  // retroactively need to backfill anything - surfaced as an optional
+  // "add this info" prompt on Restaurant Profile, never a block.
+  registrationNumber       String?
+  googleBusinessUrl        String?
+  instagramHandle          String?
+  facebookUrl              String?
+  referralSource           String?
+
+  // Set when status transitions to PAUSED (self-serve, instant,
+  // reversible - distinct from ARCHIVED, which is permanent and only
+  // reached via an approved RestaurantClosureRequest). Cleared back to
+  // null on reactivation.
+  pausedAt                 DateTime?
+
+  // Set the first time the Dashboard's one-time "You're Live!" moment is
+  // actually shown to the owner, client-side, after a PENDING -> ACTIVE
+  // approval (§16.1). Null means "next Dashboard load should show it."
+  // Reactivating from PAUSED never clears this - that restaurant already
+  // had its moment. Backfilled to non-null for restaurants that were
+  // already ACTIVE/PAUSED before this column existed, so it only ever
+  // fires for approvals going forward.
+  liveMomentSeenAt         DateTime?
+
+  // Restaurant Profile's Operating Hours card. Json shape:
+  // { mon: {open: "11:00", close: "22:00", closed: false}, tue: {...}, ... }
+  // for all seven lowercase-3-letter day keys. Null means never set - the
+  // card renders every day with empty open/close inputs and closed
+  // unchecked, not an error state.
+  operatingHours           Json?
+
   members             RestaurantMember[]
   media                RestaurantMedia[]
+  mediaAssets          MediaAsset[]
+  galleryItems         RestaurantGalleryItem[]
   dinners              Dinner[]
   enabledThemes        RestaurantEnabledTheme[]
   dinnerContexts       DinnerContext[]
   menuItems            MenuItem[]
+  meals                Meal[]
   complianceDocuments  ComplianceDocument[]
   tables               RestaurantTable[]
   recurringSeries      RecurringDinnerSeries[]
+  payouts              Payout[]
+  teamInvites          TeamInvite[]
+  closureRequests      RestaurantClosureRequest[]
 
   @@map("restaurants")
+}
+
+enum RestaurantClosureRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Settings' Danger Zone "Close Restaurant" action doesn't close the
+/// restaurant directly - closing has downstream effects on payouts,
+/// bookings, and historical data, so it creates a review request instead
+/// (same posture as the original PENDING -> ACTIVE approval, just for the
+/// opposite end of the lifecycle). Approving sets Restaurant.status =
+/// ARCHIVED; rejecting just dismisses the request, restaurant stays as it
+/// was.
+model RestaurantClosureRequest {
+  id               String                          @id @default(cuid())
+  restaurantId     String
+  requestedByUserId String
+  reason           String                          @db.Text
+  status           RestaurantClosureRequestStatus  @default(PENDING)
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  createdAt        DateTime                        @default(now())
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  requestedBy  User       @relation("ClosureRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  reviewedBy   User?      @relation("ClosureReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([restaurantId])
+  @@index([status])
+  @@map("restaurant_closure_requests")
 }
 
 model RestaurantMember {
@@ -140,6 +251,53 @@ model RestaurantMember {
   @@map("restaurant_members")
 }
 
+enum TeamInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+  EXPIRED
+}
+
+/// One shared model backing both the Restaurant Team invite (§6.2.1) and
+/// the Platform Team invite (§7.8) - the only difference is whether
+/// restaurantId is set. Deliberately stores the invite by email only,
+/// never a userId up front: this app has no user-pre-provisioning path
+/// (apps/web/src/app/api/auth/sync/route.ts only ever creates a User row
+/// from a live Clerk session, User.authProviderId is required+unique), so
+/// an invitee who hasn't signed up yet literally cannot be referenced by
+/// a User row until they do. Acceptance links the invite to a User at
+/// that point, not before.
+///
+/// role is a plain string, not RestaurantMemberRole, because a platform
+/// invite (restaurantId null) grants Role.PLATFORM_ADMIN - a completely
+/// different enum - rather than an OWNER/MANAGER value; validated at the
+/// action layer against whichever enum applies for that invite's shape.
+model TeamInvite {
+  id              String            @id @default(cuid())
+  email           String
+  restaurantId    String?
+  role            String
+  token           String            @unique
+  status          TeamInviteStatus  @default(PENDING)
+  invitedByUserId String
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime          @default(now())
+
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  invitedBy  User        @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([email])
+  @@index([status])
+  @@map("team_invites")
+}
+
+// Superseded by MediaAsset + RestaurantGalleryItem below - kept as the
+// pre-restructure baseline until the backfill migration is confirmed
+// complete for every restaurant, see prisma/migrations and
+// packages/db/src/scripts/backfill-restaurant-gallery.ts.
 model RestaurantMedia {
   id           String              @id @default(cuid())
   restaurantId String
@@ -153,6 +311,45 @@ model RestaurantMedia {
   @@index([restaurantId])
   @@index([restaurantId, type])
   @@map("restaurant_media")
+}
+
+// One stored photo per restaurant - the shared library everything else
+// (gallery items, dish photos, dinner listing/table photos) references
+// instead of storing its own copy. See Implementation Guide §16.6.
+model MediaAsset {
+  id           String   @id @default(cuid())
+  restaurantId String
+  url          String
+  key          String // Storage key for deletion, mirrors RestaurantMedia's own key field
+  caption      String?
+  uploadedAt   DateTime @default(now())
+
+  restaurant   Restaurant              @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  galleryItems RestaurantGalleryItem[]
+  dinnerMedia  DinnerMedia[]
+  menuItems    MenuItem[]
+
+  @@index([restaurantId])
+  @@map("media_assets")
+}
+
+// Restructures RestaurantMedia into a join against MediaAsset rather than
+// storing the url itself. restaurantId is kept denormalized (in addition to
+// mediaAsset.restaurantId) for cheap per-restaurant gallery queries.
+model RestaurantGalleryItem {
+  id           String                @id @default(cuid())
+  restaurantId String
+  mediaAssetId String
+  role         RestaurantGalleryRole
+  displayOrder Int                   @default(0)
+  createdAt    DateTime              @default(now())
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([restaurantId, role])
+  @@map("restaurant_gallery_items")
 }
 
 model Theme {
@@ -173,10 +370,34 @@ model Theme {
   themePerformance     ThemePerformance?
   userSignals          UserThemeSignal[]
   recurringSeries      RecurringDinnerSeries[]
+  icebreakers          ThemeIcebreaker[]
 
   @@index([key])
   @@index([isActive])
   @@map("themes")
+}
+
+/// One row per starter question, replacing Theme.conversationStarters'
+/// flat JSON array - a JSON array can't be aggregated or ranked in SQL,
+/// which was the whole point of tracking "what starters do people
+/// actually use" (§16.4). usageCount increments each time a starter is
+/// shown to a confirmed guest on Booked Dinner View; avgRating has no
+/// real data source yet (no per-starter rating UI exists anywhere), so it
+/// stays null rather than being fabricated.
+model ThemeIcebreaker {
+  id           String   @id @default(cuid())
+  themeId      String
+  text         String   @db.Text
+  displayOrder Int      @default(0)
+  usageCount   Int      @default(0)
+  avgRating    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  theme Theme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@index([themeId])
+  @@map("theme_icebreakers")
 }
 
 model RestaurantEnabledTheme {
@@ -194,22 +415,37 @@ model RestaurantEnabledTheme {
   @@map("restaurant_enabled_themes")
 }
 
+// Recovered from the live database (§ restore pass) - present as a real
+// Postgres enum with an index and real data (18 of 22 dinners set) but
+// missing from schema.prisma, evidently dropped by accident during the
+// local-master merge reconciliation. Ties to the Theme Engine's
+// Conversation Style concept (Implementation Guide §16.4).
+enum ConversationStyle {
+  STRUCTURED_ICEBREAKERS
+  OPEN_ENDED
+  DEEP_AND_MEANINGFUL
+  LIGHT_AND_CASUAL
+}
+
 model Dinner {
-  id                String       @id @default(cuid())
+  id                String             @id @default(cuid())
   restaurantId      String
   themeId           String
+  mealId            String?
   startsAt          DateTime
   endsAt            DateTime
   description       String?
   seatCount         Int
-  status            DinnerStatus @default(SCHEDULED)
+  status            DinnerStatus       @default(SCHEDULED)
   pricePerSeatCents Int?
   seriesId          String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  conversationStyle ConversationStyle?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   restaurant      Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   theme           Theme                  @relation(fields: [themeId], references: [id])
+  meal            Meal?                  @relation(fields: [mealId], references: [id], onDelete: SetNull)
   series          RecurringDinnerSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   seats           Seat[]
   feedback        Feedback[]
@@ -217,13 +453,39 @@ model Dinner {
   paymentIntents  PaymentIntent[]
   dinnerContext   DinnerContext?
   safetyReports   SafetyReport[]
+  dinnerMedia     DinnerMedia[]
+  payout          Payout?
 
   @@index([restaurantId])
   @@index([restaurantId, status])
   @@index([themeId])
+  @@index([mealId])
   @@index([startsAt])
   @@index([seriesId])
+  @@index([conversationStyle])
   @@map("dinners")
+}
+
+// Per-dinner photo join - listing photos (public, restaurant's own
+// food/venue shots, go live immediately, no moderation) and table photos
+// (private by default, may show real guests; "Promote" sends one through
+// Photo Moderation to become a listing photo). See Implementation Guide
+// §16.6/§16.8.
+model DinnerMedia {
+  id              String                     @id @default(cuid())
+  dinnerId        String
+  mediaAssetId    String
+  kind            DinnerMediaKind
+  displayOrder    Int                        @default(0)
+  promotionStatus DinnerMediaPromotionStatus @default(NONE)
+  createdAt       DateTime                   @default(now())
+
+  dinner     Dinner     @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@index([dinnerId])
+  @@index([dinnerId, kind])
+  @@map("dinner_media")
 }
 
 model Seat {
@@ -407,6 +669,47 @@ model PaymentIntent {
   @@map("payment_intents")
 }
 
+enum PayoutStatus {
+  HELD
+  READY
+  PAID
+}
+
+/// One row per restaurant/dinner payout - how much a completed,
+/// non-refunded dinner nets a restaurant after commission, and whether
+/// it's been paid. Created HELD on dinner completion, computed from
+/// confirmed seats x Dinner.pricePerSeatCents x the platform commission
+/// rate (§16.5) - the booking fee is never part of a restaurant's payout,
+/// the platform keeps all of it. Moves to READY once the post-dinner
+/// dispute/hold window closes (packages/config/src/payout-policy.ts),
+/// PAID once a Platform Ops admin processes it (manual v1, no Paystack
+/// Transfers automation yet).
+model Payout {
+  id                    String       @id @default(cuid())
+  restaurantId          String
+  dinnerId              String       @unique
+
+  grossAmountCents      Int          // confirmed seats x Dinner.pricePerSeatCents
+  commissionAmountCents Int          // platform's cut of grossAmountCents
+  bookingFeeCents       Int          // collected but never owed to the restaurant - informational only
+  netAmountCents        Int          // grossAmountCents - commissionAmountCents, what the restaurant is actually paid
+
+  status                PayoutStatus @default(HELD)
+  scheduledAt           DateTime     // when this becomes eligible to move HELD -> READY
+  paidAt                DateTime?
+
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  dinner     Dinner     @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([restaurantId, status])
+  @@index([status])
+  @@map("payouts")
+}
+
 model WebhookEvent {
   id          String   @id @default(cuid())
   externalId  String   @unique // Event ID from payment provider
@@ -495,11 +798,23 @@ model DinnerContext {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
+  // Mirrors themeId, added for MealPerformance parity (§16.6) - nullable
+  // since not every dinner has a Meal assigned, unlike Theme which is
+  // required. Schema only: DinnerContext rows are never actually created
+  // anywhere in this codebase today (no weather/seasonal population job
+  // exists for Theme either), so this column stays unpopulated until that
+  // separate, pre-existing gap is addressed - MealPerformance's own
+  // aggregation reads directly from Dinner/Seat/Feedback instead of through
+  // this table.
+  mealId         String?
+
   dinner         Dinner           @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
   theme          Theme            @relation(fields: [themeId], references: [id])
+  meal           Meal?            @relation(fields: [mealId], references: [id], onDelete: SetNull)
   restaurant     Restaurant       @relation(fields: [restaurantId], references: [id])
 
   @@index([themeId])
+  @@index([mealId])
   @@index([restaurantId])
   @@index([city])
   @@index([dayOfWeek])
@@ -583,26 +898,127 @@ enum MenuCourse {
   DESSERT
 }
 
-/// Backs the admin Restaurant Profile "Menu" section. Flat model tied
-/// directly to Restaurant - no separate Menu container, since nothing in
-/// the wireframe implies multiple named menus or menu versioning.
+enum DietaryTag {
+  VEGETARIAN
+  VEGAN
+  PESCATARIAN
+  GLUTEN_FREE
+  DAIRY_FREE
+  NUT_FREE
+  HALAL
+  KOSHER
+  CONTAINS_SHELLFISH
+  SPICY
+}
+
+/// Backs the admin Restaurant Profile "Menu" section (Dish Library). Flat
+/// model tied directly to Restaurant - no separate Menu container, since
+/// nothing in the wireframe implies multiple named menus or menu
+/// versioning. A dish entered here is the reusable building block a Meal
+/// assembles from (MealCourseOption) - no longer read directly by any
+/// diner-facing screen once Meals exist.
 model MenuItem {
-  id           String     @id @default(cuid())
+  id           String       @id @default(cuid())
   restaurantId String
   course       MenuCourse
   name         String
   description  String?
+  ingredients  String?
   priceCents   Int
-  position     Int        @default(0)
-  isAvailable  Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  position     Int          @default(0)
+  isAvailable  Boolean      @default(true)
+  mediaAssetId String?
+  dietaryTags  DietaryTag[] @default([])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  mediaAsset   MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  mealCourseOptions MealCourseOption[]
 
   @@index([restaurantId])
   @@index([restaurantId, course])
   @@map("menu_items")
+}
+
+/// A reusable, restaurant-scoped named menu - the thing Create Dinner picks
+/// from a dropdown, the same way it already picks a Theme. Assembled from
+/// the Dish Library (MenuItem) via MealCourse/MealCourseOption, never
+/// duplicating dish data.
+model Meal {
+  id                         String   @id @default(cuid())
+  restaurantId               String
+  name                       String
+  suggestedPricePerSeatCents Int
+  isActive                   Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  restaurant     Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  courses        MealCourse[]
+  dinners        Dinner[]
+  dinnerContexts DinnerContext[]
+  performance    MealPerformance?
+
+  @@index([restaurantId])
+  @@map("meals")
+}
+
+/// Aggregated performance stats per Meal, mirroring ThemePerformance's
+/// outcome metrics. Recomputed by the complete-dinners cron every time one
+/// of that Meal's dinners is marked COMPLETED - reads directly from
+/// Dinner/Seat/Feedback/MutualInterest rather than through DinnerContext,
+/// since DinnerContext's population job (weather/seasonal context) doesn't
+/// exist for Theme either and is out of scope here.
+model MealPerformance {
+  id                 String   @id @default(cuid())
+  mealId             String   @unique
+
+  totalDinners       Int      @default(0)
+  totalSeatsBooked   Int      @default(0)
+  avgFillRate        Float?
+  avgAttendanceRate  Float?
+  avgFeedbackScore   Float?
+  avgConnectionRate  Float?
+  avgWouldReturnRate Float?
+
+  lastUpdatedAt      DateTime @default(now()) @updatedAt
+  createdAt          DateTime @default(now())
+
+  meal               Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([avgFeedbackScore])
+  @@index([avgFillRate])
+  @@map("meal_performance")
+}
+
+/// One course slot within a Meal (Starter/Main/Dessert).
+model MealCourse {
+  id           String     @id @default(cuid())
+  mealId       String
+  courseType   MenuCourse
+  displayOrder Int        @default(0)
+
+  meal    Meal               @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  options MealCourseOption[]
+
+  @@index([mealId])
+  @@map("meal_courses")
+}
+
+/// One dish filling a course slot - up to 3 per course. Joins to the Dish
+/// Library (MenuItem) rather than duplicating dish data.
+model MealCourseOption {
+  id           String @id @default(cuid())
+  mealCourseId String
+  menuItemId   String
+
+  mealCourse MealCourse @relation(fields: [mealCourseId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([mealCourseId])
+  @@index([menuItemId])
+  @@map("meal_course_options")
 }
 
 enum SafetyReportReason {
@@ -665,15 +1081,17 @@ enum ComplianceDocType {
 /// private legal document leaking into a public gallery query that
 /// doesn't filter by type.
 model ComplianceDocument {
-  id           String            @id @default(cuid())
-  restaurantId String
-  docType      ComplianceDocType
-  fileName     String
-  key          String // R2 storage key, mirrors RestaurantMedia's pattern
-  url          String
-  verifiedAt   DateTime?
-  verifiedById String?
-  createdAt    DateTime          @default(now())
+  id             String            @id @default(cuid())
+  restaurantId   String
+  docType        ComplianceDocType
+  fileName       String
+  key            String // R2 storage key, mirrors RestaurantMedia's pattern
+  url            String
+  verifiedAt     DateTime?
+  verifiedById   String?
+  rejectedAt     DateTime?
+  rejectionReason String?
+  createdAt      DateTime          @default(now())
 
   restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   verifiedBy User?      @relation(fields: [verifiedById], references: [id], onDelete: SetNull)

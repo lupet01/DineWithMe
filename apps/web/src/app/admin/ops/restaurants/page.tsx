@@ -1,18 +1,22 @@
-import { restaurantRepository } from "@dinewithme/db";
+import { restaurantRepository, restaurantClosureRequestRepository } from "@dinewithme/db";
 import { RestaurantsTable } from "./components/restaurants-table";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { StatCard, StatGrid } from "@/components/ui/stat-card";
 
 export default async function OpsRestaurantsPage() {
   // Fetch all restaurants with members in a single query (fixes N+1 issue)
-  const restaurants = await restaurantRepository.findManyWithMembers();
+  const [restaurants, pendingClosureRequests] = await Promise.all([
+    restaurantRepository.findManyWithMembers(),
+    restaurantClosureRequestRepository.findPending(),
+  ]);
 
   // Count by status
   const pendingCount = restaurants.filter((r) => r.status === "PENDING").length;
   const activeCount = restaurants.filter((r) => r.status === "ACTIVE").length;
   const pausedCount = restaurants.filter((r) => r.status === "PAUSED").length;
+  const archivedCount = restaurants.filter((r) => r.status === "ARCHIVED").length;
 
   return (
     <div className="space-y-6">
@@ -25,7 +29,7 @@ export default async function OpsRestaurantsPage() {
       </div>
 
       {/* Stats Cards */}
-      <StatGrid className="md:grid-cols-4">
+      <StatGrid className="md:grid-cols-5">
         <StatCard label="Total Restaurants" value={restaurants.length} />
         <Link href="/admin/ops/restaurants/pending">
           <Card padding="lg" className="transition-colors hover:bg-amber-50">
@@ -38,6 +42,7 @@ export default async function OpsRestaurantsPage() {
         </Link>
         <StatCard label="Active" value={<span className="text-green-600">{activeCount}</span>} />
         <StatCard label="Paused" value={<span className="text-red-600">{pausedCount}</span>} />
+        <StatCard label="Archived" value={<span className="text-gray-500">{archivedCount}</span>} />
       </StatGrid>
 
       {/* Pending Alert */}
@@ -57,6 +62,29 @@ export default async function OpsRestaurantsPage() {
                 Review now
               </Link>
             </p>
+          </div>
+        </Card>
+      )}
+
+      {/* Closure Requests Alert */}
+      {pendingClosureRequests.length > 0 && (
+        <Card padding="lg" className="border-red-200 bg-red-50 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-red-900 mb-1">Closure Requests</h3>
+            <ul className="space-y-1">
+              {pendingClosureRequests.map((request) => (
+                <li key={request.id} className="text-sm text-red-800">
+                  <Link
+                    href={`/admin/ops/restaurants/${request.restaurantId}`}
+                    className="font-medium underline hover:no-underline"
+                  >
+                    {request.restaurant.name}
+                  </Link>{" "}
+                  wants to close - requested by {request.requestedBy.firstName || request.requestedBy.email}
+                </li>
+              ))}
+            </ul>
           </div>
         </Card>
       )}

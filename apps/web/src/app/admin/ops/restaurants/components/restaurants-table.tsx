@@ -16,7 +16,7 @@ interface RestaurantsTableProps {
 }
 
 export function RestaurantsTable({ restaurants }: RestaurantsTableProps) {
-  const [filter, setFilter] = useState<"all" | "pending" | "active" | "paused">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "active" | "paused" | "archived">("all");
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState("all");
 
@@ -24,6 +24,7 @@ export function RestaurantsTable({ restaurants }: RestaurantsTableProps) {
     pending: restaurants.filter((r) => r.status === "PENDING").length,
     active: restaurants.filter((r) => r.status === "ACTIVE").length,
     paused: restaurants.filter((r) => r.status === "PAUSED").length,
+    archived: restaurants.filter((r) => r.status === "ARCHIVED").length,
   };
 
   const filterTabs = [
@@ -31,6 +32,7 @@ export function RestaurantsTable({ restaurants }: RestaurantsTableProps) {
     { value: "pending", label: `Pending (${counts.pending})` },
     { value: "active", label: `Active (${counts.active})` },
     { value: "paused", label: `Paused (${counts.paused})` },
+    { value: "archived", label: `Archived (${counts.archived})` },
   ];
 
   const locations = useMemo(() => {
