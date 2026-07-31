@@ -121,7 +121,7 @@ export default async function AdminDashboardPage({
   }
 
   return (
-    <div>
+    <div className="dash">
       {/* Page Header */}
       <div
         style={{
