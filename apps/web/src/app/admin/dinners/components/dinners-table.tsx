@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import type { DinnerWithRestaurant } from "@dinewithme/db";
-import { Card } from "@/components/ui/card";
-import { Tabs } from "@/components/ui/tabs";
 import { SortableColumnHeader, type SortDirection } from "@/components/ui/sortable-column-header";
 import { DinnerRow } from "./dinner-row";
 
@@ -15,7 +13,7 @@ const filterTabs = [
   { value: "all", label: "All Dinners" },
   { value: "upcoming", label: "Upcoming" },
   { value: "past", label: "Past" },
-];
+] as const;
 
 export function DinnersTable({ dinners }: DinnersTableProps) {
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
@@ -44,31 +42,37 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
 
   if (dinners.length === 0) {
     return (
-      <Card>
-        <div className="p-12 text-center">
-          <div className="text-6xl mb-4">🍽️</div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No dinners yet
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Create your first dining experience to get started
-          </p>
-        </div>
-      </Card>
+      <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🍽️</div>
+        <div className="card-title" style={{ marginBottom: 6 }}>No dinners yet</div>
+        <p style={{ fontSize: 13, color: "var(--t3)" }}>
+          Create your first dining experience to get started
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <Tabs items={filterTabs} value={filter} onChange={(v) => setFilter(v as typeof filter)} />
+    <div>
+      <div className="tabs" style={{ marginBottom: 16 }}>
+        {filterTabs.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            className={`tab ${filter === tab.value ? "active" : ""}`}
+            onClick={() => setFilter(tab.value)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Table */}
-      <Card padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-cream-100 border-b border-gray-100">
+      <div className="table-wrap">
+        <div className="table-scroll">
+          <table className="dtable">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left">
+                <th>
                   <SortableColumnHeader
                     label="Date & Time"
                     active
@@ -76,24 +80,16 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
                     onSort={() => setDateSort(dateSort === "asc" ? "desc" : "asc")}
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Theme
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Seats
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th>Theme</th>
+                <th>Seats</th>
+                <th>Status</th>
+                <th className="r">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {filteredDinners.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} style={{ textAlign: "center", color: "var(--t3)" }}>
                     No dinners found for this filter
                   </td>
                 </tr>
@@ -105,7 +101,7 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

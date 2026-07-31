@@ -22,20 +22,17 @@ export default async function DinnersPage() {
   const dinners = await dinnerRepository.findManyWithTheme();
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Dinners</h1>
-          <p className="text-gray-600 mt-1">
-            Manage your upcoming and past dinner events
-          </p>
+    <div className="din">
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h1 className="pg-title">Dinners</h1>
+            <p className="pg-sub">Manage your upcoming and past dinner events</p>
+          </div>
+          <Link href="/admin/dinners/new" className="btn btn-primary">
+            Create Dinner
+          </Link>
         </div>
-        <Link
-          href="/admin/dinners/new"
-          className="inline-flex w-full items-center justify-center rounded-full bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-primary-600 active:scale-[0.98] sm:w-auto"
-        >
-          Create Dinner
-        </Link>
       </div>
 
       <DinnersTable dinners={dinners} />
