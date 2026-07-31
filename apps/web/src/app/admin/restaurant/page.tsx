@@ -13,6 +13,16 @@ import { ApplicationInfoCard } from "./components/application-info-card";
 import { RestaurantOnboardingWizard } from "./components/restaurant-onboarding-wizard";
 import { ThemeManager } from "./components/theme-manager";
 import { ComplianceDocumentsManager } from "./components/compliance-documents-manager";
+import { IconSprite } from "./components/icon-sprite";
+
+function getInitials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const first = words[0];
+  if (!first) return "?";
+  if (words.length === 1) return first.slice(0, 2).toUpperCase();
+  const last = words[words.length - 1] ?? first;
+  return (first.charAt(0) + last.charAt(0)).toUpperCase();
+}
 
 export default async function RestaurantProfilePage() {
   const user = await getAuthUser();
@@ -40,6 +50,7 @@ export default async function RestaurantProfilePage() {
 
   // Get compliance documents for this restaurant
   const complianceDocuments = await complianceDocumentRepository.findByRestaurant(restaurant.id);
+  const clearedDocuments = complianceDocuments.filter((d) => d.verifiedAt).length;
 
   // Profile header stats (§16.1 wireframe's "premium header" stat row)
   const [restaurantWithMembers, dinners, avgRating] = await Promise.all([
@@ -97,120 +108,143 @@ export default async function RestaurantProfilePage() {
     );
   }
 
-  const statusBadge: Record<string, string> = {
-    PENDING: "badge-yellow",
-    ACTIVE: "badge-green",
-    PAUSED: "badge-red",
+  const statusPillClass: Record<string, string> = {
+    PENDING: "yellow",
+    ACTIVE: "green",
+    PAUSED: "red",
   };
+  const cuisineTags = (restaurant.cuisine || "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
 
   return (
-    <div>
-      {/* Premium Profile Header — taller cover, bigger avatar, real presence */}
-      <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 14 }}>
-        <div className="profile-cover" style={{ background: "linear-gradient(150deg,#3d2b1f,#5c3d28)" }}>
-          <Link
-            href="/admin/media-library"
-            style={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              background: "rgba(255,255,255,.92)",
-              borderRadius: 20,
-              padding: "5px 12px",
-              fontSize: "11px",
-              fontWeight: 600,
-              color: "var(--text)",
-            }}
-          >
-            Manage in Media Library →
-          </Link>
-        </div>
-        <div style={{ padding: "0 22px 22px" }}>
-          <div
-            className="profile-avatar"
-            style={{ background: "linear-gradient(135deg,#8b6b4a,#5c3d28)" }}
-          />
-          <div style={{ marginTop: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <h1 className="pg-title" style={{ margin: 0 }}>
-                {restaurant.name}
-              </h1>
-              <span className={`badge ${statusBadge[restaurant.status] ?? "badge-slate"}`}>
-                {restaurant.status}
-              </span>
+    <div className="rp">
+      <IconSprite />
+
+      <div className="layout">
+        {/* ============ LEFT RAIL ============ */}
+        <div className="rail">
+          <div className="idcard">
+            <div className="cover">
+              <Link href="/admin/media-library" className="cover-edit">
+                <svg><use href="#ic-camera" /></svg> Change cover
+              </Link>
             </div>
-            {restaurant.cuisine && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                {restaurant.cuisine.split(",").map((c) => (
-                  <span key={c.trim()} className="badge badge-slate">
-                    {c.trim()}
-                  </span>
-                ))}
+            <div className="id-body">
+              <div className="avatar">{getInitials(restaurant.name)}</div>
+              <div className="id-name">
+                <h2>{restaurant.name}</h2>
+                <span className={`rp-pill ${statusPillClass[restaurant.status] ?? "grey"}`}>
+                  {restaurant.status === "ACTIVE" && <svg><use href="#ic-check" /></svg>}
+                  {restaurant.status}
+                </span>
               </div>
-            )}
+              {cuisineTags.length > 0 && (
+                <div className="taglist">
+                  {cuisineTags.map((tag) => (
+                    <span key={tag} className="tag">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="stats">
+              <div className="stat">
+                <div className="stat-l">Dinners hosted</div>
+                <div className="stat-v">{dinners.length}</div>
+              </div>
+              <div className="stat">
+                <div className="stat-l">Avg rating</div>
+                <div className="stat-v">
+                  {avgRating ? avgRating.average.toFixed(1) : "—"} <svg><use href="#ic-star" /></svg>
+                </div>
+              </div>
+              <div className="stat">
+                <div className="stat-l">Team</div>
+                <div className="stat-v">{teamCount}</div>
+                <Link className="stat-link" href="/admin/team">
+                  Manage <svg><use href="#ic-chev" /></svg>
+                </Link>
+              </div>
+              <div className="stat">
+                <div className="stat-l">Partner since</div>
+                <div className="stat-v sm">
+                  {new Date(restaurant.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <nav className="nav" aria-label="Sections on this page">
+            <a className="navlink on" href="#sec-app"><svg><use href="#ic-shield" /></svg> Application</a>
+            <a className="navlink" href="#sec-biz"><svg><use href="#ic-store" /></svg> Business details</a>
+            <a className="navlink" href="#sec-contact"><svg><use href="#ic-phone" /></svg> Contact</a>
+            <a className="navlink" href="#sec-themes">
+              <svg><use href="#ic-table" /></svg> Table themes
+              <span className="navcount">{enabledThemeIds.length}/{allThemes.length}</span>
+            </a>
+            <a className="navlink" href="#sec-docs">
+              <svg><use href="#ic-doc" /></svg> Documents
+              <span className="navcount">{clearedDocuments}/{complianceDocuments.length}</span>
+            </a>
+          </nav>
+
+          <div className="rail-foot">
+            <svg><use href="#ic-eye" /></svg>
+            <span>Guests see a trimmed version.</span>
           </div>
         </div>
-      </div>
 
-      {/* Header stats — own card, same stat-card language as the Dashboard */}
-      <div className="stat-grid-4" style={{ marginBottom: 20 }}>
-        <div className="stat-card">
-          <div className="stat-label">Dinners Hosted</div>
-          <div className="stat-value">{dinners.length}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Avg Rating</div>
-          <div className="stat-value">{avgRating ? `${avgRating.average.toFixed(1)} ★` : "—"}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Team</div>
-          <div className="stat-value">{teamCount}</div>
-          <Link href="/admin/team" className="stat-sub" style={{ display: "block" }}>
-            View team →
-          </Link>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Partner Since</div>
-          <div className="stat-value" style={{ fontSize: 18 }}>
-            {new Date(restaurant.createdAt).toLocaleDateString("en-US", {
-              month: "short",
-              year: "numeric",
-            })}
-          </div>
-        </div>
-      </div>
+        {/* ============ RIGHT COLUMN ============ */}
+        <div className="col">
+          {/* From Your Application - identity-first, ahead of the editable form (§16.1) */}
+          <ApplicationInfoCard restaurant={restaurant} />
 
-      {/* From Your Application - identity-first, ahead of the editable form (§16.1) */}
-      <ApplicationInfoCard restaurant={restaurant} />
+          {/* Business Details + Contact Information */}
+          <RestaurantForm restaurant={restaurant} />
 
-      {/* Business Details + Contact Information */}
-      <RestaurantForm restaurant={restaurant} />
+          {/* Table Themes */}
+          <section className="sec" id="sec-themes">
+            <div className="sec-head">
+              <div className="sec-label">Table themes</div>
+              <span className="sec-aside">Hosting {enabledThemeIds.length} of {allThemes.length}</span>
+            </div>
+            <div className="rp-card">
+              <ThemeManager
+                restaurantId={restaurant.id}
+                allThemes={allThemes}
+                enabledThemeIds={enabledThemeIds}
+              />
+            </div>
+            <p className="foot">
+              Themes you host become selectable when you create a dinner. Turning one off never
+              affects dinners already on the calendar.
+            </p>
+          </section>
 
-      {/* Theme Management */}
-      <div style={{ marginTop: 24 }}>
-        <div className="group-label">TABLE THEMES</div>
-        <div className="card card-pad">
-          <ThemeManager
-            restaurantId={restaurant.id}
-            allThemes={allThemes}
-            enabledThemeIds={enabledThemeIds}
-          />
-        </div>
-        <div className="group-footnote">
-          Choose which types of dining experiences you&apos;d like to host. Enabled themes become
-          available when creating new dinners; disabling one won&apos;t affect existing dinners.
-        </div>
-      </div>
-
-      {/* Compliance Documents */}
-      <div style={{ marginTop: 28 }}>
-        <div className="group-label">COMPLIANCE DOCUMENTS</div>
-        <div className="card card-pad">
-          <ComplianceDocumentsManager restaurantId={restaurant.id} documents={complianceDocuments} />
-        </div>
-        <div className="group-footnote">
-          Business registration, food safety certificate, and liquor license — reviewed by our team
-          before your first dinner goes live.
+          {/* Compliance Documents */}
+          <section className="sec" id="sec-docs">
+            <div className="sec-head">
+              <div className="sec-label">Compliance documents</div>
+              {complianceDocuments.length > 0 ? (
+                <span className="sec-aside">
+                  {clearedDocuments} of {complianceDocuments.length} cleared
+                </span>
+              ) : (
+                <span className="sec-aside" style={{ color: "var(--t3w)", fontWeight: 500 }}>None yet</span>
+              )}
+            </div>
+            <div className="rp-card">
+              <ComplianceDocumentsManager restaurantId={restaurant.id} documents={complianceDocuments} />
+            </div>
+            <p className="foot">
+              Business registration and food safety must be cleared before your first dinner goes
+              live. A liquor license is only needed if you plan to serve alcohol at the table.
+            </p>
+          </section>
         </div>
       </div>
     </div>

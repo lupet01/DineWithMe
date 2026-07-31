@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Loader2, Trash2 } from "lucide-react";
 import type { ComplianceDocument, ComplianceDocType } from "@prisma/client";
 import { COMPLIANCE_DOC_TYPES, COMPLIANCE_DOC_TYPE_LABELS } from "@/lib/compliance-document";
 import {
@@ -14,10 +13,6 @@ import {
 interface ComplianceDocumentsManagerProps {
   restaurantId: string;
   documents: ComplianceDocument[];
-}
-
-function formatSize(bytes: number) {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function ComplianceDocumentsManager({
@@ -102,83 +97,127 @@ export function ComplianceDocumentsManager({
     router.refresh();
   };
 
+  const uploadedTypes = new Set(documents.map((d) => d.docType));
+  const missingTypes = COMPLIANCE_DOC_TYPES.filter((t) => !uploadedTypes.has(t));
+
   return (
     <div>
       {documents.length === 0 ? (
-        <p style={{ fontSize: 13, color: "var(--t3)", marginBottom: 20 }}>
-          No compliance documents uploaded yet.
-        </p>
+        <div className="rp-empty">
+          <div className="rp-empty-ico"><svg><use href="#ic-doc" /></svg></div>
+          <div className="rp-empty-t">Nothing uploaded yet</div>
+          <div className="rp-empty-b">
+            Start with your business registration. Most restaurants are cleared within two
+            business days.
+          </div>
+        </div>
       ) : (
-        <div className="doc-grid" style={{ marginBottom: 20 }}>
-          {documents.map((doc) => {
-            const isPending = !doc.verifiedAt && !doc.rejectedAt;
-            const statusClass = doc.verifiedAt ? "verified" : doc.rejectedAt ? "rejected" : "pending";
-            return (
-              <div key={doc.id} className="doc-tile">
-                <button
-                  onClick={() => handleDelete(doc.id, doc.fileName)}
-                  disabled={deletingId === doc.id}
-                  className="m-icon-btn doc-tile-delete"
-                  style={{ color: "var(--red-txt)" }}
-                  aria-label={`Delete ${doc.fileName}`}
-                >
-                  {deletingId === doc.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
+        documents.map((doc) => {
+          const statusClass = doc.verifiedAt ? "ok" : doc.rejectedAt ? "bad" : "wait";
+          return (
+            <div key={doc.id} className={`drow ${statusClass}`}>
+              <div className="dicon"><svg><use href="#ic-doc" /></svg></div>
+              <div className="dmain">
+                <div className="dtop">
+                  <span className="dtype">{COMPLIANCE_DOC_TYPE_LABELS[doc.docType]}</span>
+                  {doc.verifiedAt && (
+                    <span className="rp-pill green"><svg><use href="#ic-check" /></svg> Verified</span>
                   )}
-                </button>
-
-                <div className={`doc-tile-icon ${statusClass}`}>
-                  <FileText className="h-4 w-4" />
+                  {doc.rejectedAt && (
+                    <span className="rp-pill red"><svg><use href="#ic-alert" /></svg> Needs a new file</span>
+                  )}
+                  {!doc.verifiedAt && !doc.rejectedAt && (
+                    <span className="rp-pill yellow">Pending review</span>
+                  )}
                 </div>
-
-                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="doc-tile-name">
-                  {doc.fileName}
-                </a>
-                <div className="doc-tile-meta">
-                  {COMPLIANCE_DOC_TYPE_LABELS[doc.docType]} · {formatDate(doc.createdAt)}
+                <div className="dmeta">
+                  {doc.fileName} &middot; {doc.verifiedAt ? `Cleared ${formatDate(doc.verifiedAt)}` : `Uploaded ${formatDate(doc.createdAt)}`}
                 </div>
-
-                <div style={{ marginTop: 8 }}>
-                  {doc.verifiedAt && <span className="badge badge-green">✓ Verified</span>}
-                  {doc.rejectedAt && <span className="badge badge-red">Rejected</span>}
-                  {isPending && <span className="badge badge-yellow">⏳ Pending review</span>}
-                </div>
-
                 {doc.rejectedAt && doc.rejectionReason && (
-                  <div className="doc-tile-rejection">
-                    &ldquo;{doc.rejectionReason}&rdquo; — upload a corrected document below
+                  <div className="note">
+                    <svg><use href="#ic-alert" /></svg>
+                    <div style={{ flex: 1 }}>
+                      <div className="note-t">Why it was rejected</div>
+                      <div className="note-b">{doc.rejectionReason}</div>
+                      <button
+                        type="button"
+                        className="rp-btn rp-btn-o rp-btn-sm"
+                        style={{ marginTop: 9 }}
+                        onClick={() => {
+                          setDocType(doc.docType);
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        <svg><use href="#ic-upload" /></svg> Upload a new file
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
+              <div className="dactions">
+                <a className="iconbtn" href={doc.url} target="_blank" rel="noopener noreferrer" aria-label="View document">
+                  <svg><use href="#ic-eye" /></svg>
+                </a>
+                {doc.verifiedAt ? (
+                  <button
+                    type="button"
+                    className="iconbtn"
+                    aria-label="Replace document"
+                    onClick={() => {
+                      setDocType(doc.docType);
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <svg><use href="#ic-swap" /></svg>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="iconbtn danger"
+                    aria-label="Delete document"
+                    disabled={deletingId === doc.id}
+                    onClick={() => handleDelete(doc.id, doc.fileName)}
+                  >
+                    <svg><use href="#ic-trash" /></svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })
       )}
 
-      <div style={{ borderTop: "1px solid var(--bdr)", paddingTop: 18 }}>
-        <div className="card-title" style={{ fontSize: 13, marginBottom: 12 }}>
-          Add a Document
+      {missingTypes.map((type) => (
+        <div key={type} className="dghost">
+          <div className="dicon"><svg><use href="#ic-doc" /></svg></div>
+          <div className="dmain">
+            <div className="dtop">
+              <span className="dtype">{COMPLIANCE_DOC_TYPE_LABELS[type]}</span>
+              <span className="rp-pill grey">{type === "OTHER" ? "Optional" : "Not uploaded"}</span>
+            </div>
+          </div>
         </div>
-        <div className="field-grid-2" style={{ marginBottom: 12 }}>
-          <div>
-            <label className="field-label">1. Document Type</label>
+      ))}
+
+      <div className="dz">
+        <div className="dz-inner">
+          <div className="dz-ico"><svg><use href="#ic-upload" /></svg></div>
+          <div className="dz-t">{documents.length === 0 ? "Add a document" : "Drag a document here"}</div>
+          <div className="dz-s">
+            {stagedFile ? stagedFile.name : "or choose one from your computer"}
+          </div>
+          <div className="dz-controls">
             <select
+              className="rp-sel"
+              aria-label="Document type"
               value={docType}
               onChange={(e) => setDocType(e.target.value as ComplianceDocType)}
               disabled={uploading}
-              className="field-input"
             >
               {COMPLIANCE_DOC_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {COMPLIANCE_DOC_TYPE_LABELS[type]}
-                </option>
+                <option key={type} value={type}>{COMPLIANCE_DOC_TYPE_LABELS[type]}</option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="field-label">2. File</label>
             <input
               ref={fileInputRef}
               type="file"
@@ -187,84 +226,21 @@ export function ComplianceDocumentsManager({
               style={{ display: "none" }}
               disabled={uploading}
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="btn btn-outline btn-block"
-            >
-              Choose File
-            </button>
-          </div>
-        </div>
-
-        {stagedFile && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              padding: "10px 12px",
-              background: "var(--p-tint)",
-              border: "1px solid var(--p-glow)",
-              borderRadius: 12,
-              marginBottom: 14,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <FileText className="h-4 w-4" style={{ color: "var(--p)", flexShrink: 0 }} />
-              <span
-                style={{
-                  fontSize: "12.5px",
-                  fontWeight: 600,
-                  color: "var(--text)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {stagedFile.name}
-              </span>
-              <span style={{ fontSize: 11, color: "var(--t3)", flexShrink: 0 }}>
-                {formatSize(stagedFile.size)}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setStagedFile(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-              className="m-icon-btn"
-              style={{ width: 22, height: 22, flexShrink: 0 }}
-              title="Remove selected file"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, color: "var(--t3)" }}>PDF, JPG, PNG, or WEBP · max 10MB</span>
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={!stagedFile || uploading}
-            className="btn btn-primary"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
-              </>
+            {stagedFile ? (
+              <button type="button" className="rp-btn rp-btn-p" onClick={handleUpload} disabled={uploading}>
+                {uploading ? "Uploading…" : "Upload document"}
+              </button>
             ) : (
-              "3. Upload Document"
+              <button type="button" className="rp-btn rp-btn-p" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                Choose file
+              </button>
             )}
-          </button>
+          </div>
+          <div className="dz-note">PDF, JPG, PNG or WEBP &middot; up to 10 MB</div>
         </div>
       </div>
 
-      {error && <p className="field-error" style={{ marginTop: 8 }}>{error}</p>}
+      {error && <p className="field-error" style={{ margin: "8px 16px 0" }}>{error}</p>}
     </div>
   );
 }

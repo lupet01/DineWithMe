@@ -10,7 +10,22 @@ interface ThemeManagerProps {
   enabledThemeIds: string[];
 }
 
-const PAGE_SIZE = 6;
+type Filter = "all" | "on" | "off";
+
+// No icon field on Theme — map by keyword in the theme's key so real,
+// non-mockup themes still get a sensible glyph instead of nothing.
+function themeIcon(key: string): string {
+  const k = key.toLowerCase();
+  if (k.includes("deep")) return "ic-deeptalk";
+  if (k.includes("network") || k.includes("business") || k.includes("professional")) return "ic-network";
+  if (k.includes("creative")) return "ic-creative";
+  if (k.includes("entrepreneur") || k.includes("founder")) return "ic-founder";
+  if (k.includes("family") || k.includes("women")) return "ic-family";
+  if (k.includes("date")) return "ic-date";
+  if (k.includes("tech")) return "ic-tech";
+  if (k.includes("wellness")) return "ic-wellness";
+  return "ic-general";
+}
 
 export function ThemeManager({
   restaurantId,
@@ -22,10 +37,16 @@ export function ThemeManager({
   );
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [bulkPending, setBulkPending] = useState(false);
 
-  const totalPages = Math.max(1, Math.ceil(allThemes.length / PAGE_SIZE));
-  const visibleThemes = allThemes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const onCount = allThemes.filter((t) => enabled.has(t.id)).length;
+  const offCount = allThemes.length - onCount;
+  const visibleThemes = allThemes.filter((t) => {
+    if (filter === "on") return enabled.has(t.id);
+    if (filter === "off") return !enabled.has(t.id);
+    return true;
+  });
 
   const handleToggle = async (themeId: string, currentlyEnabled: boolean) => {
     setLoading((prev) => new Set(prev).add(themeId));
@@ -58,82 +79,82 @@ export function ThemeManager({
     }
   };
 
+  const handleTurnAll = async () => {
+    const turningOn = onCount !== allThemes.length;
+    const targets = allThemes.filter((t) => enabled.has(t.id) !== turningOn);
+    if (targets.length === 0) return;
+
+    setBulkPending(true);
+    setError(null);
+    const results = await Promise.all(
+      targets.map((t) => toggleThemeForRestaurant(restaurantId, t.id, turningOn))
+    );
+    setBulkPending(false);
+
+    const succeeded = targets.filter((_, i) => results[i]?.success);
+    if (succeeded.length > 0) {
+      setEnabled((prev) => {
+        const next = new Set(prev);
+        succeeded.forEach((t) => (turningOn ? next.add(t.id) : next.delete(t.id)));
+        return next;
+      });
+    }
+    const failed = results.find((r) => !r.success);
+    if (failed && !failed.success) setError(failed.error);
+  };
+
   return (
     <div>
+      <div className="tbar">
+        <div className="seg" role="tablist">
+          <button role="tab" aria-selected={filter === "all"} onClick={() => setFilter("all")}>
+            All {allThemes.length}
+          </button>
+          <button role="tab" aria-selected={filter === "on"} onClick={() => setFilter("on")}>
+            Hosting {onCount}
+          </button>
+          <button role="tab" aria-selected={filter === "off"} onClick={() => setFilter("off")}>
+            Off {offCount}
+          </button>
+        </div>
+        <button type="button" className="linkbtn" onClick={handleTurnAll} disabled={bulkPending}>
+          {onCount === allThemes.length ? "Turn all off" : "Turn all on"}
+        </button>
+      </div>
+
       {error && (
-        <div
-          style={{
-            marginBottom: 12,
-            borderRadius: 12,
-            border: "1px solid var(--red-bg)",
-            background: "var(--red-bg)",
-            padding: "10px 12px",
-          }}
-        >
+        <div style={{ margin: 14, borderRadius: 12, border: "1px solid var(--red-bg)", background: "var(--red-bg)", padding: "10px 12px" }}>
           <p style={{ fontSize: 12.5, color: "var(--red-txt)" }}>{error}</p>
         </div>
       )}
 
-      <div className="theme-grid">
+      <div className="tgrid">
         {visibleThemes.map((theme) => {
           const isEnabled = enabled.has(theme.id);
           const isLoading = loading.has(theme.id);
 
           return (
-            <div key={theme.id} className="theme-tile" title={theme.shortDescription}>
-              <div className="theme-tile-body">
-                <div className="theme-tile-name">{theme.title}</div>
-                <div className="theme-tile-desc">{theme.shortDescription}</div>
+            <div key={theme.id} className={`trow ${isEnabled ? "on" : ""}`}>
+              <span className="ticon"><svg><use href={`#${themeIcon(theme.key)}`} /></svg></span>
+              <div className="tmeta">
+                <div className="tname">{theme.title}</div>
+                <div className="tdesc">{theme.shortDescription}</div>
               </div>
-
               <button
                 onClick={() => handleToggle(theme.id, isEnabled)}
-                disabled={isLoading}
-                className={`toggle ${isEnabled ? "on" : "off"}`}
+                disabled={isLoading || bulkPending}
+                className="sw"
                 style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? "not-allowed" : "pointer" }}
                 role="switch"
                 aria-checked={isEnabled}
                 aria-label={`${isEnabled ? "Disable" : "Enable"} ${theme.title}`}
               >
-                <div className="toggle-dot" />
+                <span className="sw-dot" />
               </button>
             </div>
           );
         })}
       </div>
-
-      {totalPages > 1 && (
-        <div className="pager">
-          <button
-            type="button"
-            className="pager-btn pager-arrow"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            aria-label="Previous page"
-          >
-            ‹
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-            <button
-              key={n}
-              type="button"
-              className={`pager-btn ${n === page ? "active" : ""}`}
-              onClick={() => setPage(n)}
-            >
-              {n}
-            </button>
-          ))}
-          <button
-            type="button"
-            className="pager-btn pager-arrow"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            aria-label="Next page"
-          >
-            ›
-          </button>
-        </div>
-      )}
     </div>
   );
 }

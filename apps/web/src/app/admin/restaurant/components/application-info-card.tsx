@@ -24,7 +24,7 @@ const REFERRAL_SOURCES = [
  * verification and become read-only - "contact support" rather than a
  * self-serve edit, so a verified badge stays trustworthy. Restaurants that
  * predate the Verification step (registrationNumber null) get an inline
- * "add this info" form instead of an empty locked card - nothing was ever
+ * "add this info" prompt instead of an empty locked card - nothing was ever
  * verified there, so there's nothing to protect.
  */
 export function ApplicationInfoCard({ restaurant }: ApplicationInfoCardProps) {
@@ -69,226 +69,191 @@ export function ApplicationInfoCard({ restaurant }: ApplicationInfoCardProps) {
 
   if (predatesVerification && !editing) {
     return (
-      <div className="alert alert-yellow" style={{ marginBottom: 20, justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: 10 }}>
-          <span className="alert-icon">⚠️</span>
-          <div>
-            <div className="alert-title">Add your verification info</div>
-            <div className="alert-body">
-              Your restaurant predates our verification step. Adding a business registration
-              number and a link or two helps our team keep the platform trustworthy — it&apos;s
-              optional and won&apos;t affect your listing.
+      <section className="sec" id="sec-app">
+        <div className="sec-head">
+          <div className="sec-label">From your application</div>
+        </div>
+        <div className="rp-card">
+          <div className="prompt">
+            <div className="prompt-ico"><svg><use href="#ic-shield" /></svg></div>
+            <div>
+              <div className="prompt-t">Add your verification info</div>
+              <div className="prompt-b">
+                Your profile was created before we started collecting these. A registration
+                number and a link or two help us keep the platform trustworthy. It is optional
+                and will not change your listing.
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="rp-btn rp-btn-p rp-btn-sm"
+                style={{ marginTop: 11 }}
+              >
+                Add details
+              </button>
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="btn btn-outline btn-sm"
-          style={{ flexShrink: 0, alignSelf: "flex-start" }}
-        >
-          Add info
-        </button>
-      </div>
+      </section>
     );
   }
 
   if (predatesVerification && editing) {
     return (
-      <div style={{ marginBottom: 20 }}>
-        <div className="group-label">VERIFICATION INFO</div>
-        <div className="card card-pad">
-        {error && (
-          <div
-            style={{
-              marginBottom: 16,
-              borderRadius: 12,
-              border: "1px solid var(--red-bg)",
-              background: "var(--red-bg)",
-              padding: "12px 14px",
-            }}
-          >
-            <p style={{ fontSize: 13, color: "var(--red-txt)" }}>{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <label htmlFor="registrationNumber" className="field-label">
-              Business Registration Number
-            </label>
-            <input
-              type="text"
-              id="registrationNumber"
-              name="registrationNumber"
-              value={formData.registrationNumber}
-              onChange={handleChange}
-              className="field-input field-cap"
-              disabled={isPending}
-            />
-            {fieldErrors.registrationNumber && (
-              <p className="field-error">{fieldErrors.registrationNumber[0]}</p>
-            )}
-          </div>
-
-          <div className="field-grid-2">
-            <div>
-              <label htmlFor="googleBusinessUrl" className="field-label">
-                Google Business URL
-              </label>
-              <input
-                type="url"
-                id="googleBusinessUrl"
-                name="googleBusinessUrl"
-                value={formData.googleBusinessUrl}
-                onChange={handleChange}
-                className="field-input"
-                disabled={isPending}
-              />
-              {fieldErrors.googleBusinessUrl && (
-                <p className="field-error">{fieldErrors.googleBusinessUrl[0]}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="instagramHandle" className="field-label">
-                Instagram Handle
-              </label>
-              <input
-                type="text"
-                id="instagramHandle"
-                name="instagramHandle"
-                value={formData.instagramHandle}
-                onChange={handleChange}
-                placeholder="@yourrestaurant"
-                className="field-input"
-                disabled={isPending}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="facebookUrl" className="field-label">
-                Facebook URL
-              </label>
-              <input
-                type="url"
-                id="facebookUrl"
-                name="facebookUrl"
-                value={formData.facebookUrl}
-                onChange={handleChange}
-                className="field-input"
-                disabled={isPending}
-              />
-              {fieldErrors.facebookUrl && <p className="field-error">{fieldErrors.facebookUrl[0]}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="referralSource" className="field-label">
-                How did you hear about us?
-              </label>
-              <select
-                id="referralSource"
-                name="referralSource"
-                value={formData.referralSource}
-                onChange={handleChange}
-                className="field-input"
-                disabled={isPending}
-              >
-                <option value="">Select one</option>
-                {REFERRAL_SOURCES.map((source) => (
-                  <option key={source} value={source}>
-                    {source}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              className="btn btn-outline btn-sm"
-              disabled={isPending}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary btn-sm" disabled={isPending}>
-              {isPending ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </form>
+      <section className="sec" id="sec-app">
+        <div className="sec-head">
+          <div className="sec-label">Verification info</div>
         </div>
-        <div className="group-footnote">Helps our team verify your business — all fields optional.</div>
-      </div>
+        <div className="rp-card">
+          {error && (
+            <div style={{ margin: 16, marginBottom: 0, borderRadius: 12, border: "1px solid var(--red-bg)", background: "var(--red-bg)", padding: "12px 14px" }}>
+              <p style={{ fontSize: 13, color: "var(--red-txt)" }}>{error}</p>
+            </div>
+          )}
+          <form onSubmit={handleSubmit}>
+            <div className="frow">
+              <label className="rlabel" htmlFor="registrationNumber">Business registration number</label>
+              <div className="rctl">
+                <input
+                  type="text"
+                  id="registrationNumber"
+                  name="registrationNumber"
+                  value={formData.registrationNumber}
+                  onChange={handleChange}
+                  className="inp"
+                  disabled={isPending}
+                />
+                {fieldErrors.registrationNumber && (
+                  <p className="field-error">{fieldErrors.registrationNumber[0]}</p>
+                )}
+              </div>
+            </div>
+            <div className="frow">
+              <label className="rlabel" htmlFor="googleBusinessUrl">Google Business URL</label>
+              <div className="rctl">
+                <input
+                  type="url"
+                  id="googleBusinessUrl"
+                  name="googleBusinessUrl"
+                  value={formData.googleBusinessUrl}
+                  onChange={handleChange}
+                  className="inp"
+                  disabled={isPending}
+                />
+                {fieldErrors.googleBusinessUrl && (
+                  <p className="field-error">{fieldErrors.googleBusinessUrl[0]}</p>
+                )}
+              </div>
+            </div>
+            <div className="frow">
+              <label className="rlabel" htmlFor="instagramHandle">Instagram handle</label>
+              <div className="rctl">
+                <input
+                  type="text"
+                  id="instagramHandle"
+                  name="instagramHandle"
+                  value={formData.instagramHandle}
+                  onChange={handleChange}
+                  placeholder="@yourrestaurant"
+                  className="inp"
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+            <div className="frow">
+              <label className="rlabel" htmlFor="facebookUrl">Facebook URL</label>
+              <div className="rctl">
+                <input
+                  type="url"
+                  id="facebookUrl"
+                  name="facebookUrl"
+                  value={formData.facebookUrl}
+                  onChange={handleChange}
+                  className="inp"
+                  disabled={isPending}
+                />
+                {fieldErrors.facebookUrl && <p className="field-error">{fieldErrors.facebookUrl[0]}</p>}
+              </div>
+            </div>
+            <div className="frow">
+              <label className="rlabel" htmlFor="referralSource">How did you hear about us?</label>
+              <div className="rctl">
+                <select
+                  id="referralSource"
+                  name="referralSource"
+                  value={formData.referralSource}
+                  onChange={handleChange}
+                  className="inp"
+                  disabled={isPending}
+                >
+                  <option value="">Select one</option>
+                  {REFERRAL_SOURCES.map((source) => (
+                    <option key={source} value={source}>{source}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "12px 16px" }}>
+              <button type="button" onClick={() => setEditing(false)} className="rp-btn rp-btn-q rp-btn-sm" disabled={isPending}>
+                Cancel
+              </button>
+              <button type="submit" className="rp-btn rp-btn-p rp-btn-sm" disabled={isPending}>
+                {isPending ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </form>
+        </div>
+        <p className="foot">Helps our team verify your business — all fields optional.</p>
+      </section>
     );
   }
 
   // Verified - read-only. Contact support rather than a self-serve edit, so
   // a "Verified" badge stays trustworthy (§16.1 wireframe).
   return (
-    <div style={{ marginBottom: 20 }}>
-      <div className="group-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        FROM YOUR APPLICATION
-        <span className="badge badge-green" style={{ fontSize: 10, textTransform: "none", letterSpacing: 0 }}>
-          ✓ Verified
-        </span>
+    <section className="sec" id="sec-app">
+      <div className="sec-head">
+        <div className="sec-label">From your application</div>
+        <span className="seal"><svg><use href="#ic-check" /></svg> Verified by Platform Ops</span>
       </div>
-      <div className="card card-pad">
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div className="breakdown-row">
-          <span className="breakdown-label">Business Registration Number</span>
-          <span className="breakdown-value">{restaurant.registrationNumber || "—"}</span>
+      <div className="rp-card">
+        <div className="frow">
+          <div className="rlabel">Business registration <svg className="lockicon"><use href="#ic-lock" /></svg></div>
+          <div className="rval mono">{restaurant.registrationNumber || "—"}</div>
         </div>
-        <div className="breakdown-row">
-          <span className="breakdown-label">Google Business Profile</span>
-          <span className="breakdown-value">
+        <div className="frow">
+          <div className="rlabel">Google Business Profile <svg className="lockicon"><use href="#ic-lock" /></svg></div>
+          <div className="rval">
             {restaurant.googleBusinessUrl ? (
-              <a
-                href={restaurant.googleBusinessUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--p)", fontWeight: 600 }}
-              >
-                View listing →
+              <a className="rlink" href={restaurant.googleBusinessUrl} target="_blank" rel="noopener noreferrer">
+                View listing <svg><use href="#ic-ext" /></svg>
               </a>
-            ) : (
-              "—"
-            )}
-          </span>
+            ) : "—"}
+          </div>
         </div>
-        <div className="breakdown-row">
-          <span className="breakdown-label">Instagram</span>
-          <span className="breakdown-value">{restaurant.instagramHandle || "—"}</span>
+        <div className="frow">
+          <div className="rlabel">Instagram <svg className="lockicon"><use href="#ic-lock" /></svg></div>
+          <div className="rval">{restaurant.instagramHandle || "—"}</div>
         </div>
-        <div className="breakdown-row">
-          <span className="breakdown-label">Facebook</span>
-          <span className="breakdown-value">
+        <div className="frow">
+          <div className="rlabel">Facebook <svg className="lockicon"><use href="#ic-lock" /></svg></div>
+          <div className="rval">
             {restaurant.facebookUrl ? (
-              <a
-                href={restaurant.facebookUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--p)", fontWeight: 600 }}
-              >
-                View page →
+              <a className="rlink" href={restaurant.facebookUrl} target="_blank" rel="noopener noreferrer">
+                View page <svg><use href="#ic-ext" /></svg>
               </a>
-            ) : (
-              "—"
-            )}
-          </span>
+            ) : "—"}
+          </div>
         </div>
-        <div className="breakdown-row">
-          <span className="breakdown-label">Referral Source</span>
-          <span className="breakdown-value">{restaurant.referralSource || "—"}</span>
+        <div className="frow">
+          <div className="rlabel">Heard about us via <svg className="lockicon"><use href="#ic-lock" /></svg></div>
+          <div className="rval">{restaurant.referralSource || "—"}</div>
         </div>
       </div>
-      </div>
-      <div className="group-footnote">
-        Submitted during onboarding — shown here so you never re-enter it. Need to correct
-        something? These went through Platform Ops verification, so contact support rather than
-        editing directly — that keeps your verified status trustworthy.
-      </div>
-    </div>
+      <p className="foot">
+        Collected during onboarding so you never re-enter it. These went through verification, so
+        they are locked here — contact support to correct one and keep your verified badge intact.
+      </p>
+    </section>
   );
 }

@@ -398,3 +398,320 @@
   width: 100%; max-width: 520px; margin: 40px auto; border-radius: 16px; background: var(--white);
   box-shadow: var(--shadow-2); border: 1px solid var(--bdr); padding: 32px 24px; text-align: center;
 }
+
+/* ============================================================
+ * RESTAURANT PROFILE — "Apple" design system, namespaced under
+ * .rp so it doesn't reskin the shared .card/.btn/.chip/etc. used
+ * by every other admin page. Ported 1:1 from the approved
+ * "restaurant-profile.html" Apple-style Artifact mockup (tokens,
+ * component classes, mobile behavior at 700px) — mobile-first
+ * here (base rules = mobile) with @container (min-width:700px)
+ * desktop overrides, matching this file's existing convention.
+ * ============================================================ */
+.dine-admin .rp {
+  --hair: rgba(60, 40, 25, 0.09);
+  --hair2: rgba(60, 40, 25, 0.16);
+  --t2w: #736A62;
+  --t3w: #A29890;
+  --card2: #ffffff;
+  --inset: #F6F2EC;
+  --sand: #EDE7DE;
+  --espresso: #3B2A20;
+  --espresso2: #5C3D28;
+  --r-s: 9px; --r-m: 13px; --r-l: 18px;
+  --rp-sh-1: 0 1px 2px rgba(60, 40, 25, .05), 0 1px 1px rgba(60, 40, 25, .03);
+  --rp-sh-2: 0 10px 30px -12px rgba(60, 40, 25, .18), 0 2px 6px rgba(60, 40, 25, .05);
+  --rp-ring: 0 0 0 3px var(--p-glow);
+}
+
+/* ---- layout: rail + column ---- */
+.dine-admin .rp .layout { display: block; }
+.dine-admin .rp .rail { position: static; display: flex; flex-direction: column; gap: 0; }
+.dine-admin .rp .col { display: flex; flex-direction: column; gap: 26px; min-width: 0; padding-bottom: 4px; }
+@container (min-width: 700px) {
+  .dine-admin .rp .layout { display: grid; grid-template-columns: 292px minmax(0, 1fr); gap: 30px; align-items: start; }
+  .dine-admin .rp .rail { position: sticky; top: 14px; gap: 14px; }
+  .dine-admin .rp .col { gap: 30px; }
+}
+
+/* ---- identity card ---- */
+.dine-admin .rp .idcard {
+  background: var(--card2); border: 1px solid var(--hair); border-radius: 0; overflow: hidden;
+  box-shadow: none; border-left: 0; border-right: 0; border-top: 0;
+}
+@container (min-width: 700px) {
+  .dine-admin .rp .idcard { border-radius: var(--r-l); box-shadow: var(--rp-sh-1); border: 1px solid var(--hair); }
+}
+.dine-admin .rp .cover {
+  height: 118px; position: relative;
+  background:
+    radial-gradient(120% 130% at 88% 8%, rgba(255, 107, 61, .55) 0%, rgba(255, 107, 61, 0) 58%),
+    linear-gradient(150deg, var(--espresso) 0%, var(--espresso2) 62%, #6B4830 100%);
+}
+@container (min-width: 700px) { .dine-admin .rp .cover { height: 104px; } }
+.dine-admin .rp .cover-edit {
+  position: absolute; top: 11px; right: 11px; z-index: 2;
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255, 255, 255, .94); color: var(--espresso);
+  border: 0; border-radius: 999px; padding: 5px 11px;
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .16);
+}
+.dine-admin .rp .cover-edit svg { width: 12px; height: 12px; }
+.dine-admin .rp .id-body { padding: 0 18px 16px; }
+.dine-admin .rp .avatar {
+  width: 72px; height: 72px; border-radius: 20px; margin-top: -34px; position: relative;
+  background: linear-gradient(140deg, #8B6B4A, var(--espresso2));
+  border: 4px solid var(--card2);
+  box-shadow: 0 6px 18px rgba(60, 40, 25, .22);
+  display: flex; align-items: center; justify-content: center;
+  color: #F6E9DA; font-size: 23px; font-weight: 600; letter-spacing: -.02em;
+}
+.dine-admin .rp .id-name { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 13px; }
+.dine-admin .rp .id-name h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.028em; line-height: 1.15; color: var(--text); }
+.dine-admin .rp .taglist { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.dine-admin .rp .tag { font-size: 11.5px; font-weight: 500; color: var(--t2w); background: var(--sand); border-radius: 6px; padding: 3px 8px; }
+.dine-admin .rp .stats { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--hair); }
+.dine-admin .rp .stat { padding: 13px 18px; }
+.dine-admin .rp .stat:nth-child(odd) { border-right: 1px solid var(--hair); }
+.dine-admin .rp .stat:nth-child(n+3) { border-top: 1px solid var(--hair); }
+.dine-admin .rp .stat-l { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--t3w); margin-bottom: 3px; }
+.dine-admin .rp .stat-v { font-size: 20px; font-weight: 700; letter-spacing: -.03em; color: var(--text); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 4px; }
+.dine-admin .rp .stat-v.sm { font-size: 15px; letter-spacing: -.02em; }
+.dine-admin .rp .stat-v svg { width: 14px; height: 14px; color: var(--p); }
+.dine-admin .rp .stat-link { display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; font-weight: 600; color: var(--p); text-decoration: none; margin-top: 1px; }
+.dine-admin .rp .stat-link svg { width: 11px; height: 11px; }
+
+/* ---- in-page section nav ---- */
+.dine-admin .rp .nav {
+  position: sticky; top: 0; z-index: 8; display: flex; gap: 6px; overflow-x: auto;
+  border-radius: 0; border: 0; padding: 9px 14px; box-shadow: none; background: var(--bg);
+  scrollbar-width: none;
+}
+.dine-admin .rp .nav::-webkit-scrollbar { display: none; }
+.dine-admin .rp .navlink {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  background: var(--sand); border-radius: 999px; padding: 6px 13px;
+  font-size: 13px; font-weight: 500; color: var(--t2w); text-decoration: none; white-space: nowrap;
+  transition: background .15s ease, color .15s ease; cursor: pointer;
+}
+.dine-admin .rp .navlink svg { display: none; }
+.dine-admin .rp .navlink .navcount { margin-left: 5px; font-size: 11px; font-weight: 600; color: var(--t3w); font-variant-numeric: tabular-nums; }
+.dine-admin .rp .navlink:hover { background: var(--bg2); }
+.dine-admin .rp .navlink.on { background: var(--p-tint); color: var(--p); font-weight: 600; }
+.dine-admin .rp .navlink.on .navcount { color: var(--p); opacity: .75; }
+.dine-admin .rp .rail-foot { display: none; }
+@container (min-width: 700px) {
+  .dine-admin .rp .nav { position: static; display: block; overflow: visible; background: var(--card2); border: 1px solid var(--hair); border-radius: var(--r-l); padding: 5px; box-shadow: var(--rp-sh-1); }
+  .dine-admin .rp .navlink { display: flex; width: 100%; background: none; border-radius: 11px; padding: 8px 10px; font-size: 13.5px; margin-bottom: 1px; }
+  .dine-admin .rp .navlink svg { display: block; width: 16px; height: 16px; flex: none; opacity: .75; }
+  .dine-admin .rp .navlink .navcount { margin-left: auto; }
+  .dine-admin .rp .navlink.on svg { opacity: 1; }
+  .dine-admin .rp .rail-foot { display: flex; align-items: center; gap: 7px; padding: 0 4px; font-size: 12px; color: var(--t3w); }
+  .dine-admin .rp .rail-foot svg { width: 13px; height: 13px; flex: none; }
+  .dine-admin .rp .rail-foot a { color: var(--p); text-decoration: none; font-weight: 600; }
+}
+
+/* ---- inset grouped sections ---- */
+.dine-admin .rp .sec { scroll-margin-top: 56px; padding: 0 14px; }
+@container (min-width: 700px) { .dine-admin .rp .sec { padding: 0; scroll-margin-top: 14px; } }
+.dine-admin .rp .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 4px 8px; }
+.dine-admin .rp .sec-label { font-size: 11px; font-weight: 600; letter-spacing: .075em; text-transform: uppercase; color: var(--t3w); }
+.dine-admin .rp .sec-aside { font-size: 11.5px; font-weight: 600; color: var(--t2w); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
+.dine-admin .rp .rp-card { background: var(--card2); border: 1px solid var(--hair); border-radius: var(--r-m); box-shadow: var(--rp-sh-1); overflow: hidden; }
+@container (min-width: 700px) { .dine-admin .rp .rp-card { border-radius: var(--r-l); } }
+.dine-admin .rp .foot { margin: 9px 6px 0; font-size: 12px; line-height: 1.55; color: var(--t3w); max-width: 62ch; }
+@container (min-width: 700px) { .dine-admin .rp .foot { margin: 9px 4px 0; } }
+.dine-admin .rp .foot a { color: var(--p); text-decoration: none; font-weight: 600; }
+
+.dine-admin .rp .seal { display: inline-flex; align-items: center; gap: 5px; background: var(--green-bg); color: var(--green-txt); border-radius: 999px; padding: 3px 9px 3px 7px; font-size: 11px; font-weight: 600; }
+.dine-admin .rp .seal svg { width: 12px; height: 12px; }
+
+/* ---- settings rows ---- */
+.dine-admin .rp .frow { display: grid; grid-template-columns: 1fr; gap: 2px; padding: 11px 14px; min-height: 0; }
+.dine-admin .rp .frow + .frow { border-top: 1px solid var(--hair); }
+.dine-admin .rp .frow.stack { padding-top: 12px; }
+.dine-admin .rp .frow.stack .rlabel { padding-top: 0; }
+.dine-admin .rp .rlabel { font-size: 12px; font-weight: 600; letter-spacing: .03em; color: var(--t3w); text-transform: uppercase; display: flex; align-items: center; gap: 5px; line-height: 1.35; }
+.dine-admin .rp .req { width: 5px; height: 5px; border-radius: 50%; background: var(--p); flex: none; display: inline-block; }
+.dine-admin .rp .lockicon { width: 13px; height: 13px; color: var(--t3w); flex: none; }
+.dine-admin .rp .rctl { min-width: 0; }
+@container (min-width: 700px) {
+  .dine-admin .rp .frow { grid-template-columns: 186px minmax(0, 1fr); align-items: center; gap: 14px; padding: 9px 16px; min-height: 52px; }
+  .dine-admin .rp .frow.stack { align-items: start; padding-top: 14px; padding-bottom: 15px; }
+  .dine-admin .rp .rlabel { font-size: 13.5px; font-weight: 500; color: var(--t2w); text-transform: none; letter-spacing: 0; }
+  .dine-admin .rp .frow.stack .rlabel { padding-top: 9px; }
+}
+
+.dine-admin .rp .inp {
+  width: 100%; font: inherit; font-size: 15px; font-weight: 500; color: var(--text);
+  background: transparent; border: 1px solid transparent; border-radius: var(--r-s);
+  padding: 4px 0; transition: background .14s ease, border-color .14s ease;
+}
+.dine-admin .rp .inp::placeholder { color: var(--t3w); font-weight: 400; }
+.dine-admin .rp .inp:focus { outline: none; background: var(--inset); border-color: var(--p); box-shadow: var(--rp-ring); padding: 4px 8px; margin: 0 -8px; }
+.dine-admin .rp textarea.inp { resize: none; line-height: 1.55; font-size: 14px; font-weight: 400; min-height: 96px; display: block; }
+.dine-admin .rp .hint { font-size: 11.5px; color: var(--t3w); margin: 5px 0 0 0; }
+.dine-admin .rp .hint.right { text-align: right; font-variant-numeric: tabular-nums; }
+.dine-admin .rp .ctl-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+@container (min-width: 700px) {
+  .dine-admin .rp .inp { padding: 7px 10px; font-size: 14.5px; }
+  .dine-admin .rp .inp:hover { background: var(--inset); }
+  .dine-admin .rp .inp:focus { padding: 7px 10px; margin: 0; }
+  .dine-admin .rp .hint { margin: 5px 0 0 10px; }
+  .dine-admin .rp .hint.right { margin-right: 2px; }
+}
+
+/* read-only value rows */
+.dine-admin .rp .rval { font-size: 15px; font-weight: 500; color: var(--text); padding: 2px 0; display: flex; align-items: center; gap: 7px; }
+.dine-admin .rp .rval.mono { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.dine-admin .rp .rlink { color: var(--p); text-decoration: none; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 4px; }
+.dine-admin .rp .rlink svg { width: 12px; height: 12px; flex: none; }
+@container (min-width: 700px) { .dine-admin .rp .rval { font-size: 14.5px; padding: 7px 10px; } }
+
+/* chips */
+.dine-admin .rp .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0; }
+.dine-admin .rp .rp-chip {
+  display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 12.5px; font-weight: 500;
+  color: var(--t2w); background: var(--sand); border: 1px solid transparent; border-radius: 999px;
+  padding: 5px 11px; cursor: pointer; transition: all .14s ease;
+}
+.dine-admin .rp .rp-chip svg { width: 0; height: 11px; opacity: 0; transition: opacity .12s ease; }
+.dine-admin .rp .rp-chip:hover { border-color: var(--hair2); color: var(--text); }
+.dine-admin .rp .rp-chip[aria-pressed="true"] { background: var(--p-tint); border-color: var(--p); color: var(--p); font-weight: 600; }
+.dine-admin .rp .rp-chip[aria-pressed="true"] svg { opacity: 1; width: 11px; }
+
+/* ---- table themes ---- */
+.dine-admin .rp .tbar { display: flex; flex-direction: column; align-items: stretch; gap: 9px; padding: 11px; border-bottom: 1px solid var(--hair); background: var(--bg2); }
+.dine-admin .rp .seg { display: flex; background: var(--bg3); border-radius: 9px; padding: 2px; gap: 2px; width: 100%; }
+.dine-admin .rp .seg button { flex: 1; text-align: center; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--t2w); background: transparent; border: 0; border-radius: 7px; padding: 5px 4px; cursor: pointer; transition: all .15s ease; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dine-admin .rp .seg button[aria-selected="true"] { background: var(--card2); color: var(--text); font-weight: 600; box-shadow: var(--rp-sh-1); }
+.dine-admin .rp .linkbtn { font: inherit; font-size: 12.5px; font-weight: 600; color: var(--p); background: none; border: 0; cursor: pointer; padding: 4px 2px; white-space: nowrap; align-self: flex-start; }
+.dine-admin .rp .tgrid { display: grid; grid-template-columns: 1fr; gap: 1px; background: var(--hair); }
+.dine-admin .rp .trow { display: flex; align-items: center; gap: 11px; padding: 11px 14px; background: var(--card2); min-height: 66px; }
+.dine-admin .rp .ticon { width: 34px; height: 34px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--sand); color: var(--t2w); transition: background .18s ease, color .18s ease; }
+.dine-admin .rp .ticon svg { width: 17px; height: 17px; }
+.dine-admin .rp .trow.on .ticon { background: var(--p-tint); color: var(--p); }
+.dine-admin .rp .tmeta { flex: 1; min-width: 0; }
+.dine-admin .rp .tname { font-size: 14px; font-weight: 600; letter-spacing: -.01em; color: var(--text); }
+.dine-admin .rp .tdesc { font-size: 12.25px; color: var(--t2w); line-height: 1.35; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container (min-width: 700px) {
+  .dine-admin .rp .tbar { flex-direction: row; align-items: center; justify-content: space-between; padding: 11px 14px; }
+  .dine-admin .rp .seg { width: auto; display: inline-flex; }
+  .dine-admin .rp .seg button { flex: none; padding: 4px 12px; }
+  .dine-admin .rp .tgrid { grid-template-columns: 1fr 1fr; }
+}
+
+/* switch */
+.dine-admin .rp .sw { flex: none; width: 42px; height: 25px; border-radius: 999px; border: 0; padding: 0; background: var(--bg3); cursor: pointer; position: relative; transition: background .2s cubic-bezier(.32, .72, 0, 1); }
+.dine-admin .rp .sw-dot { position: absolute; top: 2.5px; left: 2.5px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .22); transition: transform .22s cubic-bezier(.32, .72, 0, 1); }
+.dine-admin .rp .sw[aria-checked="true"] { background: linear-gradient(160deg, var(--p), var(--p2)); }
+.dine-admin .rp .sw[aria-checked="true"] .sw-dot { transform: translateX(17px); }
+
+/* ---- compliance documents ---- */
+.dine-admin .rp .drow { display: flex; align-items: flex-start; gap: 13px; padding: 13px 14px 13px 17px; position: relative; }
+.dine-admin .rp .drow + .drow, .dine-admin .rp .drow + .dghost, .dine-admin .rp .dghost + .drow { border-top: 1px solid var(--hair); }
+.dine-admin .rp .drow::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--t3w); }
+.dine-admin .rp .drow.ok::before { background: var(--green-txt); }
+.dine-admin .rp .drow.bad::before { background: var(--red-txt); }
+.dine-admin .rp .drow.wait::before { background: var(--yellow-txt); }
+.dine-admin .rp .dicon { width: 36px; height: 44px; flex: none; border-radius: 7px; background: var(--inset); border: 1px solid var(--hair); display: flex; align-items: center; justify-content: center; color: var(--t3w); }
+.dine-admin .rp .dicon svg { width: 17px; height: 17px; }
+.dine-admin .rp .drow.ok .dicon { color: var(--green-txt); }
+.dine-admin .rp .drow.bad .dicon { color: var(--red-txt); }
+.dine-admin .rp .drow.wait .dicon { color: var(--yellow-txt); }
+.dine-admin .rp .dmain { flex: 1; min-width: 0; }
+.dine-admin .rp .dtop { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.dine-admin .rp .dtype { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; color: var(--text); }
+.dine-admin .rp .dmeta { font-size: 12.25px; color: var(--t3w); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dine-admin .rp .dactions { display: flex; align-items: center; gap: 4px; flex: none; }
+.dine-admin .rp .iconbtn { width: 29px; height: 29px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--t2w); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .14s ease, color .14s ease; }
+.dine-admin .rp .iconbtn svg { width: 15px; height: 15px; }
+.dine-admin .rp .iconbtn:hover { background: var(--bg2); color: var(--text); }
+.dine-admin .rp .iconbtn.danger:hover { background: var(--red-bg); color: var(--red-txt); }
+.dine-admin .rp .iconbtn:disabled { opacity: .4; cursor: not-allowed; }
+
+.dine-admin .rp .note { margin-top: 10px; border-radius: var(--r-m); background: var(--red-bg); padding: 10px 12px; display: flex; gap: 9px; align-items: flex-start; }
+.dine-admin .rp .note > svg { width: 14px; height: 14px; color: var(--red-txt); flex: none; margin-top: 2px; }
+.dine-admin .rp .note-t { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--red-txt); }
+.dine-admin .rp .note-b { font-size: 13px; line-height: 1.5; color: var(--text); margin-top: 3px; }
+.dine-admin .rp .note-b em { font-style: normal; color: var(--t2w); }
+
+.dine-admin .rp .dghost { display: flex; align-items: center; gap: 13px; padding: 12px 14px 12px 17px; position: relative; }
+.dine-admin .rp .dghost::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: repeating-linear-gradient(180deg, var(--hair2) 0 4px, transparent 4px 8px); }
+.dine-admin .rp .dghost .dicon { border-style: dashed; background: transparent; color: var(--t3w); }
+.dine-admin .rp .dghost .dtype { color: var(--t2w); font-weight: 500; }
+@container (min-width: 700px) {
+  .dine-admin .rp .drow { padding: 14px 16px 14px 19px; }
+  .dine-admin .rp .dghost { padding: 13px 16px 13px 19px; }
+}
+
+/* pills */
+.dine-admin .rp .rp-pill { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.dine-admin .rp .rp-pill svg { width: 11px; height: 11px; }
+.dine-admin .rp .rp-pill.green { background: var(--green-bg); color: var(--green-txt); }
+.dine-admin .rp .rp-pill.red { background: var(--red-bg); color: var(--red-txt); }
+.dine-admin .rp .rp-pill.yellow { background: var(--yellow-bg); color: var(--yellow-txt); }
+.dine-admin .rp .rp-pill.grey { background: var(--sand); color: var(--t2w); }
+
+/* dropzone */
+.dine-admin .rp .dz { border-top: 1px solid var(--hair); padding: 14px; background: var(--bg2); }
+.dine-admin .rp .dz-inner { border: 1.5px dashed var(--hair2); border-radius: var(--r-m); padding: 20px 14px; text-align: center; background: var(--card2); transition: border-color .16s ease, background .16s ease; }
+.dine-admin .rp .dz-inner:hover { border-color: var(--p); background: var(--p-tint); }
+.dine-admin .rp .dz-ico { width: 38px; height: 38px; border-radius: 12px; margin: 0 auto 11px; background: var(--p-tint); color: var(--p); display: flex; align-items: center; justify-content: center; }
+.dine-admin .rp .dz-ico svg { width: 19px; height: 19px; }
+.dine-admin .rp .dz-t { font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.dine-admin .rp .dz-s { font-size: 12.25px; color: var(--t3w); margin-top: 4px; }
+.dine-admin .rp .dz-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
+.dine-admin .rp .rp-sel { font: inherit; font-size: 13px; font-weight: 500; color: var(--text); background-color: var(--card2); border: 1px solid var(--hair2); border-radius: 9px; padding: 7px 30px 7px 11px; cursor: pointer; appearance: none; width: 100%; text-align: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A29890' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center; background-size: 12px;
+}
+.dine-admin .rp .dz-note { font-size: 11.5px; color: var(--t3w); margin-top: 12px; }
+@container (min-width: 700px) {
+  .dine-admin .rp .dz { padding: 18px; }
+  .dine-admin .rp .dz-inner { padding: 22px 18px; }
+  .dine-admin .rp .dz-controls { flex-direction: row; flex-wrap: wrap; }
+  .dine-admin .rp .rp-sel { width: auto; text-align: left; }
+}
+
+/* empty state */
+.dine-admin .rp .rp-empty { padding: 34px 22px; text-align: center; }
+.dine-admin .rp .rp-empty-ico { width: 46px; height: 46px; border-radius: 14px; margin: 0 auto 13px; background: var(--sand); color: var(--t3w); display: flex; align-items: center; justify-content: center; }
+.dine-admin .rp .rp-empty-ico svg { width: 22px; height: 22px; }
+.dine-admin .rp .rp-empty-t { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+.dine-admin .rp .rp-empty-b { font-size: 13px; color: var(--t2w); margin: 6px auto 0; max-width: 40ch; line-height: 1.55; }
+
+/* verification prompt (alternate state) */
+.dine-admin .rp .prompt { display: flex; gap: 13px; align-items: flex-start; padding: 16px 17px; background: linear-gradient(180deg, var(--p-tint), transparent 70%); }
+.dine-admin .rp .prompt-ico { width: 34px; height: 34px; border-radius: 10px; flex: none; background: var(--p-tint); color: var(--p); display: flex; align-items: center; justify-content: center; }
+.dine-admin .rp .prompt-ico svg { width: 17px; height: 17px; }
+.dine-admin .rp .prompt-t { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.dine-admin .rp .prompt-b { font-size: 13px; color: var(--t2w); line-height: 1.55; margin-top: 4px; max-width: 52ch; }
+
+/* buttons + save bar */
+.dine-admin .rp .rp-btn { font: inherit; font-size: 13.5px; font-weight: 600; border-radius: 10px; padding: 8px 16px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: transform .12s ease, box-shadow .16s ease, background .16s ease; }
+.dine-admin .rp .rp-btn svg { width: 14px; height: 14px; }
+.dine-admin .rp .rp-btn:active { transform: translateY(.5px); }
+.dine-admin .rp .rp-btn:disabled { opacity: .5; cursor: not-allowed; }
+.dine-admin .rp .rp-btn-p { background: linear-gradient(160deg, var(--p), var(--p2)); color: #fff; box-shadow: 0 2px 10px -2px var(--p-glow); }
+.dine-admin .rp .rp-btn-p:hover:not(:disabled) { box-shadow: 0 5px 16px -3px var(--p-glow); }
+.dine-admin .rp .rp-btn-o { background: var(--card2); border-color: var(--hair2); color: var(--text); }
+.dine-admin .rp .rp-btn-o:hover:not(:disabled) { background: var(--bg2); }
+.dine-admin .rp .rp-btn-q { background: transparent; color: var(--t2w); }
+.dine-admin .rp .rp-btn-q:hover:not(:disabled) { background: var(--bg2); color: var(--text); }
+.dine-admin .rp .rp-btn-sm { font-size: 12.5px; padding: 6px 12px; }
+
+.dine-admin .rp .savebar { position: static; margin-top: 4px; padding-top: 0; z-index: 5; }
+@container (min-width: 700px) {
+  .dine-admin .rp .savebar { position: sticky; bottom: 0; margin-top: -8px; padding-top: 12px; background: linear-gradient(180deg, transparent, var(--bg) 55%); }
+}
+.dine-admin .rp .savebar-in { display: flex; align-items: center; gap: 12px; background: var(--card2); border: 1px solid var(--hair); border-radius: 15px; padding: 11px 12px 11px 17px; box-shadow: var(--rp-sh-2); flex-wrap: wrap; }
+.dine-admin .rp .dirty { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; font-size: 13px; color: var(--t2w); }
+.dine-admin .rp .dirty b { color: var(--text); font-weight: 600; }
+.dine-admin .rp .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--p); flex: none; box-shadow: 0 0 0 0 var(--p-glow); animation: rp-pulse 2.4s ease-out infinite; }
+@keyframes rp-pulse {
+  0% { box-shadow: 0 0 0 0 var(--p-glow); }
+  70% { box-shadow: 0 0 0 7px rgba(255, 107, 61, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 107, 61, 0); }
+}
