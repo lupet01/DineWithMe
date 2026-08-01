@@ -2,12 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Search, ArrowUpDown } from "lucide-react";
 import { formatAmount } from "@dinewithme/config/src/payment";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { SearchBar } from "@/components/ui/search-bar";
-import { Tabs } from "@/components/ui/tabs";
-import { RowCard } from "@/components/ui/row-card";
 import { GuestQuickView } from "@/app/admin/components/guest-quick-view";
 
 interface GuestUser {
@@ -36,28 +32,28 @@ interface GuestsTableProps {
   restaurantId: string;
 }
 
-function statusTone(status: string): "primary" | "success" | "neutral" | "danger" | "warning" {
-  if (status === "ATTENDED" || status === "COMPLETED") return "success";
-  if (status === "CONFIRMED") return "primary";
-  if (status === "HELD") return "warning";
-  if (status === "CANCELLED" || status === "EXPIRED" || status === "NO_SHOW") return "danger";
-  return "neutral";
+function statusBadgeClass(status: string): string {
+  if (status === "CONFIRMED") return "badge-green";
+  if (status === "HELD") return "badge-blue";
+  if (status === "ATTENDED" || status === "COMPLETED") return "badge-slate";
+  if (status === "CANCELLED" || status === "EXPIRED" || status === "NO_SHOW") return "badge-red";
+  return "badge-slate";
 }
 
-function paymentBadge(guest: Guest): { label: string; tone: "success" | "neutral" | "warning" } {
+function paymentBadge(guest: Guest): { label: string; className: string } {
   const intent = guest.paymentIntents[0];
   if (!intent) {
     return guest.status === "HELD"
-      ? { label: "Awaiting payment", tone: "warning" }
-      : { label: "—", tone: "neutral" };
+      ? { label: "Awaiting payment", className: "badge-slate" }
+      : { label: "—", className: "badge-slate" };
   }
   if (intent.status === "SUCCEEDED") {
-    return { label: `Paid · ${formatAmount(intent.amount)}`, tone: "success" };
+    return { label: `Paid · ${formatAmount(intent.amount)}`, className: "badge-green" };
   }
   if (intent.status === "REFUNDED") {
-    return { label: "Refunded", tone: "neutral" };
+    return { label: "Refunded", className: "badge-slate" };
   }
-  return { label: "Awaiting payment", tone: "warning" };
+  return { label: "Awaiting payment", className: "badge-slate" };
 }
 
 const CANCELLED_STATUSES = new Set(["CANCELLED", "EXPIRED", "NO_SHOW"]);
@@ -126,25 +122,35 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
 
   if (guests.length === 0) {
     return (
-      <Card padding="lg" className="text-center text-gray-600">
-        No bookings yet.
-      </Card>
+      <div className="card card-pad" style={{ textAlign: "center", padding: "48px 24px" }}>
+        <div className="card-title" style={{ marginBottom: 6 }}>
+          No bookings yet
+        </div>
+        <p style={{ fontSize: 13, color: "var(--t3)" }}>
+          Guests who book a table at your dinners will show up here.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchBar
-          placeholder="Search by guest name or email..."
-          value={search}
-          onValueChange={setSearch}
-          className="sm:w-72"
-        />
+    <div>
+      <div className="search-toolbar">
+        <div className="search-bar">
+          <Search className="search-icon" />
+          <input
+            className="field-input"
+            placeholder="Search by guest name or email…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 260 }}
+          />
+        </div>
         <select
+          className="field-input"
+          style={{ width: "auto" }}
           value={dinnerFilter}
           onChange={(e) => setDinnerFilter(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
         >
           <option value="">All Dinners</option>
           {dinnerOptions.map(([id, title]) => (
@@ -153,15 +159,26 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
             </option>
           ))}
         </select>
-        <Tabs items={tabItems} value={tab} onChange={(v) => setTab(v as TabValue)} />
+        <div className="tabs">
+          {tabItems.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={`tab ${tab === item.value ? "active" : ""}`}
+              onClick={() => setTab(item.value as TabValue)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Mobile: stacked cards. Desktop: table below. Same filtered data. */}
-      <div className="space-y-3 md:hidden">
+      {/* Mobile: stacked row-cards. Desktop: table. Same filtered data. */}
+      <div className="only-mobile">
         {filtered.length === 0 ? (
-          <Card padding="lg" className="text-center text-gray-500">
+          <div className="card card-pad" style={{ textAlign: "center", color: "var(--t3)" }}>
             No guests match your search
-          </Card>
+          </div>
         ) : (
           filtered.map((guest) => {
             const person = guest.confirmedByUser ?? guest.heldByUser;
@@ -173,71 +190,68 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
             const dinnerDate = new Date(guest.dinner.startsAt).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
-              year: "numeric",
             });
 
             return (
-              <RowCard
-                key={guest.id}
-                title={
-                  person ? (
-                    <button
-                      type="button"
-                      onClick={() => setQuickViewGuest(person)}
-                      className="text-left hover:text-primary-600 hover:underline"
-                    >
-                      {name}
-                    </button>
-                  ) : (
-                    name
-                  )
-                }
-                subtitle={
+              <div key={guest.id} className="row-card">
+                <div className="rc-top">
+                  <div>
+                    <div className="rc-title">
+                      {person ? (
+                        <button
+                          type="button"
+                          onClick={() => setQuickViewGuest(person)}
+                          style={{ color: "inherit", background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}
+                        >
+                          {name}
+                        </button>
+                      ) : (
+                        name
+                      )}
+                    </div>
+                    <div className="rc-sub">
+                      {guest.dinner.theme?.title || "Dinner"} · {dinnerDate}
+                    </div>
+                  </div>
+                  <span className={`badge ${statusBadgeClass(guest.status)}`}>{guest.status}</span>
+                </div>
+                <div className="rc-meta">
+                  {person?.email || "—"} · <span className={`badge ${payment.className}`}>{payment.label}</span>
+                </div>
+                <div className="rc-actions">
                   <Link
                     href={`/admin/dinners/${guest.dinner.id}`}
-                    className="hover:text-primary-600 hover:underline"
+                    className="btn btn-sm btn-outline"
+                    style={{ flex: 1, textAlign: "center" }}
                   >
-                    {guest.dinner.theme?.title || "Dinner"} · {dinnerDate}
+                    View Dinner
                   </Link>
-                }
-                trailing={
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge tone={statusTone(guest.status)}>{guest.status}</Badge>
-                    <Badge tone={payment.tone}>{payment.label}</Badge>
-                  </div>
-                }
-              />
+                </div>
+              </div>
             );
           })
         )}
       </div>
 
-      <Card padding="none" className="hidden overflow-hidden md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-cream-100 border-b border-gray-100">
+      <div className="only-desktop table-wrap">
+        <div className="table-scroll">
+          <table className="dtable">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Guest
+                <th>Guest</th>
+                <th>Dinner</th>
+                <th style={{ cursor: "pointer" }}>
+                  Date <ArrowUpDown className="h-3 w-3" style={{ display: "inline", marginLeft: 2, color: "var(--t3)" }} />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Dinner
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Dietary Notes
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Payment
-                </th>
+                <th>Seat Status</th>
+                <th>Payment</th>
+                <th className="r">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} style={{ textAlign: "center", color: "var(--t3)" }}>
                     No guests match your search
                   </td>
                 </tr>
@@ -251,31 +265,29 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
                   const payment = paymentBadge(guest);
 
                   return (
-                    <tr key={guest.id} className="hover:bg-cream-100 transition-colors">
-                      <td className="px-6 py-4">
+                    <tr key={guest.id}>
+                      <td>
                         {person ? (
                           <button
                             type="button"
                             onClick={() => setQuickViewGuest(person)}
-                            className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline"
+                            className="td-strong"
+                            style={{ background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}
                           >
                             {name}
                           </button>
                         ) : (
-                          <div className="text-sm font-medium text-gray-900">{name}</div>
+                          <div className="td-strong">{name}</div>
                         )}
-                        {person && (
-                          <div className="text-sm text-gray-500">{person.email}</div>
-                        )}
+                        {person && <div className="td-muted">{person.email}</div>}
                       </td>
-                      <td className="px-6 py-4">
-                        <Link
-                          href={`/admin/dinners/${guest.dinner.id}`}
-                          className="text-sm text-primary-600 hover:underline"
-                        >
+                      <td>
+                        <Link href={`/admin/dinners/${guest.dinner.id}`} style={{ fontSize: 13, color: "var(--p)", fontWeight: 600 }}>
                           {guest.dinner.theme?.title || "Dinner"}
                         </Link>
-                        <div className="text-sm text-gray-500">
+                      </td>
+                      <td>
+                        <div className="td-muted" style={{ marginTop: 0 }}>
                           {new Date(guest.dinner.startsAt).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -283,14 +295,18 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
                           })}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                        {guest.dietaryNotes || "—"}
+                      <td>
+                        <span className={`badge ${statusBadgeClass(guest.status)}`}>{guest.status}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge tone={statusTone(guest.status)}>{guest.status}</Badge>
+                      <td>
+                        <span className={`badge ${payment.className}`}>{payment.label}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge tone={payment.tone}>{payment.label}</Badge>
+                      <td>
+                        <div className="td-actions">
+                          <Link href={`/admin/dinners/${guest.dinner.id}`} className="btn btn-sm btn-outline">
+                            View Dinner
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -299,7 +315,7 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
 
       {quickViewGuest && (
         <GuestQuickView

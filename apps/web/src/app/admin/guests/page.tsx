@@ -1,6 +1,5 @@
 import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, seatRepository } from "@dinewithme/db";
-import { Card } from "@/components/ui/card";
 import { GuestsTable } from "./components/guests-table";
 
 export default async function GuestsPage() {
@@ -14,13 +13,13 @@ export default async function GuestsPage() {
 
   if (!restaurant) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Guests & Bookings</h1>
-        </div>
-        <Card padding="lg" className="text-center text-gray-600">
+      <div className="guests">
+        <h1 className="pg-title" style={{ marginBottom: 16 }}>
+          Guests &amp; Bookings
+        </h1>
+        <div className="card card-pad" style={{ textAlign: "center", color: "var(--t3)" }}>
           Set up your restaurant profile first to see guest bookings here.
-        </Card>
+        </div>
       </div>
     );
   }
@@ -28,12 +27,10 @@ export default async function GuestsPage() {
   const guests = await seatRepository.findGuestsByRestaurant(restaurant.id);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Guests & Bookings</h1>
-        <p className="text-gray-600 mt-1">
-          Everyone who has booked a table across all your dinners
-        </p>
+    <div className="guests">
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="pg-title">Guests &amp; Bookings</h1>
+        <p className="pg-sub">Everyone who has booked a table across all your dinners</p>
       </div>
 
       <GuestsTable guests={guests} restaurantId={restaurant.id} />

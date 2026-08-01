@@ -186,6 +186,11 @@
 .dine-admin .range-picker select:focus { outline: none; }
 .dine-admin .range-picker-chevron { font-size: 8px; color: var(--t3); margin-left: -2px; }
 
+.dine-admin .search-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.dine-admin .search-bar { position: relative; flex-shrink: 0; }
+.dine-admin .search-bar .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--t3); width: 14px; height: 14px; pointer-events: none; }
+.dine-admin .search-bar .field-input { padding-left: 36px; }
+
 .dine-admin .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 20px;
   border-radius: 50px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap;
@@ -845,6 +850,41 @@
 .dine-admin .din .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
 .dine-admin .din .live-guest-row { border-color: var(--hair); border-radius: var(--din-r); }
 .dine-admin .din .pg-title { font-weight: 650; letter-spacing: -0.028em; }
+
+/* ============================================================
+ * GUESTS & BOOKINGS — "Tesla" visual language, applied as overrides
+ * on the SHARED classes (.dtable/.table-wrap, .row-card, .badge,
+ * .btn, .tabs/.tab, .field-input, .search-bar, .pg-title) the same
+ * way .dash/.din did. This page previously used generic `Card`/
+ * `Badge`/`Tabs`/`SearchBar`/`RowCard` components and raw Tailwind,
+ * not the .dine-admin vocabulary at all — this pass ports it onto
+ * that vocabulary AND applies the Tesla mechanical/mono treatment in
+ * one go, scoped under .guests so Payouts (not yet redesigned) keeps
+ * today's look until its own pass.
+ * ============================================================ */
+.dine-admin .guests {
+  --hair: rgba(60, 40, 25, 0.09);
+  --hair2: rgba(60, 40, 25, 0.16);
+  --guests-r: 4px;
+  --guests-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
+}
+.dine-admin .guests .table-wrap { border-color: var(--hair); box-shadow: var(--guests-sh-1); border-radius: var(--guests-r); }
+.dine-admin .guests .dtable th { border-color: var(--hair); background: var(--bg2); font-family: var(--mono); }
+.dine-admin .guests .dtable td { border-color: var(--hair); }
+.dine-admin .guests .dtable tr:hover { background: var(--bg2); }
+.dine-admin .guests .tabs { background: var(--bg2); border-radius: var(--guests-r); }
+.dine-admin .guests .tab { border-radius: var(--guests-r); }
+.dine-admin .guests .tab.active { box-shadow: var(--guests-sh-1); }
+.dine-admin .guests .badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; border-radius: 2px; padding: 4px 8px;
+}
+.dine-admin .guests .btn { border-radius: var(--guests-r); }
+.dine-admin .guests .card { border-color: var(--hair); box-shadow: var(--guests-sh-1); border-radius: var(--guests-r); }
+.dine-admin .guests .row-card { border-color: var(--hair); box-shadow: var(--guests-sh-1); border-radius: var(--guests-r); }
+.dine-admin .guests .field-input { border: 1px solid var(--hair2); border-radius: var(--guests-r); background: var(--white); }
+.dine-admin .guests .field-input:focus { border-color: var(--p); background: var(--white); }
+.dine-admin .guests .pg-title { font-weight: 650; letter-spacing: -0.028em; }
 
 /* ============================================================
  * MEALS — same Apple visual language, applied as overrides on the
