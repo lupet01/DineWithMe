@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatAmount } from "@dinewithme/config/src/payment";
-import { Badge } from "@/components/ui/badge";
 import { GuestQuickView } from "@/app/admin/components/guest-quick-view";
 import { checkInGuest, refundSeat } from "../actions";
 
@@ -21,18 +20,18 @@ interface Seat {
   paymentIntents: Array<{ status: string; amount: number }>;
 }
 
-function paymentBadge(seat: Seat): { label: string; tone: "success" | "neutral" | "warning" } {
+function paymentBadge(seat: Seat): { label: string; badgeClass: string } {
   const intent = seat.paymentIntents[0];
   if (!intent) {
-    return { label: "—", tone: "neutral" };
+    return { label: "—", badgeClass: "badge-slate" };
   }
   if (intent.status === "SUCCEEDED") {
-    return { label: `Paid · ${formatAmount(intent.amount)}`, tone: "success" };
+    return { label: `Paid · ${formatAmount(intent.amount)}`, badgeClass: "badge-green" };
   }
   if (intent.status === "REFUNDED") {
-    return { label: "Refunded", tone: "neutral" };
+    return { label: "Refunded", badgeClass: "badge-slate" };
   }
-  return { label: "Awaiting payment", tone: "warning" };
+  return { label: "Awaiting payment", badgeClass: "badge-yellow" };
 }
 
 interface GuestRowProps {
@@ -43,10 +42,10 @@ interface GuestRowProps {
   isPlatformAdmin: boolean;
 }
 
-function statusTone(status: string): "primary" | "success" | "neutral" {
-  if (status === "ATTENDED" || status === "COMPLETED") return "success";
-  if (status === "CONFIRMED") return "primary";
-  return "neutral";
+function statusBadgeClass(status: string): string {
+  if (status === "ATTENDED" || status === "COMPLETED") return "badge-green";
+  if (status === "CONFIRMED") return "badge-blue";
+  return "badge-slate";
 }
 
 export function GuestRow({
@@ -90,29 +89,28 @@ export function GuestRow({
   };
 
   const canCheckIn = seat.status === "CONFIRMED";
+  const payment = paymentBadge(seat);
 
   return (
-    <tr className="hover:bg-cream-100 transition-colors">
-      <td className="px-6 py-4">
+    <tr>
+      <td>
         {guest && isPlatformAdmin ? (
-          <Link
-            href={`/admin/ops/users/${guest.id}`}
-            className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline"
-          >
+          <Link href={`/admin/ops/users/${guest.id}`} className="td-strong" style={{ textDecoration: "none" }}>
             {name}
           </Link>
         ) : guest ? (
           <button
             type="button"
             onClick={() => setQuickViewOpen(true)}
-            className="text-sm font-medium text-gray-900 hover:text-primary-600 hover:underline"
+            className="td-strong"
+            style={{ background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}
           >
             {name}
           </button>
         ) : (
-          <div className="text-sm font-medium text-gray-900">{name}</div>
+          <div className="td-strong">{name}</div>
         )}
-        {guest && <div className="text-sm text-gray-500">{guest.email}</div>}
+        {guest && <div className="td-muted">{guest.email}</div>}
         {guest && !isPlatformAdmin && (
           <GuestQuickView
             open={quickViewOpen}
@@ -122,37 +120,29 @@ export function GuestRow({
           />
         )}
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+      <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--t2)" }}>
         {seat.dietaryNotes || "—"}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <Badge tone={statusTone(seat.status)}>{seat.status}</Badge>
+      <td>
+        <span className={`badge ${statusBadgeClass(seat.status)}`}>{seat.status}</span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <Badge tone={paymentBadge(seat).tone}>{paymentBadge(seat).label}</Badge>
+      <td>
+        <span className={`badge ${payment.badgeClass}`}>{payment.label}</span>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-        <div className="flex items-center justify-end gap-2">
+      <td>
+        <div className="td-actions">
           {canCheckIn && (
-            <button
-              onClick={handleCheckIn}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button onClick={handleCheckIn} disabled={isUpdating} className="btn btn-sm btn-green">
               Check In
             </button>
           )}
           {canRefund && (
-            <button
-              onClick={handleRefund}
-              disabled={isUpdating}
-              className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button onClick={handleRefund} disabled={isUpdating} className="btn btn-sm btn-red">
               Refund
             </button>
           )}
           {!canCheckIn && !canRefund && (
-            <span className="text-xs text-gray-400">No actions</span>
+            <span style={{ fontSize: 12, color: "var(--t3)" }}>No actions</span>
           )}
         </div>
       </td>

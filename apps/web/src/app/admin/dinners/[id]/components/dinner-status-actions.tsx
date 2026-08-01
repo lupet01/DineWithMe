@@ -45,26 +45,16 @@ export function DinnerStatusActions({ dinnerId, status }: DinnerStatusActionsPro
   }
 
   return (
-    <div className="flex flex-shrink-0 items-center gap-2">
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
       {status === "SCHEDULED" && (
-        <button
-          type="button"
-          onClick={handleMarkLive}
-          disabled={isUpdating}
-          className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700 transition-colors hover:bg-green-200 disabled:opacity-50"
-        >
+        <button type="button" onClick={handleMarkLive} disabled={isUpdating} className="btn btn-green btn-sm">
           → Mark LIVE
         </button>
       )}
-      <button
-        type="button"
-        onClick={handleCancel}
-        disabled={isUpdating}
-        className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
-      >
+      <button type="button" onClick={handleCancel} disabled={isUpdating} className="btn btn-red btn-sm">
         Cancel Dinner
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p style={{ fontSize: 12, color: "var(--red-txt)" }}>{error}</p>}
     </div>
   );
 }

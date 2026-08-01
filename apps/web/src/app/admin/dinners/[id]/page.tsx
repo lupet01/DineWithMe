@@ -5,9 +5,6 @@ import { dinnerRepository, dinnerMediaRepository } from "@dinewithme/db";
 import { Role } from "@dinewithme/shared";
 import { formatAmount } from "@dinewithme/config/src/payment";
 import { getAuthUser } from "@/lib/auth/server";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { GuestRow } from "./components/guest-row";
 import { TablePhotosManager } from "./components/table-photos-manager";
 import { DinnerDetailTabs } from "./components/dinner-detail-tabs";
@@ -52,108 +49,106 @@ export default async function DinnerDetailPage({
       promotionStatus: item.promotionStatus,
     }));
 
-  const badgeTone = dinner.status === "CANCELLED" ? "danger" : dinner.status === "LIVE" ? "success" : "info";
+  const badgeClass =
+    dinner.status === "CANCELLED" ? "badge-red" : dinner.status === "LIVE" ? "badge-green" : "badge-blue";
 
   const detailsPanel = (
-    <Card padding="lg">
-      <h2 className="mb-3.5 text-base font-bold text-gray-900">Dinner Details</h2>
-      <dl className="flex flex-col gap-3">
-        <div className="flex items-center justify-between text-sm">
-          <dt className="text-gray-500">Theme</dt>
-          <dd className="font-medium text-gray-900">{dinner.theme?.title || "—"}</dd>
+    <div className="card card-pad">
+      <div className="card-title" style={{ marginBottom: 14 }}>Dinner Details</div>
+      <div>
+        <div className="breakdown-row">
+          <span className="breakdown-label">Theme</span>
+          <span className="breakdown-value">{dinner.theme?.title || "—"}</span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <dt className="text-gray-500">Meal</dt>
-          <dd className="font-medium text-gray-900">
+        <div className="breakdown-row">
+          <span className="breakdown-label">Meal</span>
+          <span className="breakdown-value">
             {dinner.meal ? (
-              <Link href="/admin/meals" className="text-primary-600 hover:underline">
+              <Link href="/admin/meals" style={{ color: "var(--p)" }}>
                 {dinner.meal.name} →
               </Link>
             ) : (
               "—"
             )}
-          </dd>
+          </span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <dt className="text-gray-500">Date</dt>
-          <dd className="font-medium text-gray-900">
+        <div className="breakdown-row">
+          <span className="breakdown-label">Date</span>
+          <span className="breakdown-value">
             {startsAt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-          </dd>
+          </span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <dt className="text-gray-500">Time</dt>
-          <dd className="font-medium text-gray-900">
+        <div className="breakdown-row">
+          <span className="breakdown-label">Time</span>
+          <span className="breakdown-value">
             {startsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} –{" "}
             {endsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-          </dd>
+          </span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <dt className="text-gray-500">Seat Count</dt>
-          <dd className="font-medium text-gray-900">{dinner._count.seats}</dd>
+        <div className="breakdown-row">
+          <span className="breakdown-label">Seat Count</span>
+          <span className="breakdown-value">{dinner._count.seats}</span>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <dt className="text-gray-500">Price per Seat</dt>
-          <dd className="font-medium text-gray-900">
+        <div className="breakdown-row">
+          <span className="breakdown-label">Price per Seat</span>
+          <span className="breakdown-value">
             {dinner.pricePerSeatCents != null ? formatAmount(dinner.pricePerSeatCents) : "—"}
-          </dd>
+          </span>
         </div>
-      </dl>
+      </div>
       {dinner.description && (
-        <div className="mt-3.5 border-t border-gray-100 pt-3.5">
-          <h3 className="mb-1.5 text-sm font-bold text-gray-900">Description</h3>
-          <p className="text-sm leading-relaxed text-gray-600">{dinner.description}</p>
+        <div style={{ marginTop: 14, borderTop: "1px solid var(--hair)", paddingTop: 14 }}>
+          <div className="card-title" style={{ fontSize: 13, marginBottom: 6 }}>Description</div>
+          <p style={{ fontSize: 13, lineHeight: 1.55, color: "var(--t2)" }}>{dinner.description}</p>
         </div>
       )}
-    </Card>
+    </div>
   );
 
   const guestsPanel = (
     <>
-      <StatGrid className="md:grid-cols-4">
-        <StatCard label="Seats Total" value={dinner._count.seats} />
-        <StatCard label="Confirmed" value={confirmedSeats.length} />
-        <StatCard label="Available" value={availableCount} />
-        <StatCard
-          label="Revenue"
-          value={formatAmount(revenueCents)}
-          caption={
-            dinner.pricePerSeatCents != null
-              ? `${confirmedSeats.length} × ${formatAmount(dinner.pricePerSeatCents)}`
-              : undefined
-          }
-        />
-      </StatGrid>
+      <div className="stat-grid-4" style={{ marginBottom: 16 }}>
+        <div className="stat-card">
+          <div className="stat-label">Seats Total</div>
+          <div className="stat-value">{dinner._count.seats}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Confirmed</div>
+          <div className="stat-value">{confirmedSeats.length}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Available</div>
+          <div className="stat-value">{availableCount}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Revenue</div>
+          <div className="stat-value" style={{ fontSize: 20 }}>{formatAmount(revenueCents)}</div>
+          {dinner.pricePerSeatCents != null && (
+            <div className="stat-sub">{confirmedSeats.length} × {formatAmount(dinner.pricePerSeatCents)}</div>
+          )}
+        </div>
+      </div>
 
-      <Card padding="none" className="overflow-hidden">
-        <div className="flex items-center justify-between p-6 pb-0">
-          <h2 className="text-lg font-semibold text-gray-900">Guest List</h2>
-          <span className="text-xs text-gray-400">{attendedCount} checked in</span>
+      <div className="table-wrap">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 0" }}>
+          <div className="card-title">Guest List</div>
+          <span className="pg-sub" style={{ margin: 0 }}>{attendedCount} checked in</span>
         </div>
         {confirmedSeats.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">No confirmed guests yet</div>
+          <div style={{ padding: 40, textAlign: "center", color: "var(--t3)" }}>No confirmed guests yet</div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-cream-100 border-b border-gray-100">
+          <div className="table-scroll" style={{ marginTop: 12 }}>
+            <table className="dtable">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Guest
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Dietary Notes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Payment
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th>Guest</th>
+                  <th>Dietary Notes</th>
+                  <th>Status</th>
+                  <th>Payment</th>
+                  <th className="r">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {confirmedSeats.map((seat) => (
                   <GuestRow
                     key={seat.id}
@@ -168,7 +163,7 @@ export default async function DinnerDetailPage({
             </table>
           </div>
         )}
-      </Card>
+      </div>
     </>
   );
 
@@ -179,27 +174,21 @@ export default async function DinnerDetailPage({
   );
 
   return (
-    <div className="space-y-6">
-      <p className="text-xs text-gray-400">
-        <Link href="/admin/dinners" className="font-semibold text-primary-500 hover:underline">
+    <div className="din">
+      <p className="pg-sub" style={{ marginBottom: 12 }}>
+        <Link href="/admin/dinners" style={{ color: "var(--p)", fontWeight: 600 }}>
           ← Dinners
         </Link>{" "}
-        /{" "}
-        {dinner.theme?.title || "Dinner"} ·{" "}
+        / {dinner.theme?.title || "Dinner"} ·{" "}
         {startsAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
       </p>
-      <div className="flex items-start gap-4">
-        <Link
-          href="/admin/dinners"
-          className="mt-1 flex-shrink-0 p-2 hover:bg-cream-200 rounded-lg transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5 text-gray-600" />
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 20, flexWrap: "wrap" }}>
+        <Link href="/admin/dinners" className="m-icon-btn" style={{ marginTop: 2 }}>
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            {dinner.theme?.title || "Dinner"}
-          </h1>
-          <p className="text-gray-600 mt-1">
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <h1 className="pg-title">{dinner.theme?.title || "Dinner"}</h1>
+          <p className="pg-sub">
             {dinner.restaurant.name} ·{" "}
             {startsAt.toLocaleDateString("en-US", {
               weekday: "long",
@@ -207,18 +196,14 @@ export default async function DinnerDetailPage({
               day: "numeric",
               year: "numeric",
             })}{" "}
-            ·{" "}
-            {startsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ·{" "}
+            · {startsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ·{" "}
             {dinner._count.seats} seats
           </p>
         </div>
-        <Badge tone={badgeTone}>{dinner.status}</Badge>
+        <span className={`badge ${badgeClass}`}>{dinner.status}</span>
         <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} />
-        <a
-          href={`/admin/dinners/${dinner.id}/export`}
-          className="inline-flex flex-shrink-0 items-center gap-2 rounded-full border-2 border-primary-500 bg-white px-4 py-2 text-sm font-semibold text-primary-500 transition-colors hover:bg-primary-50"
-        >
-          <Download className="h-4 w-4" />
+        <a href={`/admin/dinners/${dinner.id}/export`} className="btn btn-outline btn-sm">
+          <Download className="h-3.5 w-3.5" />
           Export CSV
         </a>
       </div>

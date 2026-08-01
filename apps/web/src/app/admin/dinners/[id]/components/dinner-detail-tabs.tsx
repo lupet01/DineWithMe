@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Tabs } from "@/components/ui/tabs";
 
 interface DinnerDetailTabsProps {
   detailsPanel: React.ReactNode;
@@ -26,8 +25,19 @@ export function DinnerDetailTabs({ detailsPanel, guestsPanel, mediaPanel }: Dinn
   const [tab, setTab] = useState("guests");
 
   return (
-    <div className="space-y-6">
-      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="tabs">
+        {TAB_ITEMS.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            className={`tab ${tab === item.value ? "active" : ""}`}
+            onClick={() => setTab(item.value)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
       {tab === "details" && detailsPanel}
       {tab === "guests" && guestsPanel}
       {tab === "media" && mediaPanel}

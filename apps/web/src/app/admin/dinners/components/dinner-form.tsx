@@ -98,42 +98,35 @@ export function DinnerForm({
   const minDate = tomorrow.toISOString().split("T")[0];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div style={{ borderRadius: 12, border: "1px solid var(--red-bg)", background: "var(--red-bg)", padding: "12px 14px" }}>
+          <p style={{ fontSize: 13, color: "var(--red-txt)" }}>{error}</p>
         </div>
       )}
 
       {/* Restaurant Info */}
-      <div className="bg-cream-100 border border-gray-100 rounded-2xl p-4">
-        <p className="text-sm text-gray-600">
-          Creating dinner for:{" "}
-          <span className="font-medium text-gray-900">{restaurantName}</span>
+      <div className="alert alert-slate">
+        <p style={{ fontSize: 13, color: "var(--t2)" }}>
+          Creating dinner for: <span style={{ fontWeight: 600, color: "var(--text)" }}>{restaurantName}</span>
         </p>
       </div>
 
       {/* Theme Selection */}
       <div>
-        <label
-          htmlFor="themeId"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Table Theme <span className="text-red-500">*</span>
+        <label htmlFor="themeId" className="field-label">
+          Table Theme <span className="req">*</span>
         </label>
         {enabledThemes.length === 0 ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <p className="text-sm text-amber-800">
+          <div className="alert alert-yellow">
+            <div className="alert-body" style={{ color: "var(--yellow-txt2)" }}>
               No themes are enabled for your restaurant. Please enable at least
               one theme in your{" "}
-              <Link
-                href="/admin/restaurant"
-                className="underline hover:text-amber-900"
-              >
+              <Link href="/admin/restaurant" style={{ color: "inherit", textDecoration: "underline" }}>
                 restaurant settings
               </Link>
               .
-            </p>
+            </div>
           </div>
         ) : (
           <>
@@ -143,7 +136,7 @@ export function DinnerForm({
               required
               value={selectedTheme}
               onChange={(e) => setSelectedTheme(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+              className="field-input"
             >
               <option value="">Select a theme...</option>
               {enabledThemes.map((theme) => (
@@ -154,19 +147,17 @@ export function DinnerForm({
             </select>
 
             {selectedThemeData && (
-              <div className="mt-2">
+              <div style={{ marginTop: 8 }}>
                 <button
                   type="button"
                   onClick={() => setShowThemeDetails(!showThemeDetails)}
-                  className="text-sm text-gray-600 hover:text-gray-900"
+                  style={{ background: "none", border: 0, padding: 0, cursor: "pointer", fontSize: 13, color: "var(--t2)", font: "inherit" }}
                 >
                   {showThemeDetails ? "▾" : "▸"} View theme details
                 </button>
                 {showThemeDetails && (
-                  <div className="mt-2 p-3 bg-cream-100 border border-gray-100 rounded-lg">
-                    <p className="text-sm text-gray-700">
-                      {selectedThemeData.shortDescription}
-                    </p>
+                  <div style={{ marginTop: 8, padding: 12, background: "var(--bg2)", border: "1px solid var(--bdr)", borderRadius: 10 }}>
+                    <p style={{ fontSize: 13, color: "var(--t2)" }}>{selectedThemeData.shortDescription}</p>
                   </div>
                 )}
               </div>
@@ -177,14 +168,12 @@ export function DinnerForm({
 
       {/* Meal */}
       <div>
-        <label htmlFor="mealId" className="block text-sm font-medium text-gray-700 mb-2">
-          Meal
-        </label>
+        <label htmlFor="mealId" className="field-label">Meal</label>
         {meals.length === 0 ? (
-          <div className="bg-cream-100 border border-gray-100 rounded-2xl p-4">
-            <p className="text-sm text-gray-600">
+          <div className="alert alert-slate">
+            <p style={{ fontSize: 13, color: "var(--t2)" }}>
               No Meals yet. Build one in{" "}
-              <Link href="/admin/meals" className="underline hover:text-gray-900">
+              <Link href="/admin/meals" style={{ color: "var(--p)", fontWeight: 600 }}>
                 Meals
               </Link>{" "}
               to show a real menu on this dinner&apos;s listing, or leave this blank.
@@ -196,7 +185,7 @@ export function DinnerForm({
             name="mealId"
             value={selectedMealId}
             onChange={(e) => handleMealChange(e.target.value)}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+            className="field-input"
           >
             <option value="">No meal</option>
             {meals.map((meal) => (
@@ -210,9 +199,7 @@ export function DinnerForm({
 
       {/* Price per Seat */}
       <div>
-        <label htmlFor="pricePerSeat" className="block text-sm font-medium text-gray-700 mb-2">
-          Price per Seat (ZAR)
-        </label>
+        <label htmlFor="pricePerSeat" className="field-label">Price per Seat (ZAR)</label>
         <input
           type="number"
           id="pricePerSeat"
@@ -222,20 +209,17 @@ export function DinnerForm({
           value={pricePerSeat}
           onChange={(e) => setPricePerSeat(e.target.value)}
           placeholder="0.00"
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+          className="field-input"
         />
-        <p className="text-sm text-gray-400 mt-1">
+        <p style={{ fontSize: 12, color: "var(--t3)", marginTop: 6 }}>
           Pre-fills from the selected Meal&apos;s suggested price — still editable per dinner.
         </p>
       </div>
 
       {/* Date */}
       <div>
-        <label
-          htmlFor="startsAtDate"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Date <span className="text-red-500">*</span>
+        <label htmlFor="startsAtDate" className="field-label">
+          Date <span className="req">*</span>
         </label>
         <input
           type="date"
@@ -243,18 +227,15 @@ export function DinnerForm({
           name="startsAtDate"
           required
           min={minDate}
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+          className="field-input"
         />
       </div>
 
       {/* Time Range */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="field-grid-2">
         <div>
-          <label
-            htmlFor="startsAtTime"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Start Time <span className="text-red-500">*</span>
+          <label htmlFor="startsAtTime" className="field-label">
+            Start Time <span className="req">*</span>
           </label>
           <input
             type="time"
@@ -262,15 +243,12 @@ export function DinnerForm({
             name="startsAtTime"
             required
             defaultValue="19:00"
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+            className="field-input"
           />
         </div>
         <div>
-          <label
-            htmlFor="endsAtTime"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            End Time <span className="text-red-500">*</span>
+          <label htmlFor="endsAtTime" className="field-label">
+            End Time <span className="req">*</span>
           </label>
           <input
             type="time"
@@ -278,18 +256,15 @@ export function DinnerForm({
             name="endsAtTime"
             required
             defaultValue="21:00"
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+            className="field-input"
           />
         </div>
       </div>
 
       {/* Seat Count */}
       <div>
-        <label
-          htmlFor="seatCount"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Number of Seats <span className="text-red-500">*</span>
+        <label htmlFor="seatCount" className="field-label">
+          Number of Seats <span className="req">*</span>
         </label>
         <input
           type="number"
@@ -299,41 +274,31 @@ export function DinnerForm({
           min="2"
           max="20"
           defaultValue="6"
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+          className="field-input field-cap"
         />
-        <p className="text-sm text-gray-400 mt-1">Between 2 and 20 seats</p>
+        <p style={{ fontSize: 12, color: "var(--t3)", marginTop: 6 }}>Between 2 and 20 seats</p>
       </div>
 
       {/* Description (Optional) */}
       <div>
-        <label
-          htmlFor="description"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Description (Optional)
-        </label>
+        <label htmlFor="description" className="field-label">Description (Optional)</label>
         <textarea
           id="description"
           name="description"
           rows={3}
           placeholder="Add any special notes about this dinner..."
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent resize-none"
+          className="field-input ta"
         />
       </div>
 
       {/* Listing Photos */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Listing Photos
-        </label>
+        <label className="field-label">Listing Photos</label>
         {photoPool.length === 0 ? (
-          <div className="bg-cream-100 border border-gray-100 rounded-2xl p-4">
-            <p className="text-sm text-gray-600">
+          <div className="alert alert-slate">
+            <p style={{ fontSize: 13, color: "var(--t2)" }}>
               No photos yet. Upload some to your{" "}
-              <Link
-                href="/admin/media-library"
-                className="underline hover:text-gray-900"
-              >
+              <Link href="/admin/media-library" style={{ color: "var(--p)", fontWeight: 600 }}>
                 Media Library
               </Link>{" "}
               first, then pick them here.
@@ -341,10 +306,10 @@ export function DinnerForm({
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-400 mb-2">
+            <p style={{ fontSize: 12, color: "var(--t3)", marginBottom: 8 }}>
               Pick photos from your library. The first one you select becomes the header photo guests see on Discover.
             </p>
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 10 }}>
               {photoPool.map((photo) => {
                 const selectedIndex = selectedPhotoIds.indexOf(photo.id);
                 const isSelected = selectedIndex !== -1;
@@ -353,14 +318,25 @@ export function DinnerForm({
                     key={photo.id}
                     type="button"
                     onClick={() => togglePhoto(photo.id)}
-                    className={`relative aspect-square overflow-hidden rounded-lg border-2 ${
-                      isSelected ? "border-primary-500" : "border-transparent"
-                    }`}
+                    style={{
+                      position: "relative",
+                      aspectRatio: "1 / 1",
+                      overflow: "hidden",
+                      borderRadius: 10,
+                      border: `2px solid ${isSelected ? "var(--p)" : "transparent"}`,
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.url} alt="" className="h-full w-full object-cover" />
+                    <img src={photo.url} alt="" style={{ height: "100%", width: "100%", objectFit: "cover" }} />
                     {isSelected && (
-                      <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-500 text-xs font-semibold text-white">
+                      <span
+                        style={{
+                          position: "absolute", top: 4, right: 4, display: "flex", alignItems: "center", justifyContent: "center",
+                          height: 20, width: 20, borderRadius: "50%", background: "var(--p)", color: "#fff", fontSize: 11, fontWeight: 700,
+                        }}
+                      >
                         {selectedIndex === 0 ? "★" : selectedIndex + 1}
                       </span>
                     )}
@@ -373,20 +349,11 @@ export function DinnerForm({
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col-reverse gap-3 pt-4 border-t border-gray-100 sm:flex-row">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          disabled={loading}
-          className="w-full sm:w-auto px-4 py-2.5 text-gray-700 bg-white border border-gray-200 rounded-full hover:bg-cream-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid var(--hair)" }}>
+        <button type="button" onClick={() => router.back()} disabled={loading} className="btn btn-outline">
           Cancel
         </button>
-        <button
-          type="submit"
-          disabled={loading || enabledThemes.length === 0}
-          className="w-full sm:w-auto px-4 py-2.5 text-white bg-primary-500 rounded-full shadow-soft transition-colors hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button type="submit" disabled={loading || enabledThemes.length === 0} className="btn btn-primary">
           {loading ? "Creating..." : "Create Dinner"}
         </button>
       </div>

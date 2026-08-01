@@ -3,8 +3,6 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Trash2, Upload, X } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   requestTablePhotoUploadUrl,
   saveTablePhoto,
@@ -26,11 +24,11 @@ interface TablePhotosManagerProps {
   isPlatformAdmin: boolean;
 }
 
-const STATUS_TONE: Record<string, "neutral" | "primary" | "success" | "danger"> = {
-  NONE: "neutral",
-  PENDING: "primary",
-  APPROVED: "success",
-  REJECTED: "danger",
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  NONE: "badge-slate",
+  PENDING: "badge-blue",
+  APPROVED: "badge-green",
+  REJECTED: "badge-red",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -140,114 +138,115 @@ export function TablePhotosManager({ dinnerId, photos, isPlatformAdmin }: TableP
   };
 
   return (
-    <Card padding="none" className="overflow-hidden">
-      <div className="flex items-center justify-between p-6 pb-0">
-        <h2 className="text-lg font-semibold text-gray-900">Table Photos</h2>
-      </div>
-      <div className="p-6">
-        {photos.length === 0 ? (
-          <p className="text-sm text-gray-500">No table photos uploaded yet.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {photos.map((photo) => (
-              <div key={photo.id} className="space-y-2">
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.url}
-                    alt=""
-                    className="h-32 w-full rounded-xl border border-gray-100 object-cover"
-                  />
-                  {!isPlatformAdmin && (
-                    <button
-                      onClick={() => handleDelete(photo.mediaAssetId)}
-                      disabled={actioningId === photo.id}
-                      className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-red-600 hover:bg-white disabled:opacity-50"
-                      aria-label="Delete photo"
-                    >
-                      {actioningId === photo.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  )}
-                </div>
-                <Badge tone={STATUS_TONE[photo.promotionStatus] || "neutral"}>
-                  {STATUS_LABEL[photo.promotionStatus] || photo.promotionStatus}
-                </Badge>
+    <div className="card card-pad">
+      <div className="card-title" style={{ marginBottom: 14 }}>Table Photos</div>
 
-                {!isPlatformAdmin && (photo.promotionStatus === "NONE" || photo.promotionStatus === "REJECTED") && (
+      {photos.length === 0 ? (
+        <p style={{ fontSize: 13, color: "var(--t3)" }}>No table photos uploaded yet.</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+          {photos.map((photo) => (
+            <div key={photo.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ position: "relative" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.url}
+                  alt=""
+                  style={{ height: 128, width: "100%", borderRadius: 12, border: "1px solid var(--bdr)", objectFit: "cover" }}
+                />
+                {!isPlatformAdmin && (
                   <button
-                    type="button"
-                    onClick={() => handlePromote(photo.id)}
+                    onClick={() => handleDelete(photo.mediaAssetId)}
                     disabled={actioningId === photo.id}
-                    className="w-full rounded-full border border-primary-500 px-3 py-1.5 text-xs font-semibold text-primary-500 hover:bg-primary-50 disabled:opacity-50"
+                    className="m-icon-btn"
+                    style={{ position: "absolute", top: 6, right: 6, background: "rgba(255,255,255,.92)", color: "var(--red-txt)" }}
+                    aria-label="Delete photo"
                   >
-                    Promote to Listing
+                    {actioningId === photo.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
                   </button>
                 )}
-
-                {isPlatformAdmin && photo.promotionStatus === "PENDING" && (
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleApprove(photo.id)}
-                      disabled={actioningId === photo.id}
-                      className="flex flex-1 items-center justify-center gap-1 rounded-full bg-green-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-                    >
-                      <Check className="h-3 w-3" />
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleReject(photo.id)}
-                      disabled={actioningId === photo.id}
-                      className="flex flex-1 items-center justify-center gap-1 rounded-full border border-red-300 px-2 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                    >
-                      <X className="h-3 w-3" />
-                      Reject
-                    </button>
-                  </div>
-                )}
               </div>
-            ))}
-          </div>
-        )}
+              <span className={`badge ${STATUS_BADGE_CLASS[photo.promotionStatus] || "badge-slate"}`}>
+                {STATUS_LABEL[photo.promotionStatus] || photo.promotionStatus}
+              </span>
 
-        {!isPlatformAdmin && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={uploading}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="mt-4 flex items-center justify-center gap-2 rounded-full bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-primary-600 disabled:opacity-50"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4" />
-                  Upload Table Photo
-                </>
+              {!isPlatformAdmin && (photo.promotionStatus === "NONE" || photo.promotionStatus === "REJECTED") && (
+                <button
+                  type="button"
+                  onClick={() => handlePromote(photo.id)}
+                  disabled={actioningId === photo.id}
+                  className="btn btn-outline btn-sm btn-block"
+                >
+                  Promote to Listing
+                </button>
               )}
-            </button>
-          </>
-        )}
 
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      </div>
-    </Card>
+              {isPlatformAdmin && photo.promotionStatus === "PENDING" && (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(photo.id)}
+                    disabled={actioningId === photo.id}
+                    className="btn btn-sm btn-green"
+                    style={{ flex: 1 }}
+                  >
+                    <Check className="h-3 w-3" />
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReject(photo.id)}
+                    disabled={actioningId === photo.id}
+                    className="btn btn-sm btn-red"
+                    style={{ flex: 1 }}
+                  >
+                    <X className="h-3 w-3" />
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isPlatformAdmin && (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+            disabled={uploading}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="btn btn-primary btn-sm"
+            style={{ marginTop: 16 }}
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="h-3.5 w-3.5" />
+                Upload Table Photo
+              </>
+            )}
+          </button>
+        </>
+      )}
+
+      {error && <p className="field-error" style={{ marginTop: 8 }}>{error}</p>}
+    </div>
   );
 }

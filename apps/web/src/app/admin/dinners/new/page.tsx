@@ -35,19 +35,15 @@ export default async function NewDinnerPage() {
   const meals = (await mealRepository.findByRestaurant(restaurant.id)).filter((m) => m.isActive);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="din" style={{ maxWidth: 640, margin: "0 auto" }}>
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">
-          Create New Dinner
-        </h1>
-        <p className="text-gray-600 mt-1">
-          Schedule a new dining experience for your guests
-        </p>
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="pg-title">Create New Dinner</h1>
+        <p className="pg-sub">Schedule a new dining experience for your guests</p>
       </div>
 
       {/* Form */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+      <div className="card card-pad">
         <DinnerForm
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
