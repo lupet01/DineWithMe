@@ -3,7 +3,6 @@ import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, payoutRepository, decrypt, maskAccountNumber } from "@dinewithme/db";
 import { formatAmount as formatCurrency } from "@dinewithme/config/src/payment";
 import { payoutPolicy } from "@dinewithme/config/src/payout-policy";
-import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { PayoutHistory } from "./components/payout-history";
 import { BankDetailsForm } from "./components/bank-details-form";
 import { RevenueRangePicker } from "../components/revenue-range-picker";
@@ -51,46 +50,65 @@ export default async function PayoutsPage({
     : null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="payouts">
+      <div
+        style={{
+          marginBottom: 20,
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: 12,
+        }}
+      >
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Payouts</h1>
-          <p className="mt-1 text-gray-600">
-            What you&apos;ve earned, and when it lands in your account.
-          </p>
+          <h1 className="pg-title">Payouts</h1>
+          <p className="pg-sub">What you&apos;ve earned, and when it lands in your account</p>
         </div>
         <RevenueRangePicker current={range} />
       </div>
 
-      <StatGrid className="md:grid-cols-4">
-        <StatCard
-          label="Pending Payout"
-          value={formatCurrency(pendingCents)}
-          caption={`From ${pendingPayouts.length} completed dinner${pendingPayouts.length === 1 ? "" : "s"}`}
-        />
-        <StatCard label="Paid Out" value={formatCurrency(paidCents)} caption="in selected period" />
-        <StatCard
-          label="Next Payout Date"
-          value={
-            nextPayoutDate
+      <div className="stat-grid-4" style={{ marginBottom: 20 }}>
+        <div className="stat-card">
+          <div className="stat-label">Pending Payout</div>
+          <div className="stat-value" style={{ color: "var(--yellow-txt)" }}>
+            {formatCurrency(pendingCents)}
+          </div>
+          <div className="stat-sub">
+            From {pendingPayouts.length} completed dinner{pendingPayouts.length === 1 ? "" : "s"}
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Paid Out</div>
+          <div className="stat-value">{formatCurrency(paidCents)}</div>
+          <div className="stat-sub">in selected period</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Next Payout Date</div>
+          <div className="stat-value" style={{ fontSize: 18 }}>
+            {nextPayoutDate
               ? nextPayoutDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-              : "—"
-          }
-        />
-        <StatCard
-          label="Total Commission"
-          value={formatCurrency(commissionCents)}
-          caption={`${Math.round(payoutPolicy.commissionRate * 100)}% platform rate, in period`}
-        />
-      </StatGrid>
+              : "—"}
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Total Commission</div>
+          <div className="stat-value" style={{ color: "var(--t3)" }}>
+            {formatCurrency(commissionCents)}
+          </div>
+          <div className="stat-sub">{Math.round(payoutPolicy.commissionRate * 100)}% platform rate, in period</div>
+        </div>
+      </div>
 
-      <BankDetailsForm
-        restaurantId={restaurant.id}
-        bankName={restaurant.bankName}
-        maskedAccountNumber={maskedAccountNumber}
-        bankAccountHolderName={restaurant.bankAccountHolderName}
-        verifiedAt={restaurant.bankDetailsVerifiedAt?.toISOString() ?? null}
-      />
+      <div style={{ marginBottom: 20 }}>
+        <BankDetailsForm
+          restaurantId={restaurant.id}
+          bankName={restaurant.bankName}
+          maskedAccountNumber={maskedAccountNumber}
+          bankAccountHolderName={restaurant.bankAccountHolderName}
+          verifiedAt={restaurant.bankDetailsVerifiedAt?.toISOString() ?? null}
+        />
+      </div>
 
       <PayoutHistory payouts={payouts} />
     </div>

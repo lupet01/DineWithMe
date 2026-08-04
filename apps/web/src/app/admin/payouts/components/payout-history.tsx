@@ -1,12 +1,10 @@
 import type { PayoutWithDinner } from "@dinewithme/db";
 import { formatAmount as formatCurrency } from "@dinewithme/config/src/payment";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
-const STATUS_TONE: Record<string, "primary" | "success" | "neutral"> = {
-  HELD: "neutral",
-  READY: "primary",
-  PAID: "success",
+const STATUS_BADGE: Record<string, string> = {
+  HELD: "badge-yellow",
+  READY: "badge-blue",
+  PAID: "badge-green",
 };
 
 function formatShortDate(date: Date): string {
@@ -31,71 +29,86 @@ function statusLabel(payout: PayoutWithDinner): string {
 
 export function PayoutHistory({ payouts }: { payouts: PayoutWithDinner[] }) {
   return (
-    <Card padding="none" className="overflow-hidden">
-      <div className="p-6 pb-0">
-        <h2 className="text-lg font-semibold text-gray-900">Payout History</h2>
+    <div className="card card-pad">
+      <div className="card-title" style={{ marginBottom: 14 }}>
+        Payout History
       </div>
       {payouts.length === 0 ? (
-        <div className="p-12 text-center text-gray-500">
+        <div style={{ padding: "24px 0", fontSize: 13, color: "var(--t3)", textAlign: "center" }}>
           No payouts yet - they appear here a few business days after each dinner completes.
         </div>
       ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-gray-100 bg-cream-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Dinner
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Gross
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Commission
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Net
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {payouts.map((payout) => (
-                <tr key={payout.id}>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {payout.dinner.theme?.title || "Dinner"}
-                    </p>
-                    <p className="text-xs text-gray-500">
+        <>
+          {/* Desktop: table. Mobile: stacked row-cards. Same data either way. */}
+          <div className="only-desktop table-wrap">
+            <div className="table-scroll">
+              <table className="dtable">
+                <thead>
+                  <tr>
+                    <th>Dinner</th>
+                    <th>Date</th>
+                    <th className="r">Gross</th>
+                    <th className="r">Commission</th>
+                    <th className="r">Net Payout</th>
+                    <th className="r">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payouts.map((payout) => (
+                    <tr key={payout.id}>
+                      <td className="td-strong">{payout.dinner.theme?.title || "Dinner"}</td>
+                      <td className="td-muted" style={{ marginTop: 0 }}>
+                        {new Date(payout.dinner.startsAt).toLocaleDateString("en-ZA", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td style={{ textAlign: "right" }}>{formatCurrency(payout.grossAmountCents)}</td>
+                      <td style={{ textAlign: "right", color: "var(--t3)" }}>
+                        − {formatCurrency(payout.commissionAmountCents)}
+                      </td>
+                      <td className="td-strong" style={{ textAlign: "right" }}>
+                        {formatCurrency(payout.netAmountCents)}
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <span className={`badge ${STATUS_BADGE[payout.status] || "badge-slate"}`}>
+                          {statusLabel(payout)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="only-mobile">
+            {payouts.map((payout) => (
+              <div key={payout.id} className="row-card">
+                <div className="rc-top">
+                  <div>
+                    <div className="rc-title">{payout.dinner.theme?.title || "Dinner"}</div>
+                    <div className="rc-sub">
                       {new Date(payout.dinner.startsAt).toLocaleDateString("en-ZA", {
                         month: "short",
                         day: "numeric",
-                        year: "numeric",
                       })}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm text-gray-700">
-                    {formatCurrency(payout.grossAmountCents)}
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm text-gray-700">
-                    {formatCurrency(payout.commissionAmountCents)}
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
-                    {formatCurrency(payout.netAmountCents)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <Badge tone={STATUS_TONE[payout.status] || "neutral"}>
-                      {statusLabel(payout)}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </div>
+                  <span className={`badge ${STATUS_BADGE[payout.status] || "badge-slate"}`}>
+                    {statusLabel(payout)}
+                  </span>
+                </div>
+                <div className="rc-meta">
+                  {formatCurrency(payout.grossAmountCents)} gross →{" "}
+                  <b style={{ color: "var(--text)" }}>{formatCurrency(payout.netAmountCents)}</b> net
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
-    </Card>
+    </div>
   );
 }
