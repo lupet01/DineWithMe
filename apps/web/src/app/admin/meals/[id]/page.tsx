@@ -24,16 +24,12 @@ export default async function MealEditorPage({ params }: { params: { id: string 
   const dishLibrary = await menuItemRepository.findByRestaurant(meal.restaurantId);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/admin/meals"
-          className="rounded-lg p-2 transition-colors hover:bg-cream-200"
-          aria-label="Back to Meals"
-        >
-          <ArrowLeft className="h-5 w-5 text-gray-600" />
+    <div className="meals mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Link href="/admin/meals" className="m-icon-btn" aria-label="Back to Meals">
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">{meal.name}</h1>
+        <h1 className="pg-title">{meal.name}</h1>
       </div>
 
       <MealEditor meal={meal} dishLibrary={dishLibrary} />

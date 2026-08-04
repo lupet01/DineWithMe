@@ -28,23 +28,16 @@ export function NewMealButton({ restaurantId }: { restaurantId: string }) {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-2 rounded-full bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-primary-600"
-      >
+      <button type="button" onClick={() => setOpen(true)} className="btn btn-primary" style={{ alignSelf: "flex-start" }}>
         + New Meal
       </button>
     );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-xl border border-primary-200 bg-primary-50/40 p-4 sm:flex-row sm:items-end"
-    >
-      <div className="flex-1">
-        <label className="mb-1 block text-xs font-medium text-gray-700">Meal Name</label>
+    <form onSubmit={handleSubmit} className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div>
+        <label className="field-label">Meal Name</label>
         <input
           required
           autoFocus
@@ -52,16 +45,12 @@ export function NewMealButton({ restaurantId }: { restaurantId: string }) {
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Autumn Tasting Menu"
           disabled={saving}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none disabled:opacity-60"
+          className="field-input"
         />
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && <p className="field-error">{error}</p>}
       </div>
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:bg-primary-200"
-        >
+      <div style={{ display: "flex", gap: 8 }}>
+        <button type="submit" disabled={saving} className="btn btn-primary btn-sm">
           {saving ? "Creating…" : "Create & Edit"}
         </button>
         <button
@@ -71,7 +60,7 @@ export function NewMealButton({ restaurantId }: { restaurantId: string }) {
             setError(null);
           }}
           disabled={saving}
-          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+          className="btn btn-outline btn-sm"
         >
           Cancel
         </button>

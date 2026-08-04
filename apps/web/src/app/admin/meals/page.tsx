@@ -20,18 +20,15 @@ export default async function MealsPage() {
   const meals = await mealRepository.findByRestaurant(restaurant.id);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-start justify-between">
+    <div className="meals mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Meals</h1>
-          <p className="mt-1 text-gray-600">
+          <h1 className="pg-title">Meals</h1>
+          <p className="pg-sub">
             Reusable named menus Create Dinner picks from, assembled from your Dish Library.
           </p>
         </div>
-        <Link
-          href="/admin/dish-library"
-          className="whitespace-nowrap text-sm font-semibold text-primary-600 hover:text-primary-700"
-        >
+        <Link href="/admin/dish-library" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
           Dish Library →
         </Link>
       </div>

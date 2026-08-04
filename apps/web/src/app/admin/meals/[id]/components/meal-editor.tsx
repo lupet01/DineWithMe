@@ -6,7 +6,6 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
 import type { MealWithCourses } from "@dinewithme/db";
-import { Card } from "@/components/ui/card";
 import { FilterSheet } from "@/components/ui/filter-sheet";
 import { updateMeal, deleteMeal, addCourseOption, removeCourseOption } from "../../actions";
 
@@ -22,15 +21,6 @@ function formatPrice(cents: number): string {
 
 function formatPercent(value: number | null | undefined): string {
   return value == null ? "—" : `${Math.round(value * 100)}%`;
-}
-
-function PerformanceStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-lg font-semibold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-500">{label}</p>
-    </div>
-  );
 }
 
 interface MealEditorProps {
@@ -116,28 +106,26 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="alert alert-yellow">
+          <p style={{ fontSize: 13, color: "var(--yellow-txt)" }}>{error}</p>
         </div>
       )}
 
-      <Card padding="lg" className="space-y-4">
+      <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-700">Meal Name</label>
+          <label className="field-label">Meal Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={saving}
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none disabled:opacity-60"
+            className="field-input"
           />
         </div>
-        <div className="flex items-end gap-4">
-          <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-gray-700">
-              Suggested Price / Seat (ZAR)
-            </label>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <label className="field-label">Suggested Price / Seat (ZAR)</label>
             <input
               type="number"
               min="0"
@@ -145,72 +133,81 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               disabled={saving}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-500 focus:outline-none disabled:opacity-60"
+              className="field-input"
             />
           </div>
-          <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 9 }}>
+            <span style={{ fontSize: 13, color: "var(--t2)" }}>Active</span>
+            <button
+              type="button"
+              onClick={() => setIsActive((v) => !v)}
               disabled={saving}
-              className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-            />
-            Active
-          </label>
+              className={`toggle ${isActive ? "on" : "off"}`}
+              role="switch"
+              aria-checked={isActive}
+              aria-label="Active"
+            >
+              <span className="toggle-dot" />
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2 pt-1">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-full bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:bg-primary-200"
-          >
+        <div style={{ display: "flex", gap: 8, paddingTop: 2 }}>
+          <button type="button" onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm">
             {saving ? "Saving…" : "Save"}
           </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
-          >
+          <button type="button" onClick={handleDelete} disabled={deleting} className="btn btn-red btn-sm">
             {deleting ? "Deleting…" : "Delete Meal"}
           </button>
         </div>
-      </Card>
+      </div>
 
-      <Card padding="lg" className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900">Performance</h3>
+      <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="card-title">Performance</div>
         {meal.performance ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <PerformanceStat label="Dinners Completed" value={String(meal.performance.totalDinners)} />
-            <PerformanceStat label="Seats Booked" value={String(meal.performance.totalSeatsBooked)} />
-            <PerformanceStat label="Avg Fill Rate" value={formatPercent(meal.performance.avgFillRate)} />
-            <PerformanceStat label="Avg Attendance" value={formatPercent(meal.performance.avgAttendanceRate)} />
-            <PerformanceStat
-              label="Avg Rating"
-              value={meal.performance.avgFeedbackScore != null ? `${meal.performance.avgFeedbackScore.toFixed(1)}/5` : "—"}
-            />
-            <PerformanceStat label="Would Return" value={formatPercent(meal.performance.avgWouldReturnRate)} />
+          <div className="stat-grid-4">
+            <div className="stat-card">
+              <div className="stat-label">Dinners Completed</div>
+              <div className="stat-value">{meal.performance.totalDinners}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Seats Booked</div>
+              <div className="stat-value">{meal.performance.totalSeatsBooked}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Avg Fill Rate</div>
+              <div className="stat-value">{formatPercent(meal.performance.avgFillRate)}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Avg Attendance</div>
+              <div className="stat-value">{formatPercent(meal.performance.avgAttendanceRate)}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Avg Rating</div>
+              <div className="stat-value">
+                {meal.performance.avgFeedbackScore != null ? `${meal.performance.avgFeedbackScore.toFixed(1)}/5` : "—"}
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Would Return</div>
+              <div className="stat-value">{formatPercent(meal.performance.avgWouldReturnRate)}</div>
+            </div>
           </div>
         ) : (
-          <p className="text-xs text-gray-400">
+          <p style={{ fontSize: 12, color: "var(--t3)" }}>
             No completed dinners for this Meal yet - stats appear once one wraps up.
           </p>
         )}
-      </Card>
+      </div>
 
       {meal.courses.map((course) => (
-        <Card key={course.id} padding="lg" className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">
-              {COURSE_LABELS[course.courseType] || course.courseType}
-            </h3>
+        <div key={course.id} className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="card-title">{COURSE_LABELS[course.courseType] || course.courseType}</div>
             {course.options.length < 3 && (
               <button
                 type="button"
                 onClick={() => setPickerCourseId(course.id)}
-                className="text-xs font-semibold text-primary-600 hover:text-primary-700"
+                style={{ fontSize: 12, fontWeight: 600, color: "var(--p)", background: "none", border: 0, cursor: "pointer" }}
               >
                 + Add Option
               </button>
@@ -218,24 +215,22 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
           </div>
 
           {course.options.length === 0 ? (
-            <p className="text-xs text-gray-400">No dishes assigned yet.</p>
+            <p style={{ fontSize: 12, color: "var(--t3)" }}>No dishes assigned yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {course.options.map((option) => (
-                <div
-                  key={option.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-100 bg-white p-3 shadow-card"
-                >
+                <div key={option.id} className="live-guest-row">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{option.menuItem.name}</p>
-                    <p className="text-xs text-gray-500">R{formatPrice(option.menuItem.priceCents)}</p>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{option.menuItem.name}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--t3)" }}>R{formatPrice(option.menuItem.priceCents)}</div>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveOption(option.id)}
                     disabled={busyOptionId === option.id}
                     aria-label={`Remove ${option.menuItem.name}`}
-                    className="rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    className="m-icon-btn"
+                    style={{ color: "var(--red-txt)" }}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -243,7 +238,7 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
               ))}
             </div>
           )}
-        </Card>
+        </div>
       ))}
 
       <FilterSheet
@@ -252,32 +247,30 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
         title={`Add ${pickerCourse ? COURSE_LABELS[pickerCourse.courseType] : ""} Option`}
       >
         {pickerChoices.length === 0 ? (
-          <div className="py-6 text-center">
-            <p className="mb-3 text-sm text-gray-500">
+          <div style={{ padding: "24px 0", textAlign: "center" }}>
+            <p style={{ marginBottom: 12, fontSize: 13, color: "var(--t3)" }}>
               No available dishes in this course yet.
             </p>
-            <Link
-              href="/admin/dish-library"
-              className="text-sm font-semibold text-primary-600 hover:text-primary-700"
-            >
+            <Link href="/admin/dish-library" style={{ fontSize: 13, fontWeight: 600, color: "var(--p)" }}>
               Add it to your Dish Library first →
             </Link>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {pickerChoices.map((dish) => (
               <button
                 key={dish.id}
                 type="button"
                 onClick={() => pickerCourseId && handleAddOption(pickerCourseId, dish.id)}
                 disabled={busyOptionId === dish.id}
-                className="flex w-full items-center justify-between rounded-lg border border-gray-100 p-3 text-left transition-colors hover:bg-cream-100 disabled:opacity-50"
+                className="live-guest-row"
+                style={{ width: "100%", textAlign: "left", cursor: "pointer" }}
               >
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{dish.name}</p>
-                  <p className="text-xs text-gray-500">R{formatPrice(dish.priceCents)}</p>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{dish.name}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--t3)" }}>R{formatPrice(dish.priceCents)}</div>
                 </div>
-                <span className="text-xs font-semibold text-primary-600">
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--p)" }}>
                   {busyOptionId === dish.id ? "Adding…" : "Add"}
                 </span>
               </button>
