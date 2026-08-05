@@ -76,4 +76,36 @@ export class RestaurantGalleryItemRepository extends BaseRepository<RestaurantGa
       }),
     ]);
   }
+
+  /**
+   * Media Library lets ANY photo become the featured cover, including
+   * Dish/Dinner-sourced ones that don't have a gallery item yet - unlike
+   * setFeatured() above, this takes a mediaAssetId and creates the gallery
+   * item on demand rather than requiring one to already exist.
+   */
+  async setFeaturedByMediaAsset(restaurantId: string, mediaAssetId: string): Promise<void> {
+    const existing = await this.prisma.restaurantGalleryItem.findFirst({
+      where: { restaurantId, mediaAssetId },
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.restaurantGalleryItem.updateMany({
+        where: { restaurantId, role: "FEATURED" as RestaurantGalleryRole },
+        data: { role: "GALLERY" as RestaurantGalleryRole },
+      }),
+      existing
+        ? this.prisma.restaurantGalleryItem.update({
+            where: { id: existing.id },
+            data: { role: "FEATURED" as RestaurantGalleryRole },
+          })
+        : this.prisma.restaurantGalleryItem.create({
+            data: {
+              restaurant: { connect: { id: restaurantId } },
+              mediaAsset: { connect: { id: mediaAssetId } },
+              role: "FEATURED" as RestaurantGalleryRole,
+              displayOrder: 0,
+            },
+          }),
+    ]);
+  }
 }

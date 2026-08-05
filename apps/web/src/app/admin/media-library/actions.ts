@@ -100,14 +100,14 @@ export async function saveMediaAsset(
   }
 }
 
-export async function setFeaturedPhoto(restaurantId: string, itemId: string): Promise<ActionResult> {
+export async function setFeaturedPhoto(restaurantId: string, mediaAssetId: string): Promise<ActionResult> {
   const authResult = await requireOwner(restaurantId);
   if ("error" in authResult) {
     return { success: false, error: authResult.error };
   }
 
   try {
-    await restaurantGalleryItemRepository.setFeatured(restaurantId, itemId);
+    await restaurantGalleryItemRepository.setFeaturedByMediaAsset(restaurantId, mediaAssetId);
     revalidatePath("/admin/media-library");
     return { success: true };
   } catch (error) {

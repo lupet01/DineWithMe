@@ -70,6 +70,7 @@ export { ComplianceDocumentRepository } from "./compliance-document.repository";
 export { MediaAssetRepository } from "./media-asset.repository";
 export { RestaurantGalleryItemRepository } from "./restaurant-gallery-item.repository";
 export type { RestaurantGalleryItemWithAsset } from "./restaurant-gallery-item.repository";
+export type { MediaLibraryItem } from "./media-asset.repository";
 export { DinnerMediaRepository } from "./dinner-media.repository";
 export type { DinnerMediaWithAsset } from "./dinner-media.repository";
 export { MealRepository } from "./meal.repository";

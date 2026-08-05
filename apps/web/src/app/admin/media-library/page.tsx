@@ -1,6 +1,5 @@
 import { getAuthUser } from "@/lib/auth/server";
-import { restaurantRepository, restaurantGalleryItemRepository } from "@dinewithme/db";
-import { Card } from "@/components/ui/card";
+import { restaurantRepository, mediaAssetRepository } from "@dinewithme/db";
 import { MediaLibraryGrid } from "./components/media-library-grid";
 
 export default async function MediaLibraryPage() {
@@ -14,27 +13,21 @@ export default async function MediaLibraryPage() {
 
   if (!restaurant) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Media Library</h1>
-        <Card padding="lg" className="text-center text-gray-600">
-          Set up your restaurant profile first to manage photos here.
-        </Card>
+      <div className="media-library mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <h1 className="pg-title">Media Library</h1>
+        <div className="card card-pad">
+          <p style={{ fontSize: 13, color: "var(--t3)" }}>
+            Set up your restaurant profile first to manage photos here.
+          </p>
+        </div>
       </div>
     );
   }
 
-  const items = await restaurantGalleryItemRepository.findByRestaurant(restaurant.id);
+  const items = await mediaAssetRepository.findLibraryByRestaurant(restaurant.id);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Media Library</h1>
-        <p className="text-gray-600 mt-1">
-          Every photo your restaurant has uploaded, in one place. Tap any tile to set it as your
-          featured cover photo.
-        </p>
-      </div>
-
+    <div className="media-library mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <MediaLibraryGrid restaurantId={restaurant.id} items={items} />
     </div>
   );

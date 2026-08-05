@@ -1,26 +1,56 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Star, Trash2, Upload } from "lucide-react";
-import type { RestaurantGalleryItemWithAsset } from "@dinewithme/db";
-import { Card } from "@/components/ui/card";
+import type { MediaLibraryItem } from "@dinewithme/db";
 import { requestMediaUploadUrl, saveMediaAsset, setFeaturedPhoto, deleteMediaAsset } from "../actions";
+import { MediaTabs } from "./media-tabs";
+import { FeaturedPhoto } from "./featured-photo";
+import { PhotoTile } from "./photo-tile";
+import { PhotoOptionsSheet } from "./photo-options-sheet";
+
+type MediaTab = "ALL" | "PROFILE" | "DISH" | "DINNER";
 
 interface MediaLibraryGridProps {
   restaurantId: string;
-  items: RestaurantGalleryItemWithAsset[];
+  items: MediaLibraryItem[];
 }
+
+const SOURCE_BY_TAB: Record<Exclude<MediaTab, "ALL">, MediaLibraryItem["source"]> = {
+  PROFILE: "PROFILE",
+  DISH: "DISH",
+  DINNER: "DINNER",
+};
 
 export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<MediaTab>("ALL");
   const [uploading, setUploading] = useState(false);
-  const [actioningId, setActioningId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [optionsItem, setOptionsItem] = useState<MediaLibraryItem | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const featured = items.find((item) => item.role === "FEATURED");
-  const rest = items.filter((item) => item.id !== featured?.id);
+  const counts = useMemo(
+    () => ({
+      all: items.length,
+      profile: items.filter((i) => i.source === "PROFILE").length,
+      dish: items.filter((i) => i.source === "DISH").length,
+      dinner: items.filter((i) => i.source === "DINNER").length,
+    }),
+    [items]
+  );
+
+  const featured = items.find((i) => i.isFeatured) ?? null;
+
+  // The active tab's own count already reflects the featured photo (it's
+  // still "a Profile photo" etc.), so filtering happens against the full
+  // list, then the featured item is excluded from the grid below it
+  // regardless of which tab is active - it's always shown once, up top,
+  // never duplicated in the grid, rather than reappearing when its own
+  // category tab is selected.
+  const filtered = activeTab === "ALL" ? items : items.filter((i) => i.source === SOURCE_BY_TAB[activeTab]);
+  const gridItems = filtered.filter((i) => i.id !== featured?.id);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,7 +58,6 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
 
     setError(null);
     setUploading(true);
-
     try {
       const signResult = await requestMediaUploadUrl(restaurantId, file.name, file.type);
       if (!signResult.success || !signResult.data) {
@@ -54,132 +83,93 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleSetFeatured = async (itemId: string) => {
-    if (actioningId) return;
-    setActioningId(itemId);
+  const handleSetFeatured = async (mediaAssetId: string) => {
+    setBusyId(mediaAssetId);
     setError(null);
-    const result = await setFeaturedPhoto(restaurantId, itemId);
-    setActioningId(null);
+    const result = await setFeaturedPhoto(restaurantId, mediaAssetId);
+    setBusyId(null);
     if (!result.success) {
       setError(result.error || "Failed to set featured photo");
       return;
     }
+    setOptionsItem(null);
     router.refresh();
   };
 
   const handleDelete = async (mediaAssetId: string) => {
-    if (actioningId) return;
-    if (!confirm("Delete this photo? This cannot be undone.")) return;
-
-    setActioningId(mediaAssetId);
+    setBusyId(mediaAssetId);
     setError(null);
     const result = await deleteMediaAsset(mediaAssetId, restaurantId);
-    setActioningId(null);
+    setBusyId(null);
     if (!result.success) {
       setError(result.error || "Failed to delete photo");
       return;
     }
+    setOptionsItem(null);
     router.refresh();
   };
 
   return (
-    <div className="space-y-4">
-      {featured && (
-        <Card padding="none" className="relative overflow-hidden">
-          <img
-            src={featured.mediaAsset.url}
-            alt={featured.mediaAsset.caption || "Featured photo"}
-            className="h-64 w-full object-cover"
-          />
-          <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-primary-500 px-3 py-1 text-xs font-semibold text-white">
-            <Star className="h-3 w-3 fill-current" />
-            Featured · Profile Cover
-          </span>
-          <button
-            onClick={() => handleDelete(featured.mediaAsset.id)}
-            disabled={actioningId === featured.mediaAsset.id}
-            className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-red-600 hover:bg-white disabled:opacity-50"
-            aria-label="Delete featured photo"
-          >
-            {actioningId === featured.mediaAsset.id ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </button>
-        </Card>
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <h1 className="pg-title">Media Library</h1>
+          <p className="pg-sub">
+            {items.length} photo{items.length === 1 ? "" : "s"} · every one reusable across Profile, Meals, and
+            Dinners
+          </p>
+        </div>
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="btn btn-primary">
+          {uploading ? "Uploading…" : "+ Add Photo"}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={uploading}
+        />
+      </div>
+
+      {error && (
+        <div className="alert alert-yellow">
+          <p style={{ fontSize: 13, color: "var(--yellow-txt)" }}>{error}</p>
+        </div>
       )}
 
+      <MediaTabs active={activeTab} counts={counts} onChange={setActiveTab} />
+
+      <FeaturedPhoto item={featured} onOpenOptions={setOptionsItem} />
+
       {items.length === 0 ? (
-        <p className="text-sm text-gray-500">No photos uploaded yet.</p>
+        <p style={{ fontSize: 13, color: "var(--t3)" }}>No photos uploaded yet.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {rest.map((item) => (
-            <div key={item.id} className="group relative">
-              <button
-                type="button"
-                onClick={() => handleSetFeatured(item.id)}
-                disabled={actioningId === item.id}
-                className="block w-full"
-                title="Set as featured cover photo"
-              >
-                <img
-                  src={item.mediaAsset.url}
-                  alt={item.mediaAsset.caption || "Restaurant photo"}
-                  className="h-32 w-full rounded-xl border border-gray-100 object-cover transition-opacity group-hover:opacity-80"
-                />
-              </button>
-              <button
-                onClick={() => handleDelete(item.mediaAsset.id)}
-                disabled={actioningId === item.mediaAsset.id}
-                className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-red-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white disabled:opacity-50"
-                aria-label="Delete photo"
-              >
-                {actioningId === item.mediaAsset.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
+        <div className="media-library-grid">
+          {gridItems.map((item) => (
+            <PhotoTile key={item.id} item={item} onOpenOptions={setOptionsItem} />
           ))}
         </div>
       )}
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        onChange={handleFileSelect}
-        className="hidden"
-        disabled={uploading}
-      />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
-        className="flex items-center justify-center gap-2 rounded-full bg-primary-500 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-primary-600 disabled:opacity-50"
-      >
-        {uploading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading...
-          </>
-        ) : (
-          <>
-            <Upload className="h-4 w-4" />
-            Upload Photo
-          </>
-        )}
-      </button>
+      <p className="media-library-caption">
+        Tap a tag to filter by that dinner or theme — groups every photo captured at that one dinner, so nothing
+        gets mixed up between dinners run the same week. Tap any tile to set it as the Featured cover photo,
+        delete it, or see which Meal/Dinner it's currently used on.
+      </p>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-    </div>
+      <PhotoOptionsSheet
+        item={optionsItem}
+        open={optionsItem !== null}
+        onClose={() => setOptionsItem(null)}
+        onSetFeatured={handleSetFeatured}
+        onDelete={handleDelete}
+        isBusy={optionsItem !== null && busyId === optionsItem.id}
+      />
+    </>
   );
 }

@@ -1104,6 +1104,51 @@
 .dine-admin .settings .danger-zone-cancel-link { font-size: 12px; font-weight: 600; color: var(--t2); background: none; border: none; cursor: pointer; padding: 0; margin-top: 8px; text-decoration: underline; }
 .dine-admin .settings .danger-zone-btn { border-color: rgba(220, 38, 38, 0.4); color: var(--red-txt); }
 
+/* ============================================================
+ * MEDIA LIBRARY — "Tesla" visual language, first vocabulary pass
+ * (this page previously used raw Tailwind + a generic Card
+ * component, not on .dine-admin at all). Overrides shared classes
+ * scoped under .media-library (tabs, following the Dinners
+ * precedent), plus the page-specific classes from the wireframe
+ * rebuild: .featured-photo-*, .photo-tile-*, .photo-options-*,
+ * .media-library-grid/-caption.
+ * ============================================================ */
+.dine-admin .media-library {
+  --hair: rgba(60, 40, 25, 0.09);
+  --hair2: rgba(60, 40, 25, 0.16);
+  --media-r: 4px;
+  --media-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
+}
+.dine-admin .media-library .pg-title { font-weight: 650; letter-spacing: -0.028em; }
+.dine-admin .media-library .btn { border-radius: var(--media-r); }
+.dine-admin .media-library .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
+.dine-admin .media-library .alert { border-radius: var(--media-r); }
+.dine-admin .media-library .alert-yellow { border-color: var(--hair2); }
+.dine-admin .media-library .tabs { background: var(--bg2); border-radius: var(--media-r); }
+.dine-admin .media-library .tab { border-radius: var(--media-r); }
+.dine-admin .media-library .tab.active { box-shadow: var(--media-sh-1); }
+
+.dine-admin .media-library .featured-photo { display: block; width: 100%; padding: 0; border: 1px solid var(--hair); border-radius: var(--media-r); overflow: hidden; position: relative; cursor: pointer; background: none; }
+.dine-admin .media-library .featured-photo-img { width: 100%; height: 170px; object-fit: cover; display: block; }
+.dine-admin .media-library .featured-photo-badge { position: absolute; top: 10px; left: 10px; background: var(--p); color: #fff; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; }
+.dine-admin .media-library .featured-photo-empty { border: 1.5px dashed var(--hair2); border-radius: var(--media-r); padding: 24px; text-align: center; }
+
+.dine-admin .media-library .media-library-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.dine-admin .media-library .photo-tile { position: relative; padding: 0; border: 1px solid var(--hair); border-radius: var(--media-r); overflow: hidden; cursor: pointer; background: none; height: 88px; }
+.dine-admin .media-library .photo-tile-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dine-admin .media-library .photo-tile-tag { position: absolute; bottom: 4px; left: 4px; font-size: 8px; font-weight: 700; color: #fff; background: rgba(0,0,0,.55); padding: 1px 5px; border-radius: 2px; }
+.dine-admin .media-library .media-library-caption { font-size: 11px; color: var(--t3); margin-top: 4px; line-height: 1.5; }
+
+.dine-admin .media-library .photo-options-body { display: flex; flex-direction: column; gap: 12px; }
+.dine-admin .media-library .photo-options-preview { width: 100%; height: 180px; object-fit: cover; border-radius: var(--media-r); border: 1px solid var(--hair); }
+.dine-admin .media-library .photo-options-usage { font-size: 12.5px; color: var(--t2); }
+.dine-admin .media-library .photo-options-usage-link { color: var(--p); font-weight: 600; text-decoration: none; }
+.dine-admin .media-library .photo-options-actions { display: flex; flex-direction: column; gap: 8px; }
+
+@container (max-width: 699px) {
+  .dine-admin .media-library .media-library-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
 .dine-admin .rp .savebar { position: static; margin-top: 4px; padding-top: 0; z-index: 5; }
 @container (min-width: 700px) {
   .dine-admin .rp .savebar { position: sticky; bottom: 0; margin-top: -8px; padding-top: 12px; background: linear-gradient(180deg, transparent, var(--bg) 55%); }
