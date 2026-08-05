@@ -21,14 +21,10 @@ export default async function TeamPage() {
   const isOwner = restaurant.members.some((m) => m.userId === user.id && m.role === "OWNER");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Team</h1>
-        <p className="mt-1 text-gray-600">Who has access to manage {restaurant.name}</p>
-      </div>
-
+    <div className="team mx-auto max-w-2xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <TeamManager
         restaurantId={restaurant.id}
+        restaurantName={restaurant.name}
         members={restaurant.members.map((m) => ({
           userId: m.userId,
           role: m.role,
@@ -43,6 +39,7 @@ export default async function TeamPage() {
           expiresAt: i.expiresAt.toISOString(),
         }))}
         isOwner={isOwner}
+        currentUserId={user.id}
       />
     </div>
   );
