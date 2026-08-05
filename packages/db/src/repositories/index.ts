@@ -73,7 +73,7 @@ export type { RestaurantGalleryItemWithAsset } from "./restaurant-gallery-item.r
 export { DinnerMediaRepository } from "./dinner-media.repository";
 export type { DinnerMediaWithAsset } from "./dinner-media.repository";
 export { MealRepository } from "./meal.repository";
-export type { MealWithCourses, MealCourseWithOptions, MealCourseOptionWithDish, MealWithPerformance } from "./meal.repository";
+export type { MealWithCourses, MealCourseWithOptions, MealCourseOptionWithDish, MealWithPerformance, MealWithCoursesAndPerformance } from "./meal.repository";
 export { PayoutRepository } from "./payout.repository";
 export type { PayoutWithDinner, PayoutWithDinnerAndRestaurant } from "./payout.repository";
 export { TeamInviteRepository } from "./team-invite.repository";

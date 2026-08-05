@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X } from "lucide-react";
@@ -23,12 +23,52 @@ function formatPercent(value: number | null | undefined): string {
   return value == null ? "—" : `${Math.round(value * 100)}%`;
 }
 
+interface PhotoPoolEntry {
+  id: string;
+  url: string;
+}
+
 interface MealEditorProps {
   meal: MealWithCourses;
   dishLibrary: MenuItem[];
+  photoPool: PhotoPoolEntry[];
 }
 
-export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
+function DishThumb({
+  mediaAssetId,
+  photoPool,
+  size,
+}: {
+  mediaAssetId: string | null;
+  photoPool: PhotoPoolEntry[];
+  size: number;
+}) {
+  const url = mediaAssetId ? photoPool.find((p) => p.id === mediaAssetId)?.url : null;
+  if (url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={url}
+        alt=""
+        style={{ width: size, height: size, borderRadius: 10, objectFit: "cover", flexShrink: 0 }}
+      />
+    );
+  }
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 10,
+        background: "var(--bg2)",
+        border: "1px solid var(--bdr)",
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
   const router = useRouter();
   const [name, setName] = useState(meal.name);
   const [price, setPrice] = useState(formatPrice(meal.suggestedPricePerSeatCents));
@@ -37,6 +77,7 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickerCourseId, setPickerCourseId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [busyOptionId, setBusyOptionId] = useState<string | null>(null);
 
   const handleSave = async () => {
@@ -56,6 +97,13 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
       return;
     }
     router.refresh();
+  };
+
+  const handleCancel = () => {
+    setName(meal.name);
+    setPrice(formatPrice(meal.suggestedPricePerSeatCents));
+    setIsActive(meal.isActive);
+    setError(null);
   };
 
   const handleDelete = async () => {
@@ -96,14 +144,23 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
     router.refresh();
   };
 
+  const usedElsewhereInMeal = useMemo(
+    () => new Set(meal.courses.flatMap((c) => c.options.map((o) => o.menuItemId))),
+    [meal.courses]
+  );
+
   const pickerCourse = meal.courses.find((c) => c.id === pickerCourseId);
+  const alreadyInPickerCourse = useMemo(
+    () => new Set(pickerCourse?.options.map((o) => o.menuItemId) ?? []),
+    [pickerCourse]
+  );
   const pickerChoices = pickerCourse
-    ? dishLibrary.filter(
-        (dish) =>
-          dish.course === pickerCourse.courseType &&
-          !pickerCourse.options.some((o) => o.menuItemId === dish.id)
-      )
+    ? dishLibrary
+        .filter((dish) => dish.course === pickerCourse.courseType && !alreadyInPickerCourse.has(dish.id))
+        .filter((dish) => dish.name.toLowerCase().includes(search.trim().toLowerCase()))
     : [];
+
+  const fillRate = meal.performance?.avgFillRate ?? null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -113,83 +170,75 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
         </div>
       )}
 
-      <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div>
-          <label className="field-label">Meal Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={saving}
-            className="field-input"
-          />
+      <div>
+        <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
+          <Link href="/admin/meals" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
+            Meals
+          </Link>{" "}
+          / {meal.name}
         </div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
-          <div style={{ flex: 1 }}>
-            <label className="field-label">Suggested Price / Seat (ZAR)</label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 220 }}>
             <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               disabled={saving}
               className="field-input"
+              style={{ fontSize: 16, fontWeight: 700, maxWidth: 280 }}
             />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 9 }}>
-            <span style={{ fontSize: 13, color: "var(--t2)" }}>Active</span>
             <button
               type="button"
               onClick={() => setIsActive((v) => !v)}
               disabled={saving}
-              className={`toggle ${isActive ? "on" : "off"}`}
-              role="switch"
-              aria-checked={isActive}
-              aria-label="Active"
+              className={`badge ${isActive ? "badge-green" : "badge-slate"}`}
+              style={{ border: 0, cursor: "pointer" }}
             >
-              <span className="toggle-dot" />
+              {isActive ? "ACTIVE" : "INACTIVE"}
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button type="button" onClick={handleCancel} disabled={saving} className="btn btn-outline btn-sm">
+              Cancel
+            </button>
+            <button type="button" onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm">
+              {saving ? "Saving…" : "Save"}
             </button>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, paddingTop: 2 }}>
-          <button type="button" onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm">
-            {saving ? "Saving…" : "Save"}
-          </button>
-          <button type="button" onClick={handleDelete} disabled={deleting} className="btn btn-red btn-sm">
-            {deleting ? "Deleting…" : "Delete Meal"}
-          </button>
-        </div>
       </div>
 
-      <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div className="card-title">Performance</div>
+      <div>
+        <div className="section-block-title" style={{ marginBottom: 10, opacity: 0.6 }}>
+          Performance (read-only)
+        </div>
         {meal.performance ? (
           <div className="stat-grid-4">
             <div className="stat-card">
-              <div className="stat-label">Dinners Completed</div>
-              <div className="stat-value">{meal.performance.totalDinners}</div>
+              <div className="stat-label">Dinners Served</div>
+              <div className="stat-value" style={{ fontSize: 18 }}>
+                {meal.performance.totalDinners}
+              </div>
             </div>
             <div className="stat-card">
-              <div className="stat-label">Seats Booked</div>
-              <div className="stat-value">{meal.performance.totalSeatsBooked}</div>
+              <div className="stat-label">Fill Rate</div>
+              <div
+                className="stat-value"
+                style={{ fontSize: 18, color: fillRate != null && fillRate >= 0.7 ? "var(--green-txt)" : undefined }}
+              >
+                {formatPercent(fillRate)}
+              </div>
             </div>
             <div className="stat-card">
-              <div className="stat-label">Avg Fill Rate</div>
-              <div className="stat-value">{formatPercent(meal.performance.avgFillRate)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Avg Attendance</div>
-              <div className="stat-value">{formatPercent(meal.performance.avgAttendanceRate)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Avg Rating</div>
-              <div className="stat-value">
-                {meal.performance.avgFeedbackScore != null ? `${meal.performance.avgFeedbackScore.toFixed(1)}/5` : "—"}
+              <div className="stat-label">Avg Feedback</div>
+              <div className="stat-value" style={{ fontSize: 18 }}>
+                {meal.performance.avgFeedbackScore != null ? `${meal.performance.avgFeedbackScore.toFixed(1)} ★` : "—"}
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-label">Would Return</div>
-              <div className="stat-value">{formatPercent(meal.performance.avgWouldReturnRate)}</div>
+              <div className="stat-value" style={{ fontSize: 18 }}>
+                {formatPercent(meal.performance.avgWouldReturnRate)}
+              </div>
             </div>
           </div>
         ) : (
@@ -199,84 +248,147 @@ export function MealEditor({ meal, dishLibrary }: MealEditorProps) {
         )}
       </div>
 
-      {meal.courses.map((course) => (
-        <div key={course.id} className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div className="card-title">{COURSE_LABELS[course.courseType] || course.courseType}</div>
-            {course.options.length < 3 && (
-              <button
-                type="button"
-                onClick={() => setPickerCourseId(course.id)}
-                style={{ fontSize: 12, fontWeight: 600, color: "var(--p)", background: "none", border: 0, cursor: "pointer" }}
-              >
-                + Add Option
-              </button>
-            )}
-          </div>
+      <div>
+        <div className="section-block-title" style={{ marginBottom: 10 }}>
+          Suggested Price per Seat
+        </div>
+        <div className="card card-pad" style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            disabled={saving}
+            className="field-input"
+            style={{ maxWidth: 140 }}
+          />
+          <p style={{ fontSize: 11.5, color: "var(--t3)", margin: 0, flex: 1, minWidth: 200 }}>
+            Pre-fills Create Dinner&apos;s price field — the restaurant confirms or overrides the actual charge per
+            dinner there. This is a starting suggestion, not a binding price.
+          </p>
+        </div>
+      </div>
 
-          {course.options.length === 0 ? (
-            <p style={{ fontSize: 12, color: "var(--t3)" }}>No dishes assigned yet.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {course.options.map((option) => (
-                <div key={option.id} className="live-guest-row">
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{option.menuItem.name}</div>
-                    <div style={{ fontSize: 11.5, color: "var(--t3)" }}>R{formatPrice(option.menuItem.priceCents)}</div>
+      <div>
+        <div className="section-block-title" style={{ marginBottom: 10 }}>
+          Courses
+        </div>
+        <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {meal.courses.map((course) => (
+            <div key={course.id}>
+              <div className="meal-editor-course-label">
+                {COURSE_LABELS[course.courseType] || course.courseType} (up to 3 options)
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                {course.options.map((option) => (
+                  <div key={option.id} className="meal-editor-dish-chip">
+                    <DishThumb mediaAssetId={option.menuItem.mediaAssetId} photoPool={photoPool} size={48} />
+                    <div className="meal-editor-dish-chip-body">
+                      <div className="meal-editor-dish-chip-name">{option.menuItem.name}</div>
+                      <div className="meal-editor-dish-chip-caption">from Dish Library</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOption(option.id)}
+                      disabled={busyOptionId === option.id}
+                      aria-label={`Remove ${option.menuItem.name}`}
+                      className="m-icon-btn"
+                      style={{ width: 22, height: 22, color: "var(--red-txt)", marginLeft: 4 }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
+                ))}
+                {course.options.length < 3 && (
                   <button
                     type="button"
-                    onClick={() => handleRemoveOption(option.id)}
-                    disabled={busyOptionId === option.id}
-                    aria-label={`Remove ${option.menuItem.name}`}
-                    className="m-icon-btn"
-                    style={{ color: "var(--red-txt)" }}
+                    onClick={() => {
+                      setPickerCourseId(course.id);
+                      setSearch("");
+                    }}
+                    className="btn btn-sm btn-outline"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    + Add Option ({course.options.length} of 3 used)
                   </button>
-                </div>
-              ))}
+                )}
+              </div>
             </div>
-          )}
+          ))}
         </div>
-      ))}
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--red-txt)",
+            background: "none",
+            border: 0,
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          {deleting ? "Deleting…" : "Delete Meal"}
+        </button>
+      </div>
 
       <FilterSheet
         open={pickerCourseId !== null}
         onClose={() => setPickerCourseId(null)}
-        title={`Add ${pickerCourse ? COURSE_LABELS[pickerCourse.courseType] : ""} Option`}
+        title={`Choose a ${pickerCourse ? COURSE_LABELS[pickerCourse.courseType] : ""}`}
       >
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search your Dish Library…"
+          className="field-input"
+          style={{ marginBottom: 12 }}
+        />
         {pickerChoices.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center" }}>
             <p style={{ marginBottom: 12, fontSize: 13, color: "var(--t3)" }}>
               No available dishes in this course yet.
             </p>
-            <Link href="/admin/dish-library" style={{ fontSize: 13, fontWeight: 600, color: "var(--p)" }}>
-              Add it to your Dish Library first →
-            </Link>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflowY: "auto" }}>
             {pickerChoices.map((dish) => (
               <button
                 key={dish.id}
                 type="button"
                 onClick={() => pickerCourseId && handleAddOption(pickerCourseId, dish.id)}
                 disabled={busyOptionId === dish.id}
-                className="live-guest-row"
-                style={{ width: "100%", textAlign: "left", cursor: "pointer" }}
+                className="meal-editor-picker-row"
               >
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{dish.name}</div>
-                  <div style={{ fontSize: 11.5, color: "var(--t3)" }}>R{formatPrice(dish.priceCents)}</div>
+                <DishThumb mediaAssetId={dish.mediaAssetId} photoPool={photoPool} size={40} />
+                <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>
+                    {dish.name}
+                    {usedElsewhereInMeal.has(dish.id) && (
+                      <span style={{ color: "var(--p)", fontWeight: 700, marginLeft: 8, fontSize: 11.5 }}>
+                        ✓ already used above
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--p)" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--p)", flexShrink: 0 }}>
                   {busyOptionId === dish.id ? "Adding…" : "Add"}
                 </span>
               </button>
             ))}
           </div>
         )}
+        <p style={{ fontSize: 11, color: "var(--t3)", marginTop: 10, textAlign: "center" }}>
+          Dish missing?{" "}
+          <Link href="/admin/dish-library" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
+            Add it to your Dish Library first →
+          </Link>
+        </p>
       </FilterSheet>
     </div>
   );

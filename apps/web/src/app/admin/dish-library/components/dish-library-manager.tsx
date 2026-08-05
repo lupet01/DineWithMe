@@ -1,361 +1,43 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
-import { MenuCourse, DietaryTag } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import {
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
   toggleMenuItemAvailability,
-  requestDishPhotoUploadUrl,
-  saveDishPhoto,
   type MenuItemInput,
 } from "../actions";
+import {
+  COURSES,
+  DIETARY_TAG_LABELS,
+  DishFormSheet,
+  emptyDishFormValues,
+  type DishFormValues,
+} from "./dish-form-sheet";
 
 interface DishLibraryManagerProps {
   restaurantId: string;
   menuItems: MenuItem[];
   photoPool: Array<{ id: string; url: string }>;
+  usageCounts: Record<string, number>;
 }
-
-const COURSES: { key: MenuCourse; label: string }[] = [
-  { key: MenuCourse.STARTER, label: "Starters" },
-  { key: MenuCourse.MAIN, label: "Mains" },
-  { key: MenuCourse.DESSERT, label: "Desserts" },
-];
-
-const DIETARY_TAG_LABELS: Record<DietaryTag, string> = {
-  VEGETARIAN: "Vegetarian",
-  VEGAN: "Vegan",
-  PESCATARIAN: "Pescatarian",
-  GLUTEN_FREE: "Gluten-Free",
-  DAIRY_FREE: "Dairy-Free",
-  NUT_FREE: "Nut-Free",
-  HALAL: "Halal",
-  KOSHER: "Kosher",
-  CONTAINS_SHELLFISH: "Contains Shellfish",
-  SPICY: "Spicy",
-};
 
 function formatPrice(cents: number): string {
   return `R${(cents / 100).toFixed(2)}`;
 }
 
-interface DishFormValues {
-  name: string;
-  description: string;
-  ingredients: string;
-  price: string;
-  isAvailable: boolean;
-  mediaAssetId: string | null;
-  dietaryTags: DietaryTag[];
-}
-
-const emptyFormValues: DishFormValues = {
-  name: "",
-  description: "",
-  ingredients: "",
-  price: "",
-  isAvailable: true,
-  mediaAssetId: null,
-  dietaryTags: [],
-};
-
-function PhotoPicker({
-  restaurantId,
-  photoPool,
-  selectedId,
-  onSelect,
-  disabled,
-}: {
-  restaurantId: string;
-  photoPool: Array<{ id: string; url: string }>;
-  selectedId: string | null;
-  onSelect: (mediaAssetId: string | null, url: string | null) => void;
-  disabled: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [pool, setPool] = useState(photoPool);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const selected = pool.find((p) => p.id === selectedId);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const signResult = await requestDishPhotoUploadUrl(restaurantId, file.name, file.type);
-      if (!signResult.success || !signResult.data) {
-        throw new Error(signResult.error || "Failed to get upload URL");
-      }
-
-      const uploadResponse = await fetch(signResult.data.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!uploadResponse.ok) throw new Error("Failed to upload file");
-
-      const saveResult = await saveDishPhoto(restaurantId, signResult.data.key, signResult.data.publicUrl);
-      if (!saveResult.success || !saveResult.data) {
-        throw new Error(saveResult.error || "Failed to save photo");
-      }
-
-      const newAsset = { id: saveResult.data.mediaAssetId, url: signResult.data.publicUrl };
-      setPool((prev) => [newAsset, ...prev]);
-      onSelect(newAsset.id, newAsset.url);
-      setOpen(false);
-    } catch {
-      // Silently no-op on failure - the picker just stays open for retry
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-medium text-gray-700">Photo</label>
-      <div className="flex items-center gap-3">
-        {selected ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={selected.url} alt="" className="h-14 w-14 rounded-lg object-cover" />
-        ) : (
-          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-gray-300 text-xs text-gray-400">
-            None
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          disabled={disabled}
-          className="text-xs font-semibold text-primary-600 hover:text-primary-700 disabled:opacity-50"
-        >
-          {selected ? "Change" : "Add Photo"}
-        </button>
-        {selected && (
-          <button
-            type="button"
-            onClick={() => onSelect(null, null)}
-            disabled={disabled}
-            className="text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
-          >
-            Remove
-          </button>
-        )}
-      </div>
-
-      {open && (
-        <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-white p-3">
-          {pool.length === 0 ? (
-            <p className="text-xs text-gray-400">No photos in your library yet.</p>
-          ) : (
-            <div className="grid grid-cols-5 gap-2">
-              {pool.map((photo) => (
-                <button
-                  key={photo.id}
-                  type="button"
-                  onClick={() => {
-                    onSelect(photo.id, photo.url);
-                    setOpen(false);
-                  }}
-                  className={`aspect-square overflow-hidden rounded-lg border-2 ${
-                    photo.id === selectedId ? "border-primary-500" : "border-transparent"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleUpload}
-            className="hidden"
-            disabled={uploading}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="text-xs font-semibold text-primary-600 hover:text-primary-700 disabled:opacity-50"
-          >
-            {uploading ? "Uploading…" : "+ Upload New Photo"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DishForm({
-  restaurantId,
-  photoPool,
-  initialValues,
-  onCancel,
-  onSubmit,
-  isSaving,
-  error,
-}: {
-  restaurantId: string;
-  photoPool: Array<{ id: string; url: string }>;
-  initialValues: DishFormValues;
-  onCancel: () => void;
-  onSubmit: (values: DishFormValues) => void;
-  isSaving: boolean;
-  error: string | null;
-}) {
-  const [values, setValues] = useState<DishFormValues>(initialValues);
-
-  const toggleTag = (tag: DietaryTag) => {
-    setValues((v) => ({
-      ...v,
-      dietaryTags: v.dietaryTags.includes(tag)
-        ? v.dietaryTags.filter((t) => t !== tag)
-        : [...v.dietaryTags, tag],
-    }));
-  };
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(values);
-      }}
-      className="space-y-3 rounded-xl border border-primary-200 bg-primary-50/40 p-4"
-    >
-      <PhotoPicker
-        restaurantId={restaurantId}
-        photoPool={photoPool}
-        selectedId={values.mediaAssetId}
-        onSelect={(mediaAssetId) => setValues((v) => ({ ...v, mediaAssetId }))}
-        disabled={isSaving}
-      />
-
-      <div>
-        <label className="mb-1 block text-xs font-medium text-gray-700">Dish Name</label>
-        <input
-          required
-          autoFocus
-          value={values.name}
-          onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
-          placeholder="e.g. Seared Scallops"
-          disabled={isSaving}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs font-medium text-gray-700">Description</label>
-        <textarea
-          rows={2}
-          value={values.description}
-          onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
-          placeholder="Optional — prep style, flavor notes, etc."
-          disabled={isSaving}
-          className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs font-medium text-gray-700">Ingredients</label>
-        <input
-          value={values.ingredients}
-          onChange={(e) => setValues((v) => ({ ...v, ingredients: e.target.value }))}
-          placeholder="Optional — comma-separated"
-          disabled={isSaving}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs font-medium text-gray-700">Dietary Tags</label>
-        <div className="flex flex-wrap gap-1.5">
-          {Object.values(DietaryTag).map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => toggleTag(tag)}
-              disabled={isSaving}
-              className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                values.dietaryTags.includes(tag)
-                  ? "border-primary-500 bg-primary-500 text-white"
-                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {DIETARY_TAG_LABELS[tag]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-end gap-4">
-        <div className="flex-1">
-          <label className="mb-1 block text-xs font-medium text-gray-700">Price (ZAR)</label>
-          <input
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            value={values.price}
-            onChange={(e) => setValues((v) => ({ ...v, price: e.target.value }))}
-            placeholder="0.00"
-            disabled={isSaving}
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none disabled:opacity-60"
-          />
-        </div>
-
-        <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={values.isAvailable}
-            onChange={(e) => setValues((v) => ({ ...v, isAvailable: e.target.checked }))}
-            disabled={isSaving}
-            className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-          />
-          Available
-        </label>
-      </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <div className="flex gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="rounded-full bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:bg-primary-200"
-        >
-          {isSaving ? "Saving…" : "Save Dish"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isSaving}
-          className="rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishLibraryManagerProps) {
+export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCounts }: DishLibraryManagerProps) {
   const [items, setItems] = useState<MenuItem[]>(menuItems);
-  const [addingCourse, setAddingCourse] = useState<MenuCourse | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<{ mode: "add" } | { mode: "edit"; item: MenuItem } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
-  const [pool, setPool] = useState(photoPool);
 
   const parsePrice = (price: string): number | null => {
     const parsed = Math.round(parseFloat(price) * 100);
@@ -363,14 +45,14 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishL
     return parsed;
   };
 
-  const toInput = (course: MenuCourse, values: DishFormValues): MenuItemInput | null => {
+  const toInput = (values: DishFormValues): MenuItemInput | null => {
     const priceCents = parsePrice(values.price);
     if (priceCents === null) {
       setFormError("Enter a valid price");
       return null;
     }
     return {
-      course,
+      course: values.course,
       name: values.name,
       description: values.description || null,
       ingredients: values.ingredients || null,
@@ -381,14 +63,10 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishL
     };
   };
 
-  const handleCreate = async (course: MenuCourse, values: DishFormValues) => {
+  const handleCreate = async (values: DishFormValues) => {
     setFormError(null);
-    const input = toInput(course, values);
+    const input = toInput(values);
     if (!input) return;
-
-    if (values.mediaAssetId && !pool.some((p) => p.id === values.mediaAssetId)) {
-      setPool((prev) => [{ id: values.mediaAssetId!, url: "" }, ...prev]);
-    }
 
     setIsSaving(true);
     const result = await createMenuItem(restaurantId, input);
@@ -398,21 +76,20 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishL
       setFormError(result.error || "Failed to create dish");
       return;
     }
-    const newMenuItemId = result.data.menuItemId;
 
     setItems((prev) => [
       ...prev,
       {
-        id: newMenuItemId,
+        id: result.data!.menuItemId,
         restaurantId,
-        course,
+        course: input.course,
         name: input.name.trim(),
         description: input.description ?? null,
         ingredients: input.ingredients ?? null,
         priceCents: input.priceCents,
         position:
-          prev.filter((i) => i.course === course).length > 0
-            ? Math.max(...prev.filter((i) => i.course === course).map((i) => i.position)) + 1
+          prev.filter((i) => i.course === input.course).length > 0
+            ? Math.max(...prev.filter((i) => i.course === input.course).map((i) => i.position)) + 1
             : 0,
         isAvailable: input.isAvailable,
         mediaAssetId: input.mediaAssetId ?? null,
@@ -421,12 +98,12 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishL
         updatedAt: new Date(),
       },
     ]);
-    setAddingCourse(null);
+    setSheet(null);
   };
 
   const handleUpdate = async (item: MenuItem, values: DishFormValues) => {
     setFormError(null);
-    const input = toInput(item.course, values);
+    const input = toInput(values);
     if (!input) return;
 
     setIsSaving(true);
@@ -443,6 +120,7 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishL
         i.id === item.id
           ? {
               ...i,
+              course: input.course,
               name: input.name.trim(),
               description: input.description ?? null,
               ingredients: input.ingredients ?? null,
@@ -454,7 +132,7 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishL
           : i
       )
     );
-    setEditingId(null);
+    setSheet(null);
   };
 
   const handleToggleAvailability = async (item: MenuItem) => {
@@ -489,159 +167,149 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool }: DishL
     setItems((prev) => prev.filter((i) => i.id !== item.id));
   };
 
+  const photo = (item: MenuItem) => (item.mediaAssetId ? photoPool.find((p) => p.id === item.mediaAssetId) : undefined);
+
   return (
-    <div className="space-y-6">
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Link href="/admin/meals" className="m-icon-btn" aria-label="Back to Meals">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="pg-title">Dish Library</h1>
+            <p className="pg-sub">Your dish roster — photographed once, reused in every Meal</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setFormError(null);
+            setSheet({ mode: "add" });
+          }}
+          className="btn btn-primary"
+          style={{ fontSize: 12, flexShrink: 0 }}
+        >
+          + Add Dish
+        </button>
+      </div>
+
       {listError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-800">{listError}</p>
+        <div className="alert alert-yellow">
+          <p style={{ fontSize: 13, color: "var(--yellow-txt)" }}>{listError}</p>
         </div>
       )}
 
-      {COURSES.map(({ key: course, label }) => {
-        const courseItems = items
-          .filter((item) => item.course === course)
-          .sort((a, b) => a.position - b.position);
+      <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {COURSES.map(({ key: course, label }) => {
+          const courseItems = items
+            .filter((item) => item.course === course)
+            .sort((a, b) => a.position - b.position);
 
-        return (
-          <div key={course} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">{label}</h3>
-              {addingCourse !== course && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAddingCourse(course);
-                    setEditingId(null);
-                    setFormError(null);
-                  }}
-                  className="text-xs font-semibold text-primary-600 hover:text-primary-700"
-                >
-                  + Add {label.slice(0, -1)}
-                </button>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              {courseItems.length === 0 && addingCourse !== course && (
-                <p className="text-xs text-gray-400">No {label.toLowerCase()} yet.</p>
-              )}
-
-              {courseItems.map((item) =>
-                editingId === item.id ? (
-                  <DishForm
-                    key={item.id}
-                    restaurantId={restaurantId}
-                    photoPool={pool}
-                    initialValues={{
-                      name: item.name,
-                      description: item.description ?? "",
-                      ingredients: item.ingredients ?? "",
-                      price: (item.priceCents / 100).toFixed(2),
-                      isAvailable: item.isAvailable,
-                      mediaAssetId: item.mediaAssetId,
-                      dietaryTags: item.dietaryTags,
-                    }}
-                    onCancel={() => {
-                      setEditingId(null);
-                      setFormError(null);
-                    }}
-                    onSubmit={(values) => handleUpdate(item, values)}
-                    isSaving={isSaving}
-                    error={formError}
-                  />
-                ) : (
-                  <div
-                    key={item.id}
-                    className="flex items-start justify-between gap-3 rounded-lg border border-gray-100 bg-white p-3 shadow-card"
-                  >
-                    <div className="flex min-w-0 flex-1 gap-3">
-                      {item.mediaAssetId && pool.find((p) => p.id === item.mediaAssetId)?.url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={pool.find((p) => p.id === item.mediaAssetId)!.url}
-                          alt=""
-                          className="h-12 w-12 flex-shrink-0 rounded-lg object-cover"
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-                          <Badge tone={item.isAvailable ? "success" : "neutral"}>
-                            {item.isAvailable ? "Available" : "Unavailable"}
-                          </Badge>
+          return (
+            <div key={course}>
+              <div className="dish-library-group-label">{label}s</div>
+              {courseItems.length === 0 ? (
+                <p style={{ fontSize: 12, color: "var(--t3)" }}>No {label.toLowerCase()}s yet.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {courseItems.map((item) => {
+                    const photoAsset = photo(item);
+                    const usageCount = usageCounts[item.id] ?? 0;
+                    return (
+                      <div key={item.id} className="dish-library-row">
+                        {photoAsset ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={photoAsset.url} alt="" className="dish-library-thumb" />
+                        ) : (
+                          <div className="dish-library-thumb dish-library-thumb-empty" />
+                        )}
+                        <div className="dish-library-row-body">
+                          <div className="dish-library-row-title">{item.name}</div>
+                          {item.description && <div className="dish-library-row-desc">{item.description}</div>}
+                          {(item.dietaryTags.length > 0 || usageCount > 0) && (
+                            <div className="dish-library-row-tags">
+                              {item.dietaryTags.map((tag) => (
+                                <span key={tag} className="badge badge-slate">
+                                  {DIETARY_TAG_LABELS[tag]}
+                                </span>
+                              ))}
+                              {usageCount > 0 && (
+                                <span className="badge badge-slate">
+                                  Used in {usageCount} {usageCount === 1 ? "Meal" : "Meals"}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAvailability(item)}
+                            disabled={togglingId === item.id}
+                            className={`badge ${item.isAvailable ? "badge-green" : "badge-slate"}`}
+                            style={{ marginTop: 6, border: "none", cursor: "pointer" }}
+                          >
+                            {togglingId === item.id ? "…" : item.isAvailable ? "Available" : "86'd — tap to restore"}
+                          </button>
                         </div>
-                        {item.description && (
-                          <p className="mt-0.5 text-xs text-gray-500">{item.description}</p>
-                        )}
-                        {item.dietaryTags.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {item.dietaryTags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-semibold text-primary-600"
-                              >
-                                {DIETARY_TAG_LABELS[tag]}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <p className="mt-1 text-sm font-medium text-gray-700">
-                          {formatPrice(item.priceCents)}
-                        </p>
+                        <div className="dish-library-row-actions">
+                          <span className="dish-library-row-price">{formatPrice(item.priceCents)}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormError(null);
+                              setSheet({ mode: "edit", item });
+                            }}
+                            className="m-icon-btn"
+                            aria-label={`Edit ${item.name}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item)}
+                            disabled={deletingId === item.id}
+                            className="m-icon-btn"
+                            style={{ color: "var(--red-txt)" }}
+                            aria-label={`Delete ${item.name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex flex-shrink-0 items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleAvailability(item)}
-                        disabled={togglingId === item.id}
-                        className="text-xs font-semibold text-gray-500 hover:text-gray-700 disabled:opacity-50"
-                      >
-                        {togglingId === item.id ? "…" : item.isAvailable ? "Mark 86'd" : "Mark Available"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingId(item.id);
-                          setAddingCourse(null);
-                          setFormError(null);
-                        }}
-                        className="text-xs font-semibold text-primary-600 hover:text-primary-700"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item)}
-                        disabled={deletingId === item.id}
-                        className="text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
-                      >
-                        {deletingId === item.id ? "…" : "Delete"}
-                      </button>
-                    </div>
-                  </div>
-                )
-              )}
-
-              {addingCourse === course && (
-                <DishForm
-                  restaurantId={restaurantId}
-                  photoPool={pool}
-                  initialValues={emptyFormValues}
-                  onCancel={() => {
-                    setAddingCourse(null);
-                    setFormError(null);
-                  }}
-                  onSubmit={(values) => handleCreate(course, values)}
-                  isSaving={isSaving}
-                  error={formError}
-                />
+                    );
+                  })}
+                </div>
               )}
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+
+      <DishFormSheet
+        key={sheet?.mode === "edit" ? sheet.item.id : "add"}
+        open={sheet !== null}
+        onClose={() => setSheet(null)}
+        title={sheet?.mode === "edit" ? "Edit Dish" : "Add Dish"}
+        restaurantId={restaurantId}
+        photoPool={photoPool}
+        initialValues={
+          sheet?.mode === "edit"
+            ? {
+                course: sheet.item.course,
+                name: sheet.item.name,
+                description: sheet.item.description ?? "",
+                ingredients: sheet.item.ingredients ?? "",
+                price: (sheet.item.priceCents / 100).toFixed(2),
+                isAvailable: sheet.item.isAvailable,
+                mediaAssetId: sheet.item.mediaAssetId,
+                dietaryTags: sheet.item.dietaryTags,
+              }
+            : emptyDishFormValues
+        }
+        onSubmit={(values) => (sheet?.mode === "edit" ? handleUpdate(sheet.item, values) : handleCreate(values))}
+        isSaving={isSaving}
+        error={formError}
+      />
+    </>
   );
 }

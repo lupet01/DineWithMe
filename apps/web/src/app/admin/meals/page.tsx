@@ -17,23 +17,22 @@ export default async function MealsPage() {
     redirect("/admin/restaurant");
   }
 
-  const meals = await mealRepository.findByRestaurant(restaurant.id);
+  const meals = await mealRepository.findByRestaurantWithCourses(restaurant.id);
 
   return (
     <div className="meals mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 className="pg-title">Meals</h1>
-          <p className="pg-sub">
-            Reusable named menus Create Dinner picks from, assembled from your Dish Library.
-          </p>
+          <p className="pg-sub">Reusable menus, chosen by name at Create Dinner</p>
         </div>
-        <Link href="/admin/dish-library" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
-          Dish Library →
-        </Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href="/admin/dish-library" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+            Dish Library →
+          </Link>
+          <NewMealButton restaurantId={restaurant.id} />
+        </div>
       </div>
-
-      <NewMealButton restaurantId={restaurant.id} />
 
       <MealsList meals={meals} />
     </div>

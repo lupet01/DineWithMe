@@ -1,8 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { getAuthUser } from "@/lib/auth/server";
-import { mealRepository, menuItemRepository, restaurantRepository } from "@dinewithme/db";
+import { mealRepository, menuItemRepository, mediaAssetRepository, restaurantRepository } from "@dinewithme/db";
 import { MealEditor } from "./components/meal-editor";
 
 export default async function MealEditorPage({ params }: { params: { id: string } }) {
@@ -21,18 +19,18 @@ export default async function MealEditorPage({ params }: { params: { id: string 
     notFound();
   }
 
-  const dishLibrary = await menuItemRepository.findByRestaurant(meal.restaurantId);
+  const [dishLibrary, photoAssets] = await Promise.all([
+    menuItemRepository.findByRestaurant(meal.restaurantId),
+    mediaAssetRepository.findByRestaurant(meal.restaurantId),
+  ]);
 
   return (
     <div className="meals mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <Link href="/admin/meals" className="m-icon-btn" aria-label="Back to Meals">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <h1 className="pg-title">{meal.name}</h1>
-      </div>
-
-      <MealEditor meal={meal} dishLibrary={dishLibrary} />
+      <MealEditor
+        meal={meal}
+        dishLibrary={dishLibrary}
+        photoPool={photoAssets.map((asset) => ({ id: asset.id, url: asset.url }))}
+      />
     </div>
   );
 }

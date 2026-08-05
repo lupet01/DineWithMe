@@ -931,29 +931,106 @@
 .dine-admin .payouts .pg-title { font-weight: 650; letter-spacing: -0.028em; }
 
 /* ============================================================
- * MEALS — same Apple visual language, applied as overrides on the
- * SHARED classes (.card, .row-card, .stat-card, .badge, .btn,
- * .field-input, .pg-title, .live-guest-row) the same way .dash and
- * .din did. The Meals pages previously used a generic `Card`
- * component and raw Tailwind, not the .dine-admin vocabulary at
- * all — this pass ports them onto that vocabulary AND applies the
- * hairline/shadow layer in one go, scoped under .meals so pages
- * that haven't been redesigned yet keep today's look.
+ * MEALS — "Tesla" visual language (canon since 2026-08-01), applied
+ * as overrides on the SHARED classes (.card, .row-card, .stat-card,
+ * .stat-grid-4, .badge, .btn, .field-input, .field-label, .dtable,
+ * .table-wrap, .pg-title, .alert, .section-block-title) the same
+ * way .dash/.din/.guests/.payouts did. Also styles the Meals-
+ * specific classes introduced by the wireframe rebuild:
+ * .meal-editor-course-label/-dish-chip/-dish-chip-body/-dish-chip-
+ * name/-dish-chip-caption/-picker-row (list + editor share this one
+ * .meals namespace, matching how both pages share the `meals`
+ * wrapper class in their page.tsx).
  * ============================================================ */
 .dine-admin .meals {
   --hair: rgba(60, 40, 25, 0.09);
   --hair2: rgba(60, 40, 25, 0.16);
-  --meals-sh-1: 0 1px 2px rgba(60, 40, 25, .05), 0 1px 1px rgba(60, 40, 25, .03);
+  --meals-r: 4px;
+  --meals-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
 }
-.dine-admin .meals .card { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: 16px; }
-.dine-admin .meals .row-card { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: 16px; transition: box-shadow var(--dur-base) var(--ease); }
+.dine-admin .meals .card { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: var(--meals-r); }
+.dine-admin .meals .row-card { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: var(--meals-r); transition: box-shadow var(--dur-base) var(--ease); }
 .dine-admin .meals .row-card:hover { box-shadow: var(--shadow-2); }
-.dine-admin .meals .stat-card { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: 16px; }
-.dine-admin .meals .badge { font-weight: 600; }
-.dine-admin .meals .field-input { border-color: var(--hair); }
-.dine-admin .meals .field-input:focus { border-color: var(--p); }
+.dine-admin .meals .stat-grid-4 { gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--meals-r); overflow: hidden; }
+.dine-admin .meals .stat-card { background: var(--bg); border: none; box-shadow: none; border-radius: 0; }
+.dine-admin .meals .stat-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
+.dine-admin .meals .stat-value { font-weight: 600; letter-spacing: -.02em; }
+.dine-admin .meals .badge { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; border-radius: 2px; padding: 4px 8px; }
+.dine-admin .meals .field-input { border: 1px solid var(--hair2); border-radius: var(--meals-r); background: var(--white); }
+.dine-admin .meals .field-input:focus { border-color: var(--p); background: var(--white); }
+.dine-admin .meals .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
+.dine-admin .meals .btn { border-radius: var(--meals-r); }
+.dine-admin .meals .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
+.dine-admin .meals .btn-outline { border-color: var(--hair2); }
+.dine-admin .meals .alert { border-radius: var(--meals-r); }
+.dine-admin .meals .alert-yellow { border-color: var(--hair2); }
+.dine-admin .meals .table-wrap { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: var(--meals-r); }
+.dine-admin .meals .dtable th { border-color: var(--hair); background: var(--bg2); font-family: var(--mono); font-size: 10px; }
+.dine-admin .meals .dtable td { border-color: var(--hair); }
+.dine-admin .meals .dtable tr:hover { background: var(--bg2); }
 .dine-admin .meals .live-guest-row { border-color: var(--hair); }
-.dine-admin .meals .pg-title { letter-spacing: -0.03em; }
+.dine-admin .meals .pg-title { font-weight: 650; letter-spacing: -0.028em; }
+.dine-admin .meals .section-block-title { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); }
+
+.dine-admin .meals .meal-editor-course-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); margin-bottom: 10px; }
+.dine-admin .meals .meal-editor-dish-chip { display: flex; align-items: center; gap: 10px; border: 1px solid var(--hair); border-radius: var(--meals-r); padding: 8px 10px 8px 8px; background: var(--bg); }
+.dine-admin .meals .meal-editor-dish-chip-body { min-width: 0; }
+.dine-admin .meals .meal-editor-dish-chip-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.dine-admin .meals .meal-editor-dish-chip-caption { font-size: 11px; color: var(--t3); }
+.dine-admin .meals .meal-editor-picker-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--hair); border-radius: var(--meals-r); padding: 8px; background: var(--bg); cursor: pointer; font: inherit; color: inherit; transition: border-color var(--dur-fast) var(--ease), background var(--dur-base) var(--ease); }
+.dine-admin .meals .meal-editor-picker-row:hover { background: var(--bg2); border-color: var(--hair2); }
+.dine-admin .meals .meal-editor-picker-row:disabled { opacity: .5; cursor: default; }
+
+/* ============================================================
+ * DISH LIBRARY — "Tesla" visual language, first vocabulary pass
+ * (this page previously used raw Tailwind + generic Card/Badge
+ * components, not on .dine-admin at all — like Payouts, it goes
+ * straight to Tesla with no interim Apple pass). Overrides shared
+ * classes scoped under .dish-library, plus the page-specific
+ * .dish-library-*/.dish-form-photo-* classes from the wireframe
+ * rebuild.
+ * ============================================================ */
+.dine-admin .dish-library {
+  --hair: rgba(60, 40, 25, 0.09);
+  --hair2: rgba(60, 40, 25, 0.16);
+  --dish-r: 4px;
+  --dish-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
+}
+.dine-admin .dish-library .card { border-color: var(--hair); box-shadow: var(--dish-sh-1); border-radius: var(--dish-r); }
+.dine-admin .dish-library .pg-title { font-weight: 650; letter-spacing: -0.028em; }
+.dine-admin .dish-library .btn { border-radius: var(--dish-r); }
+.dine-admin .dish-library .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
+.dine-admin .dish-library .btn-outline { border-color: var(--hair2); }
+.dine-admin .dish-library .badge { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; border-radius: 2px; padding: 3px 7px; }
+.dine-admin .dish-library .field-input { border: 1px solid var(--hair2); border-radius: var(--dish-r); background: var(--white); }
+.dine-admin .dish-library .field-input:focus { border-color: var(--p); background: var(--white); }
+.dine-admin .dish-library .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
+.dine-admin .dish-library .alert { border-radius: var(--dish-r); }
+.dine-admin .dish-library .alert-yellow { border-color: var(--hair2); }
+
+.dine-admin .dish-library .dish-library-group-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); margin-bottom: 10px; }
+.dine-admin .dish-library .dish-library-row { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--hair); border-radius: var(--dish-r); margin-bottom: 8px; }
+.dine-admin .dish-library .dish-library-row:last-child { margin-bottom: 0; }
+.dine-admin .dish-library .dish-library-thumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.dine-admin .dish-library .dish-library-thumb-empty { background: var(--bg2); border: 1px solid var(--hair); }
+.dine-admin .dish-library .dish-library-row-body { flex: 1; min-width: 0; }
+.dine-admin .dish-library .dish-library-row-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.dine-admin .dish-library .dish-library-row-desc { font-size: 12px; color: var(--t3); margin-top: 2px; }
+.dine-admin .dish-library .dish-library-row-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.dine-admin .dish-library .dish-library-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.dine-admin .dish-library .dish-library-row-price { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+
+.dine-admin .dish-library .dish-form-photo-drop { width: 100%; height: 100px; border-radius: var(--dish-r); background: var(--bg2); border: 1.5px dashed var(--hair2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--t3); cursor: pointer; font: inherit; margin-bottom: 12px; }
+.dine-admin .dish-library .dish-form-photo-selected { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.dine-admin .dish-library .dish-form-photo-thumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.dine-admin .dish-library .dish-form-photo-actions { display: flex; gap: 12px; }
+.dine-admin .dish-library .dish-form-photo-link { font-size: 12px; font-weight: 600; color: var(--p); background: none; border: none; cursor: pointer; padding: 0; font: inherit; }
+.dine-admin .dish-library .dish-form-photo-link-remove { color: var(--red-txt); }
+.dine-admin .dish-library .dish-form-photo-pool { margin-top: 10px; padding: 10px; border: 1px solid var(--hair); border-radius: var(--dish-r); }
+.dine-admin .dish-library .dish-form-photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.dine-admin .dish-library .dish-form-photo-cell { aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid transparent; padding: 0; cursor: pointer; }
+.dine-admin .dish-library .dish-form-photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dine-admin .dish-library .dish-form-photo-cell.selected { border-color: var(--p); }
 
 .dine-admin .rp .savebar { position: static; margin-top: 4px; padding-top: 0; z-index: 5; }
 @container (min-width: 700px) {

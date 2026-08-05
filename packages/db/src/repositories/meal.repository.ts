@@ -5,6 +5,10 @@ export type MealCourseOptionWithDish = MealCourseOption & { menuItem: MenuItem }
 export type MealCourseWithOptions = MealCourse & { options: MealCourseOptionWithDish[] };
 export type MealWithCourses = Meal & { courses: MealCourseWithOptions[]; performance: MealPerformance | null };
 export type MealWithPerformance = Meal & { performance: MealPerformance | null };
+export type MealWithCoursesAndPerformance = Meal & {
+  performance: MealPerformance | null;
+  courses: MealCourseWithOptions[];
+};
 
 const COURSE_ORDER = ["STARTER", "MAIN", "DESSERT"] as const;
 
@@ -27,6 +31,35 @@ export class MealRepository extends BaseRepository<Meal> {
       include: { performance: true },
       orderBy: { name: "asc" },
     });
+  }
+
+  /**
+   * Like findByRestaurant, but with courses/options/dish data attached so
+   * callers (the Meals list) can render a per-course dish summary and
+   * course count without a second round-trip per Meal.
+   */
+  async findByRestaurantWithCourses(restaurantId: string): Promise<MealWithCoursesAndPerformance[]> {
+    const meals = await this.prisma.meal.findMany({
+      where: { restaurantId },
+      include: {
+        courses: {
+          include: {
+            options: {
+              include: { menuItem: true },
+            },
+          },
+        },
+        performance: true,
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return meals.map((meal) => ({
+      ...meal,
+      courses: [...meal.courses].sort(
+        (a, b) => COURSE_ORDER.indexOf(a.courseType) - COURSE_ORDER.indexOf(b.courseType)
+      ),
+    }));
   }
 
   async findByIdWithCourses(id: string): Promise<MealWithCourses | null> {

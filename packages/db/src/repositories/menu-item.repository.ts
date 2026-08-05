@@ -68,4 +68,20 @@ export class MenuItemRepository extends BaseRepository<MenuItem> {
       where: { id },
     });
   }
+
+  /**
+   * How many distinct Meals reference each dish, keyed by menuItemId.
+   * Dishes with no entry here aren't used in any Meal yet.
+   */
+  async countMealUsage(restaurantId: string): Promise<Record<string, number>> {
+    const counts = await this.prisma.mealCourseOption.groupBy({
+      by: ["menuItemId"],
+      where: {
+        menuItem: { restaurantId },
+      },
+      _count: { menuItemId: true },
+    });
+
+    return Object.fromEntries(counts.map((c) => [c.menuItemId, c._count.menuItemId]));
+  }
 }
