@@ -115,6 +115,30 @@ export async function reactivateRestaurantSelfServe(
 }
 
 /**
+ * Persists the Settings page's Notification Preferences card. Sent to this
+ * account's email only for now - no WhatsApp delivery path for
+ * restaurant-side notifications yet.
+ */
+export async function updateNotificationPreferences(
+  restaurantId: string,
+  prefs: { notifyNewBooking: boolean; notifyCancellation: boolean; notifyLowFillRateWarning: boolean }
+): Promise<ActionResult> {
+  try {
+    await requireOwner(restaurantId);
+    await restaurantRepository.updateNotificationPreferences(restaurantId, prefs);
+
+    revalidatePath("/admin/settings");
+    return { success: true };
+  } catch (error) {
+    console.error("[Settings] Error updating notification preferences:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update notification preferences",
+    };
+  }
+}
+
+/**
  * Submits a closure request for Platform Ops review - never changes status
  * directly (§4.5.5, §16.7). At most one PENDING request per restaurant.
  */

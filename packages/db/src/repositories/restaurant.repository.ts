@@ -225,6 +225,16 @@ export class RestaurantRepository extends BaseRepository<Restaurant> {
     });
   }
 
+  async updateNotificationPreferences(
+    restaurantId: string,
+    prefs: { notifyNewBooking?: boolean; notifyCancellation?: boolean; notifyLowFillRateWarning?: boolean }
+  ): Promise<Restaurant> {
+    return this.prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: prefs,
+    });
+  }
+
   /**
    * Permanently closes a restaurant - only ever called from an approved
    * RestaurantClosureRequest, never directly from a button (§4.5.5).

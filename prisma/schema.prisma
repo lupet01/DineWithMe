@@ -184,6 +184,13 @@ model Restaurant {
   // unchecked, not an error state.
   operatingHours           Json?
 
+  // Settings page's Notification Preferences card (§16.6 wireframe).
+  // Sent to this account's email only for now - no WhatsApp delivery path
+  // for restaurant-side notifications yet.
+  notifyNewBooking            Boolean @default(true)
+  notifyCancellation          Boolean @default(true)
+  notifyLowFillRateWarning    Boolean @default(true)
+
   members             RestaurantMember[]
   media                RestaurantMedia[]
   mediaAssets          MediaAsset[]
