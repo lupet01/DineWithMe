@@ -730,7 +730,7 @@
 
 /* ============================================================
  * TEAM — reverted to wireframe-native 2026-08-06. Shared classes
- * need no override; only .team-roster-*/.pending-invite-row are
+ * need no override; only .team-roster-* and .pending-invite-row are
  * styled here.
  * ============================================================ */
 .dine-admin .team .team-roster-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--bdr); border-radius: 14px; }

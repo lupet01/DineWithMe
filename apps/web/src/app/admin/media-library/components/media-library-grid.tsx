@@ -159,7 +159,7 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
       <p className="media-library-caption">
         Tap a tag to filter by that dinner or theme — groups every photo captured at that one dinner, so nothing
         gets mixed up between dinners run the same week. Tap any tile to set it as the Featured cover photo,
-        delete it, or see which Meal/Dinner it's currently used on.
+        delete it, or see which Meal/Dinner it&apos;s currently used on.
       </p>
 
       <PhotoOptionsSheet

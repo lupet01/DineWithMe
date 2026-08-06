@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth/server";
 import {
   restaurantRepository,
