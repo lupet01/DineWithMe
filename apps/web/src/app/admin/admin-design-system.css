@@ -407,13 +407,18 @@
 }
 
 /* ============================================================
- * RESTAURANT PROFILE — "Apple" design system, namespaced under
- * .rp so it doesn't reskin the shared .card/.btn/.chip/etc. used
- * by every other admin page. Ported 1:1 from the approved
- * "restaurant-profile.html" Apple-style Artifact mockup (tokens,
- * component classes, mobile behavior at 700px) — mobile-first
- * here (base rules = mobile) with @container (min-width:700px)
- * desktop overrides, matching this file's existing convention.
+ * RESTAURANT PROFILE — wireframe-native ("Apple-native" cream/
+ * orange) tokens, namespaced under .rp so it doesn't reskin the
+ * shared .card/.btn/.chip/etc. used by every other admin page.
+ * Originally ported 1:1 from the approved "restaurant-profile.html"
+ * Apple-style Artifact mockup (tokens, component classes, mobile
+ * behavior at 700px); briefly reskinned to Tesla (sharp 4/6/8px
+ * radius) 2026-08-01, reverted back to the original 9/13/18px
+ * radius here 2026-08-06 along with the rest of the canon flip.
+ * The old sticky rail + in-page anchor nav (.layout/.rail/.nav/
+ * .navlink/.rail-foot) were removed from page.tsx the same day —
+ * the current wireframe is one flat scrolling column — so those
+ * rules are dropped below rather than reverted.
  * ============================================================ */
 .dine-admin .rp {
   --hair: rgba(60, 40, 25, 0.09);
@@ -425,20 +430,14 @@
   --sand: #EDE7DE;
   --espresso: #3B2A20;
   --espresso2: #5C3D28;
-  /* Tesla: mechanical sharp radius, near-flat shadow — was 9/13/18 under Apple */
-  --r-s: 4px; --r-m: 6px; --r-l: 8px;
+  --r-s: 9px; --r-m: 13px; --r-l: 18px;
   --rp-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
   --rp-sh-2: 0 4px 14px -6px rgba(60, 40, 25, .16);
   --rp-ring: 0 0 0 2px var(--p-glow);
 }
 
-/* ---- layout: rail + column ---- */
-.dine-admin .rp .layout { display: block; }
-.dine-admin .rp .rail { position: static; display: flex; flex-direction: column; gap: 0; }
 .dine-admin .rp .col { display: flex; flex-direction: column; gap: 26px; min-width: 0; padding-bottom: 4px; }
 @container (min-width: 700px) {
-  .dine-admin .rp .layout { display: grid; grid-template-columns: 292px minmax(0, 1fr); gap: 30px; align-items: start; }
-  .dine-admin .rp .rail { position: sticky; top: 14px; gap: 14px; }
   .dine-admin .rp .col { gap: 30px; }
 }
 
@@ -489,36 +488,6 @@
 .dine-admin .rp .stat-v svg { width: 14px; height: 14px; color: var(--p); }
 .dine-admin .rp .stat-link { display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; font-weight: 600; color: var(--p); text-decoration: none; margin-top: 1px; }
 .dine-admin .rp .stat-link svg { width: 11px; height: 11px; }
-
-/* ---- in-page section nav ---- */
-.dine-admin .rp .nav {
-  position: sticky; top: 0; z-index: 8; display: flex; gap: 6px; overflow-x: auto;
-  border-radius: 0; border: 0; padding: 9px 14px; box-shadow: none; background: var(--bg);
-  scrollbar-width: none;
-}
-.dine-admin .rp .nav::-webkit-scrollbar { display: none; }
-.dine-admin .rp .navlink {
-  flex: none; display: flex; align-items: center; gap: 10px;
-  background: var(--sand); border-radius: 999px; padding: 6px 13px;
-  font-size: 13px; font-weight: 500; color: var(--t2w); text-decoration: none; white-space: nowrap;
-  transition: background .15s ease, color .15s ease; cursor: pointer;
-}
-.dine-admin .rp .navlink svg { display: none; }
-.dine-admin .rp .navlink .navcount { margin-left: 5px; font-size: 11px; font-weight: 600; color: var(--t3w); font-variant-numeric: tabular-nums; }
-.dine-admin .rp .navlink:hover { background: var(--bg2); }
-.dine-admin .rp .navlink.on { background: var(--p-tint); color: var(--p); font-weight: 600; }
-.dine-admin .rp .navlink.on .navcount { color: var(--p); opacity: .75; }
-.dine-admin .rp .rail-foot { display: none; }
-@container (min-width: 700px) {
-  .dine-admin .rp .nav { position: static; display: block; overflow: visible; background: var(--card2); border: 1px solid var(--hair); border-radius: var(--r-l); padding: 5px; box-shadow: var(--rp-sh-1); }
-  .dine-admin .rp .navlink { display: flex; width: 100%; background: none; border-radius: 11px; padding: 8px 10px; font-size: 13.5px; margin-bottom: 1px; }
-  .dine-admin .rp .navlink svg { display: block; width: 16px; height: 16px; flex: none; opacity: .75; }
-  .dine-admin .rp .navlink .navcount { margin-left: auto; }
-  .dine-admin .rp .navlink.on svg { opacity: 1; }
-  .dine-admin .rp .rail-foot { display: flex; align-items: center; gap: 7px; padding: 0 4px; font-size: 12px; color: var(--t3w); }
-  .dine-admin .rp .rail-foot svg { width: 13px; height: 13px; flex: none; }
-  .dine-admin .rp .rail-foot a { color: var(--p); text-decoration: none; font-weight: 600; }
-}
 
 /* ---- inset grouped sections ---- */
 .dine-admin .rp .sec { scroll-margin-top: 56px; padding: 0 14px; }
@@ -709,226 +678,6 @@
 .dine-admin .rp .rp-btn-q { background: transparent; color: var(--t2w); }
 .dine-admin .rp .rp-btn-q:hover:not(:disabled) { background: var(--bg2); color: var(--text); }
 .dine-admin .rp .rp-btn-sm { font-size: 12.5px; padding: 6px 12px; }
-
-/* ============================================================
- * RESTAURANT PROFILE — Tesla override pass. The rules above are
- * shared with the original Apple build; most of the visual change
- * (radius, shadow depth) already lands from the --r-s/--r-m/--r-l
- * and --rp-sh-* tokens redefined in the .rp block above. What's
- * left here are the selectors that hardcoded a pill/circle radius
- * or an Apple-specific "ghost until focus" input treatment instead
- * of referencing those tokens — sharpened individually, plus mono
- * uppercase labels to match the Tesla mockup's instrument-panel
- * typography. No JSX changed for this pass: every class below
- * already exists in the shipped components.
- * ============================================================ */
-.dine-admin .rp .sec-label,
-.dine-admin .rp .stat-l,
-.dine-admin .rp .rlabel { font-family: var(--mono); letter-spacing: .1em; }
-@container (min-width: 700px) {
-  .dine-admin .rp .rlabel { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: var(--t3w); font-weight: 600; }
-}
-.dine-admin .rp .avatar { border-radius: var(--r-m); }
-.dine-admin .rp .tag { background: transparent; border: 1px solid var(--hair2); border-radius: var(--r-s); }
-.dine-admin .rp .id-name h2 { font-weight: 650; letter-spacing: -.028em; }
-.dine-admin .rp .navlink { border-radius: var(--r-s); background: transparent; border: 1px solid var(--hair2); }
-.dine-admin .rp .navlink.on { background: transparent; border-color: var(--p); color: var(--p); }
-@container (min-width: 700px) {
-  .dine-admin .rp .navlink { border: 0; border-left: 2px solid transparent; border-radius: 0; padding-left: 8px; }
-  .dine-admin .rp .navlink.on { border-left-color: var(--p); background: var(--p-tint); }
-}
-.dine-admin .rp .rp-chip { border-radius: var(--r-s); }
-.dine-admin .rp .rp-pill { border-radius: 2px; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
-.dine-admin .rp .dicon { border-radius: var(--r-s); }
-.dine-admin .rp .iconbtn { border-radius: var(--r-s); }
-.dine-admin .rp .ticon { border-radius: var(--r-s); }
-.dine-admin .rp .trow.on { box-shadow: inset 3px 0 0 var(--p); }
-.dine-admin .rp .sw { border-radius: var(--r-s); }
-.dine-admin .rp .sw-dot { border-radius: 2px; }
-.dine-admin .rp .rp-btn { border-radius: var(--r-s); }
-.dine-admin .rp .rp-sel { border-radius: var(--r-s); }
-.dine-admin .rp .dz-ico { border-radius: var(--r-s); }
-.dine-admin .rp .rp-empty-ico { border-radius: var(--r-s); }
-.dine-admin .rp .prompt-ico { border-radius: var(--r-s); }
-.dine-admin .rp .savebar-in { border-radius: var(--r-m); }
-/* persistent bordered input box instead of the Apple "ghost until focus" field */
-.dine-admin .rp .inp { border: 1px solid var(--hair2); border-radius: var(--r-s); padding: 7px 10px; background: var(--card2); }
-.dine-admin .rp .inp:hover { background: var(--card2); border-color: var(--t3w); }
-.dine-admin .rp .inp:focus { background: var(--card2); border-color: var(--p); padding: 7px 10px; margin: 0; }
-
-/* ============================================================
- * DASHBOARD — "Tesla" visual language (mechanical sharp radius,
- * near-zero shadow, mono uppercase labels, hairline-divided
- * instrument-strip stats) applied as overrides on the SHARED
- * classes (.card, .stat-card, .badge, .quick-link, .dtable,
- * .row-card, .live-guest-row, .activity-item, .alert) rather than
- * new component classes: Dashboard's JSX already uses those shared
- * classes, and so do several pages that haven't been redesigned yet
- * (Dinners, Guests, Payouts). Scoping every override under .dash
- * means only the Dashboard's own DOM subtree gets this treatment;
- * those other pages keep today's look until their own pass. Same
- * base color tokens as the Apple pass this replaces — the Tesla
- * mockup shares --bg/--bdr/--p byte-for-byte with the Apple one;
- * what differs is radius, shadow depth and typography, not palette.
- * ============================================================ */
-.dine-admin .dash {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --dash-r: 4px;
-  --dash-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .dash .card { border-color: var(--hair); box-shadow: var(--dash-sh-1); border-radius: var(--dash-r); }
-.dine-admin .dash .card-title {
-  font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--text);
-}
-/* instrument strip: cards flatten into flush hairline-divided cells */
-.dine-admin .dash .stat-grid-4 { gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--dash-r); overflow: hidden; }
-.dine-admin .dash .stat-card { background: var(--bg); border: none; box-shadow: none; border-radius: 0; }
-.dine-admin .dash .stat-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
-.dine-admin .dash .stat-value { font-weight: 600; letter-spacing: -.02em; }
-.dine-admin .dash .quick-link { border-color: var(--hair); box-shadow: none; border-radius: var(--dash-r); }
-.dine-admin .dash .quick-link:hover { box-shadow: none; transform: none; background: var(--bg2); }
-.dine-admin .dash .quick-link-title { letter-spacing: -.01em; }
-.dine-admin .dash .badge {
-  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; border-radius: 2px; padding: 4px 8px;
-}
-.dine-admin .dash .btn { border-radius: var(--dash-r); }
-.dine-admin .dash .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
-.dine-admin .dash .btn-outline { border-color: var(--hair2); }
-.dine-admin .dash .dtable th { border-color: var(--hair); font-family: var(--mono); background: var(--bg2); }
-.dine-admin .dash .dtable td { border-color: var(--hair); }
-.dine-admin .dash .table-scroll { border: 1px solid var(--hair); border-radius: var(--dash-r); overflow: hidden; }
-.dine-admin .dash .row-card { border-color: var(--hair); box-shadow: var(--dash-sh-1); border-radius: var(--dash-r); }
-.dine-admin .dash .live-guest-row { border-color: var(--hair); border-radius: var(--dash-r); }
-.dine-admin .dash .activity-item { border-color: var(--hair); }
-.dine-admin .dash .activity-icon { border-radius: var(--dash-r); }
-.dine-admin .dash .alert { border-radius: var(--dash-r); }
-.dine-admin .dash .alert-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; }
-.dine-admin .dash .alert-yellow { border-color: var(--hair2); }
-.dine-admin .dash .alert-slate { border-color: var(--hair); }
-.dine-admin .dash .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-
-/* ============================================================
- * DINNERS — "Tesla" visual language, applied as overrides on the
- * SHARED classes (.tabs/.tab, .table-wrap, .dtable, .badge, .btn,
- * .stat-grid-4/.stat-card, .field-input, .pg-title) the same way
- * .dash and .rp did for Dashboard and Restaurant Profile: mechanical
- * sharp radius, near-zero shadow, mono uppercase labels, persistent
- * bordered inputs. Scoped under .din so Guests/Payouts (which still
- * use the same shared classes and haven't been redesigned yet) keep
- * today's look until their own pass.
- * ============================================================ */
-.dine-admin .din {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --din-r: 4px;
-  --din-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .din .table-wrap { border-color: var(--hair); box-shadow: var(--din-sh-1); border-radius: var(--din-r); }
-.dine-admin .din .dtable th { border-color: var(--hair); background: var(--bg2); font-family: var(--mono); }
-.dine-admin .din .dtable td { border-color: var(--hair); }
-.dine-admin .din .dtable tr:hover { background: var(--bg2); }
-.dine-admin .din .tabs { background: var(--bg2); border-radius: var(--din-r); }
-.dine-admin .din .tab { border-radius: var(--din-r); }
-.dine-admin .din .tab.active { box-shadow: var(--din-sh-1); }
-.dine-admin .din .badge {
-  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; border-radius: 2px; padding: 4px 8px;
-}
-.dine-admin .din .btn { border-radius: var(--din-r); }
-.dine-admin .din .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
-.dine-admin .din .card { border-color: var(--hair); box-shadow: var(--din-sh-1); border-radius: var(--din-r); }
-.dine-admin .din .card-title { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
-.dine-admin .din .stat-grid-4 { gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--din-r); overflow: hidden; }
-.dine-admin .din .stat-card { background: var(--bg); border: none; box-shadow: none; border-radius: 0; }
-.dine-admin .din .stat-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
-.dine-admin .din .stat-value { font-weight: 600; letter-spacing: -.02em; }
-.dine-admin .din .field-input { border: 1px solid var(--hair2); border-radius: var(--din-r); background: var(--white); }
-.dine-admin .din .field-input:focus { border-color: var(--p); background: var(--white); }
-.dine-admin .din .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
-.dine-admin .din .live-guest-row { border-color: var(--hair); border-radius: var(--din-r); }
-.dine-admin .din .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-
-/* ============================================================
- * GUESTS & BOOKINGS — "Tesla" visual language, applied as overrides
- * on the SHARED classes (.dtable/.table-wrap, .row-card, .badge,
- * .btn, .tabs/.tab, .field-input, .search-bar, .pg-title) the same
- * way .dash/.din did. This page previously used generic `Card`/
- * `Badge`/`Tabs`/`SearchBar`/`RowCard` components and raw Tailwind,
- * not the .dine-admin vocabulary at all — this pass ports it onto
- * that vocabulary AND applies the Tesla mechanical/mono treatment in
- * one go, scoped under .guests so Payouts (not yet redesigned) keeps
- * today's look until its own pass.
- * ============================================================ */
-.dine-admin .guests {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --guests-r: 4px;
-  --guests-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .guests .table-wrap { border-color: var(--hair); box-shadow: var(--guests-sh-1); border-radius: var(--guests-r); }
-.dine-admin .guests .dtable th { border-color: var(--hair); background: var(--bg2); font-family: var(--mono); }
-.dine-admin .guests .dtable td { border-color: var(--hair); }
-.dine-admin .guests .dtable tr:hover { background: var(--bg2); }
-.dine-admin .guests .tabs { background: var(--bg2); border-radius: var(--guests-r); }
-.dine-admin .guests .tab { border-radius: var(--guests-r); }
-.dine-admin .guests .tab.active { box-shadow: var(--guests-sh-1); }
-.dine-admin .guests .badge {
-  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; border-radius: 2px; padding: 4px 8px;
-}
-.dine-admin .guests .btn { border-radius: var(--guests-r); }
-.dine-admin .guests .card { border-color: var(--hair); box-shadow: var(--guests-sh-1); border-radius: var(--guests-r); }
-.dine-admin .guests .row-card { border-color: var(--hair); box-shadow: var(--guests-sh-1); border-radius: var(--guests-r); }
-.dine-admin .guests .field-input { border: 1px solid var(--hair2); border-radius: var(--guests-r); background: var(--white); }
-.dine-admin .guests .field-input:focus { border-color: var(--p); background: var(--white); }
-.dine-admin .guests .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-
-/* ============================================================
- * PAYOUTS — "Tesla" visual language, applied as overrides on the
- * SHARED classes (.card, .stat-grid-4/.stat-card, .field-input,
- * .field-grid-2, .btn, .badge, .alert, .dtable/.table-wrap,
- * .row-card, .pg-title) the same way .dash/.din/.guests did. This
- * page previously used generic `StatCard`/`Card`/`Badge` components
- * and raw Tailwind, not the .dine-admin vocabulary at all — this
- * pass ports it onto that vocabulary AND applies the Tesla
- * mechanical/mono treatment in one go, scoped under .payouts.
- * ============================================================ */
-.dine-admin .payouts {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --payouts-r: 4px;
-  --payouts-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .payouts .stat-grid-4 { gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--payouts-r); overflow: hidden; }
-.dine-admin .payouts .stat-card { background: var(--bg); border: none; box-shadow: none; border-radius: 0; }
-.dine-admin .payouts .stat-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
-.dine-admin .payouts .stat-value { font-weight: 600; letter-spacing: -.02em; }
-.dine-admin .payouts .card { border-color: var(--hair); box-shadow: var(--payouts-sh-1); border-radius: var(--payouts-r); }
-.dine-admin .payouts .card-title {
-  font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--text);
-}
-.dine-admin .payouts .field-input { border: 1px solid var(--hair2); border-radius: var(--payouts-r); background: var(--white); }
-.dine-admin .payouts .field-input:focus { border-color: var(--p); background: var(--white); }
-.dine-admin .payouts .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
-.dine-admin .payouts .btn { border-radius: var(--payouts-r); }
-.dine-admin .payouts .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
-.dine-admin .payouts .btn-outline { border-color: var(--hair2); }
-.dine-admin .payouts .badge {
-  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; border-radius: 2px; padding: 4px 8px;
-}
-.dine-admin .payouts .alert { border-radius: var(--payouts-r); }
-.dine-admin .payouts .alert-yellow { border-color: var(--hair2); }
-.dine-admin .payouts .table-wrap { border-color: var(--hair); box-shadow: var(--payouts-sh-1); border-radius: var(--payouts-r); }
-.dine-admin .payouts .dtable th { border-color: var(--hair); background: var(--bg2); font-family: var(--mono); }
-.dine-admin .payouts .dtable td { border-color: var(--hair); }
-.dine-admin .payouts .dtable tr:hover { background: var(--bg2); }
-.dine-admin .payouts .row-card { border-color: var(--hair); box-shadow: var(--payouts-sh-1); border-radius: var(--payouts-r); }
-.dine-admin .payouts .pg-title { font-weight: 650; letter-spacing: -0.028em; }
 
 /* ============================================================
  * MEALS — reverted to wireframe-native ("Apple-native" cream/

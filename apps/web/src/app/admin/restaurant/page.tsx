@@ -11,6 +11,7 @@ import {
 import { RestaurantForm } from "./components/restaurant-form";
 import { ApplicationInfoCard } from "./components/application-info-card";
 import { RestaurantOnboardingWizard } from "./components/restaurant-onboarding-wizard";
+import { OperatingHoursCard } from "./components/operating-hours-card";
 import { ThemeManager } from "./components/theme-manager";
 import { ComplianceDocumentsManager } from "./components/compliance-documents-manager";
 import { IconSprite } from "./components/icon-sprite";
@@ -122,130 +123,122 @@ export default async function RestaurantProfilePage() {
     <div className="rp">
       <IconSprite />
 
-      <div className="layout">
-        {/* ============ LEFT RAIL ============ */}
-        <div className="rail">
-          <div className="idcard">
-            <div className="cover">
-              <Link href="/admin/media-library" className="cover-edit">
-                <svg><use href="#ic-camera" /></svg> Change cover
+      {/*
+        Single flat scrolling column, matching the wireframe's "restructured
+        again" premium-header + stacked-cards layout (§sec-restaurant-profile)
+        - no sticky rail, no in-page anchor nav. Those existed here from an
+        earlier, since-superseded "restaurant-profile.html" Apple mockup
+        (see the CSS comment above .dine-admin .rp); the canonical wireframe
+        dropped that shell entirely once Team/Media Library/Settings were
+        promoted to their own sidebar destinations, leaving this page as one
+        continuous identity+compliance story. The .rp-scoped classes below
+        (idcard, rp-card, sec, etc.) are kept as-is - only the shell around
+        them changed.
+      */}
+      <div className="col" style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
+        {/* Premium profile header - banner, avatar, name, tags, stat row */}
+        <div className="idcard">
+          <div className="cover">
+            <Link href="/admin/media-library" className="cover-edit">
+              Manage in Media Library →
+            </Link>
+          </div>
+          <div className="id-body">
+            <div className="avatar">{getInitials(restaurant.name)}</div>
+            <div className="id-name">
+              <h2>{restaurant.name}</h2>
+              <span className={`rp-pill ${statusPillClass[restaurant.status] ?? "grey"}`}>
+                {restaurant.status === "ACTIVE" && <svg><use href="#ic-check" /></svg>}
+                {restaurant.status}
+              </span>
+            </div>
+            {cuisineTags.length > 0 && (
+              <div className="taglist">
+                {cuisineTags.map((tag) => (
+                  <span key={tag} className="tag">{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="stats">
+            <div className="stat">
+              <div className="stat-l">Dinners hosted</div>
+              <div className="stat-v">{dinners.length}</div>
+            </div>
+            <div className="stat">
+              <div className="stat-l">Avg rating</div>
+              <div className="stat-v">
+                {avgRating ? avgRating.average.toFixed(1) : "—"} <svg><use href="#ic-star" /></svg>
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-l">Team members</div>
+              <div className="stat-v">{teamCount}</div>
+              <Link className="stat-link" href="/admin/team">
+                Manage <svg><use href="#ic-chev" /></svg>
               </Link>
             </div>
-            <div className="id-body">
-              <div className="avatar">{getInitials(restaurant.name)}</div>
-              <div className="id-name">
-                <h2>{restaurant.name}</h2>
-                <span className={`rp-pill ${statusPillClass[restaurant.status] ?? "grey"}`}>
-                  {restaurant.status === "ACTIVE" && <svg><use href="#ic-check" /></svg>}
-                  {restaurant.status}
-                </span>
-              </div>
-              {cuisineTags.length > 0 && (
-                <div className="taglist">
-                  {cuisineTags.map((tag) => (
-                    <span key={tag} className="tag">{tag}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="stats">
-              <div className="stat">
-                <div className="stat-l">Dinners hosted</div>
-                <div className="stat-v">{dinners.length}</div>
-              </div>
-              <div className="stat">
-                <div className="stat-l">Avg rating</div>
-                <div className="stat-v">
-                  {avgRating ? avgRating.average.toFixed(1) : "—"} <svg><use href="#ic-star" /></svg>
-                </div>
-              </div>
-              <div className="stat">
-                <div className="stat-l">Team</div>
-                <div className="stat-v">{teamCount}</div>
-                <Link className="stat-link" href="/admin/team">
-                  Manage <svg><use href="#ic-chev" /></svg>
-                </Link>
-              </div>
-              <div className="stat">
-                <div className="stat-l">Partner since</div>
-                <div className="stat-v sm">
-                  {new Date(restaurant.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </div>
+            <div className="stat">
+              <div className="stat-l">Partner since</div>
+              <div className="stat-v sm">
+                {new Date(restaurant.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  year: "numeric",
+                })}
               </div>
             </div>
           </div>
+        </div>
 
-          <nav className="nav" aria-label="Sections on this page">
-            <a className="navlink on" href="#sec-app"><svg><use href="#ic-shield" /></svg> Application</a>
-            <a className="navlink" href="#sec-biz"><svg><use href="#ic-store" /></svg> Business details</a>
-            <a className="navlink" href="#sec-contact"><svg><use href="#ic-phone" /></svg> Contact</a>
-            <a className="navlink" href="#sec-themes">
-              <svg><use href="#ic-table" /></svg> Table themes
-              <span className="navcount">{enabledThemeIds.length}/{allThemes.length}</span>
-            </a>
-            <a className="navlink" href="#sec-docs">
-              <svg><use href="#ic-doc" /></svg> Documents
-              <span className="navcount">{clearedDocuments}/{complianceDocuments.length}</span>
-            </a>
-          </nav>
+        {/* From Your Application - identity-first, ahead of the editable form (§16.1) */}
+        <ApplicationInfoCard restaurant={restaurant} />
 
-          <div className="rail-foot">
-            <svg><use href="#ic-eye" /></svg>
-            <span>Guests see a trimmed version.</span>
+        {/* Business Details + Contact Information */}
+        <RestaurantForm restaurant={restaurant} />
+
+        {/* Operating Hours - §6.2 wireframe, "NEW" badge; built but never
+            rendered on this page until now */}
+        <OperatingHoursCard restaurantId={restaurant.id} operatingHours={restaurant.operatingHours} />
+
+        {/* Table Themes */}
+        <section className="sec" id="sec-themes">
+          <div className="sec-head">
+            <div className="sec-label">Table themes</div>
+            <span className="sec-aside">Hosting {enabledThemeIds.length} of {allThemes.length}</span>
           </div>
-        </div>
+          <div className="rp-card">
+            <ThemeManager
+              restaurantId={restaurant.id}
+              allThemes={allThemes}
+              enabledThemeIds={enabledThemeIds}
+            />
+          </div>
+          <p className="foot">
+            Themes you host become selectable when you create a dinner. Turning one off never
+            affects dinners already on the calendar.
+          </p>
+        </section>
 
-        {/* ============ RIGHT COLUMN ============ */}
-        <div className="col">
-          {/* From Your Application - identity-first, ahead of the editable form (§16.1) */}
-          <ApplicationInfoCard restaurant={restaurant} />
-
-          {/* Business Details + Contact Information */}
-          <RestaurantForm restaurant={restaurant} />
-
-          {/* Table Themes */}
-          <section className="sec" id="sec-themes">
-            <div className="sec-head">
-              <div className="sec-label">Table themes</div>
-              <span className="sec-aside">Hosting {enabledThemeIds.length} of {allThemes.length}</span>
-            </div>
-            <div className="rp-card">
-              <ThemeManager
-                restaurantId={restaurant.id}
-                allThemes={allThemes}
-                enabledThemeIds={enabledThemeIds}
-              />
-            </div>
-            <p className="foot">
-              Themes you host become selectable when you create a dinner. Turning one off never
-              affects dinners already on the calendar.
-            </p>
-          </section>
-
-          {/* Compliance Documents */}
-          <section className="sec" id="sec-docs">
-            <div className="sec-head">
-              <div className="sec-label">Compliance documents</div>
-              {complianceDocuments.length > 0 ? (
-                <span className="sec-aside">
-                  {clearedDocuments} of {complianceDocuments.length} cleared
-                </span>
-              ) : (
-                <span className="sec-aside" style={{ color: "var(--t3w)", fontWeight: 500 }}>None yet</span>
-              )}
-            </div>
-            <div className="rp-card">
-              <ComplianceDocumentsManager restaurantId={restaurant.id} documents={complianceDocuments} />
-            </div>
-            <p className="foot">
-              Business registration and food safety must be cleared before your first dinner goes
-              live. A liquor license is only needed if you plan to serve alcohol at the table.
-            </p>
-          </section>
-        </div>
+        {/* Compliance Documents */}
+        <section className="sec" id="sec-docs">
+          <div className="sec-head">
+            <div className="sec-label">Compliance documents</div>
+            {complianceDocuments.length > 0 ? (
+              <span className="sec-aside">
+                {clearedDocuments} of {complianceDocuments.length} cleared
+              </span>
+            ) : (
+              <span className="sec-aside" style={{ color: "var(--t3w)", fontWeight: 500 }}>None yet</span>
+            )}
+          </div>
+          <div className="rp-card">
+            <ComplianceDocumentsManager restaurantId={restaurant.id} documents={complianceDocuments} />
+          </div>
+          <p className="foot">
+            Business registration and food safety must be cleared before your first dinner goes
+            live. A liquor license is only needed if you plan to serve alcohol at the table.
+          </p>
+        </section>
       </div>
     </div>
   );
