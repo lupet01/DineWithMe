@@ -931,88 +931,35 @@
 .dine-admin .payouts .pg-title { font-weight: 650; letter-spacing: -0.028em; }
 
 /* ============================================================
- * MEALS — "Tesla" visual language (canon since 2026-08-01), applied
- * as overrides on the SHARED classes (.card, .row-card, .stat-card,
- * .stat-grid-4, .badge, .btn, .field-input, .field-label, .dtable,
- * .table-wrap, .pg-title, .alert, .section-block-title) the same
- * way .dash/.din/.guests/.payouts did. Also styles the Meals-
- * specific classes introduced by the wireframe rebuild:
+ * MEALS — reverted to wireframe-native ("Apple-native" cream/
+ * orange system) 2026-08-06, canon flip away from Tesla. The
+ * shared classes (.card, .row-card, .stat-card, .badge, .btn,
+ * .field-input, .dtable, .table-wrap, .pg-title) need no override
+ * at all anymore — they're already wireframe-native by default, so
+ * this page now only styles its own page-specific classes:
  * .meal-editor-course-label/-dish-chip/-dish-chip-body/-dish-chip-
  * name/-dish-chip-caption/-picker-row (list + editor share this one
- * .meals namespace, matching how both pages share the `meals`
- * wrapper class in their page.tsx).
+ * .meals namespace).
  * ============================================================ */
-.dine-admin .meals {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --meals-r: 4px;
-  --meals-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .meals .card { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: var(--meals-r); }
-.dine-admin .meals .row-card { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: var(--meals-r); transition: box-shadow var(--dur-base) var(--ease); }
-.dine-admin .meals .row-card:hover { box-shadow: var(--shadow-2); }
-.dine-admin .meals .stat-grid-4 { gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: var(--meals-r); overflow: hidden; }
-.dine-admin .meals .stat-card { background: var(--bg); border: none; box-shadow: none; border-radius: 0; }
-.dine-admin .meals .stat-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
-.dine-admin .meals .stat-value { font-weight: 600; letter-spacing: -.02em; }
-.dine-admin .meals .badge { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; border-radius: 2px; padding: 4px 8px; }
-.dine-admin .meals .field-input { border: 1px solid var(--hair2); border-radius: var(--meals-r); background: var(--white); }
-.dine-admin .meals .field-input:focus { border-color: var(--p); background: var(--white); }
-.dine-admin .meals .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
-.dine-admin .meals .btn { border-radius: var(--meals-r); }
-.dine-admin .meals .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
-.dine-admin .meals .btn-outline { border-color: var(--hair2); }
-.dine-admin .meals .alert { border-radius: var(--meals-r); }
-.dine-admin .meals .alert-yellow { border-color: var(--hair2); }
-.dine-admin .meals .table-wrap { border-color: var(--hair); box-shadow: var(--meals-sh-1); border-radius: var(--meals-r); }
-.dine-admin .meals .dtable th { border-color: var(--hair); background: var(--bg2); font-family: var(--mono); font-size: 10px; }
-.dine-admin .meals .dtable td { border-color: var(--hair); }
-.dine-admin .meals .dtable tr:hover { background: var(--bg2); }
-.dine-admin .meals .live-guest-row { border-color: var(--hair); }
-.dine-admin .meals .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-.dine-admin .meals .section-block-title { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); }
-
-.dine-admin .meals .meal-editor-course-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); margin-bottom: 10px; }
-.dine-admin .meals .meal-editor-dish-chip { display: flex; align-items: center; gap: 10px; border: 1px solid var(--hair); border-radius: var(--meals-r); padding: 8px 10px 8px 8px; background: var(--bg); }
+.dine-admin .meals .meal-editor-course-label { font-size: 12px; color: var(--t3); font-weight: 500; margin-bottom: 10px; }
+.dine-admin .meals .meal-editor-dish-chip { display: flex; align-items: center; gap: 10px; border: 1px solid var(--bdr); border-radius: 14px; padding: 8px 10px 8px 8px; background: var(--white); }
 .dine-admin .meals .meal-editor-dish-chip-body { min-width: 0; }
 .dine-admin .meals .meal-editor-dish-chip-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
 .dine-admin .meals .meal-editor-dish-chip-caption { font-size: 11px; color: var(--t3); }
-.dine-admin .meals .meal-editor-picker-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--hair); border-radius: var(--meals-r); padding: 8px; background: var(--bg); cursor: pointer; font: inherit; color: inherit; transition: border-color var(--dur-fast) var(--ease), background var(--dur-base) var(--ease); }
-.dine-admin .meals .meal-editor-picker-row:hover { background: var(--bg2); border-color: var(--hair2); }
+.dine-admin .meals .meal-editor-picker-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--bdr); border-radius: 14px; padding: 8px; background: var(--white); cursor: pointer; font: inherit; color: inherit; transition: border-color var(--dur-fast) var(--ease), background var(--dur-base) var(--ease); }
+.dine-admin .meals .meal-editor-picker-row:hover { background: var(--bg2); border-color: var(--bdr2); }
 .dine-admin .meals .meal-editor-picker-row:disabled { opacity: .5; cursor: default; }
 
 /* ============================================================
- * DISH LIBRARY — "Tesla" visual language, first vocabulary pass
- * (this page previously used raw Tailwind + generic Card/Badge
- * components, not on .dine-admin at all — like Payouts, it goes
- * straight to Tesla with no interim Apple pass). Overrides shared
- * classes scoped under .dish-library, plus the page-specific
- * .dish-library-*/.dish-form-photo-* classes from the wireframe
- * rebuild.
+ * DISH LIBRARY — reverted to wireframe-native 2026-08-06. Shared
+ * classes need no override; only the page-specific .dish-library-*
+ * and .dish-form-photo-* classes are styled here.
  * ============================================================ */
-.dine-admin .dish-library {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --dish-r: 4px;
-  --dish-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .dish-library .card { border-color: var(--hair); box-shadow: var(--dish-sh-1); border-radius: var(--dish-r); }
-.dine-admin .dish-library .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-.dine-admin .dish-library .btn { border-radius: var(--dish-r); }
-.dine-admin .dish-library .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
-.dine-admin .dish-library .btn-outline { border-color: var(--hair2); }
-.dine-admin .dish-library .badge { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; border-radius: 2px; padding: 3px 7px; }
-.dine-admin .dish-library .field-input { border: 1px solid var(--hair2); border-radius: var(--dish-r); background: var(--white); }
-.dine-admin .dish-library .field-input:focus { border-color: var(--p); background: var(--white); }
-.dine-admin .dish-library .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
-.dine-admin .dish-library .alert { border-radius: var(--dish-r); }
-.dine-admin .dish-library .alert-yellow { border-color: var(--hair2); }
-
-.dine-admin .dish-library .dish-library-group-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); margin-bottom: 10px; }
-.dine-admin .dish-library .dish-library-row { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--hair); border-radius: var(--dish-r); margin-bottom: 8px; }
+.dine-admin .dish-library .dish-library-group-label { font-size: 12px; color: var(--t3); font-weight: 500; margin-bottom: 10px; }
+.dine-admin .dish-library .dish-library-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--bdr); border-radius: 14px; margin-bottom: 8px; }
 .dine-admin .dish-library .dish-library-row:last-child { margin-bottom: 0; }
-.dine-admin .dish-library .dish-library-thumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
-.dine-admin .dish-library .dish-library-thumb-empty { background: var(--bg2); border: 1px solid var(--hair); }
+.dine-admin .dish-library .dish-library-thumb { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+.dine-admin .dish-library .dish-library-thumb-empty { background: var(--bg2); border: 1px solid var(--bdr); }
 .dine-admin .dish-library .dish-library-row-body { flex: 1; min-width: 0; }
 .dine-admin .dish-library .dish-library-row-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
 .dine-admin .dish-library .dish-library-row-desc { font-size: 12px; color: var(--t3); margin-top: 2px; }
@@ -1020,127 +967,67 @@
 .dine-admin .dish-library .dish-library-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .dine-admin .dish-library .dish-library-row-price { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
 
-.dine-admin .dish-library .dish-form-photo-drop { width: 100%; height: 100px; border-radius: var(--dish-r); background: var(--bg2); border: 1.5px dashed var(--hair2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--t3); cursor: pointer; font: inherit; margin-bottom: 12px; }
+.dine-admin .dish-library .dish-form-photo-drop { width: 100%; height: 120px; border-radius: 14px; background: var(--bg2); border: 1.5px dashed var(--bdr2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--t3); cursor: pointer; font: inherit; margin-bottom: 14px; }
 .dine-admin .dish-library .dish-form-photo-selected { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.dine-admin .dish-library .dish-form-photo-thumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.dine-admin .dish-library .dish-form-photo-thumb { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
 .dine-admin .dish-library .dish-form-photo-actions { display: flex; gap: 12px; }
 .dine-admin .dish-library .dish-form-photo-link { font-size: 12px; font-weight: 600; color: var(--p); background: none; border: none; cursor: pointer; padding: 0; font: inherit; }
 .dine-admin .dish-library .dish-form-photo-link-remove { color: var(--red-txt); }
-.dine-admin .dish-library .dish-form-photo-pool { margin-top: 10px; padding: 10px; border: 1px solid var(--hair); border-radius: var(--dish-r); }
+.dine-admin .dish-library .dish-form-photo-pool { margin-top: 10px; padding: 10px; border: 1px solid var(--bdr); border-radius: 14px; }
 .dine-admin .dish-library .dish-form-photo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.dine-admin .dish-library .dish-form-photo-cell { aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid transparent; padding: 0; cursor: pointer; }
+.dine-admin .dish-library .dish-form-photo-cell { aspect-ratio: 1; border-radius: 10px; overflow: hidden; border: 2px solid transparent; padding: 0; cursor: pointer; }
 .dine-admin .dish-library .dish-form-photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dine-admin .dish-library .dish-form-photo-cell.selected { border-color: var(--p); }
 
 /* ============================================================
- * TEAM — "Tesla" visual language, first vocabulary pass (this
- * page previously used raw Tailwind + generic Card/Badge
- * components, not on .dine-admin at all — like Payouts and Dish
- * Library, it goes straight to Tesla with no interim Apple pass).
- * Overrides shared classes scoped under .team, plus the page-
- * specific .team-roster-*/.pending-invite-row classes from the
- * wireframe rebuild.
+ * TEAM — reverted to wireframe-native 2026-08-06. Shared classes
+ * need no override; only .team-roster-*/.pending-invite-row are
+ * styled here.
  * ============================================================ */
-.dine-admin .team {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --team-r: 4px;
-  --team-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .team .card { border-color: var(--hair); box-shadow: var(--team-sh-1); border-radius: var(--team-r); }
-.dine-admin .team .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-.dine-admin .team .btn { border-radius: var(--team-r); }
-.dine-admin .team .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
-.dine-admin .team .btn-outline { border-color: var(--hair2); }
-.dine-admin .team .badge { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; border-radius: 2px; padding: 4px 8px; }
-.dine-admin .team .field-input { border: 1px solid var(--hair2); border-radius: var(--team-r); background: var(--white); }
-.dine-admin .team .field-input:focus { border-color: var(--p); background: var(--white); }
-.dine-admin .team .field-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); }
-.dine-admin .team .alert { border-radius: var(--team-r); }
-.dine-admin .team .alert-yellow { border-color: var(--hair2); }
-
-.dine-admin .team .team-roster-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--hair); border-radius: var(--team-r); }
+.dine-admin .team .team-roster-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--bdr); border-radius: 14px; }
 .dine-admin .team .team-roster-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .dine-admin .team .team-roster-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .dine-admin .team .team-roster-email { font-size: 12px; color: var(--t3); margin-top: 1px; }
-.dine-admin .team .pending-invite-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px dashed var(--hair2); border-radius: var(--team-r); }
+.dine-admin .team .pending-invite-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1.5px dashed var(--bdr2); border-radius: 14px; }
 
 /* ============================================================
- * SETTINGS — "Tesla" visual language, first vocabulary pass (this
- * page previously used raw Tailwind + generic Card/Badge
- * components, not on .dine-admin at all — like Payouts, Dish
- * Library, and Team, it goes straight to Tesla with no interim
- * Apple pass). Overrides shared classes scoped under .settings,
- * plus the page-specific classes from the wireframe rebuild:
- * .pause-listing-note, .notification-pref-*, .danger-zone-*,
- * .payouts-snapshot-card.
+ * SETTINGS — reverted to wireframe-native 2026-08-06. Shared
+ * classes need no override; only .pause-listing-note,
+ * .notification-pref-*, and .danger-zone-* (which now matches the
+ * wireframe's own literal red-wash colors) are styled here.
  * ============================================================ */
-.dine-admin .settings {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --settings-r: 4px;
-  --settings-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .settings .card { border-color: var(--hair); box-shadow: var(--settings-sh-1); border-radius: var(--settings-r); }
-.dine-admin .settings .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-.dine-admin .settings .card-title { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--text); }
-.dine-admin .settings .btn { border-radius: var(--settings-r); }
-.dine-admin .settings .btn-outline { border-color: var(--hair2); }
-.dine-admin .settings .field-input { border: 1px solid var(--hair2); border-radius: var(--settings-r); background: var(--white); }
-.dine-admin .settings .field-input:focus { border-color: var(--p); background: var(--white); }
-.dine-admin .settings .alert { border-radius: var(--settings-r); }
-.dine-admin .settings .alert-yellow { border-color: var(--hair2); }
-
 .dine-admin .settings .pause-listing-note { font-size: 11px; color: var(--t3); margin-top: 6px; }
 
 .dine-admin .settings .notification-pref-rows { display: flex; flex-direction: column; gap: 10px; }
 .dine-admin .settings .notification-pref-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text); cursor: pointer; }
 .dine-admin .settings .notification-pref-caption { font-size: 11px; color: var(--t3); margin-top: 12px; line-height: 1.4; }
 
-.dine-admin .settings .danger-zone-card { border-color: rgba(220, 38, 38, 0.28); background: rgba(220, 38, 38, 0.035); }
-.dine-admin .settings .danger-zone-title { color: var(--red-txt); }
-.dine-admin .settings .danger-zone-body { color: var(--red-txt); opacity: 0.85; line-height: 1.4; }
-.dine-admin .settings .danger-zone-pending { border: 1px solid var(--yellow-bdr); background: var(--yellow-bg); border-radius: var(--settings-r); padding: 12px; color: var(--yellow-txt2); }
+.dine-admin .settings .danger-zone-card { border: 1.5px solid #fecaca; background: #fef2f2; }
+.dine-admin .settings .danger-zone-title { color: #991b1b; }
+.dine-admin .settings .danger-zone-body { color: #991b1b; line-height: 1.4; }
+.dine-admin .settings .danger-zone-pending { border: 1px solid var(--yellow-bdr); background: var(--yellow-bg); border-radius: 14px; padding: 12px; color: var(--yellow-txt2); }
 .dine-admin .settings .danger-zone-cancel-link { font-size: 12px; font-weight: 600; color: var(--t2); background: none; border: none; cursor: pointer; padding: 0; margin-top: 8px; text-decoration: underline; }
-.dine-admin .settings .danger-zone-btn { border-color: rgba(220, 38, 38, 0.4); color: var(--red-txt); }
+.dine-admin .settings .danger-zone-btn { border-color: #ef4444; color: #ef4444; }
 
 /* ============================================================
- * MEDIA LIBRARY — "Tesla" visual language, first vocabulary pass
- * (this page previously used raw Tailwind + a generic Card
- * component, not on .dine-admin at all). Overrides shared classes
- * scoped under .media-library (tabs, following the Dinners
- * precedent), plus the page-specific classes from the wireframe
- * rebuild: .featured-photo-*, .photo-tile-*, .photo-options-*,
- * .media-library-grid/-caption.
+ * MEDIA LIBRARY — reverted to wireframe-native 2026-08-06. Shared
+ * classes (including .tabs/.tab) need no override; only
+ * .featured-photo-*, .photo-tile-*, .photo-options-*, and
+ * .media-library-grid/-caption are styled here.
  * ============================================================ */
-.dine-admin .media-library {
-  --hair: rgba(60, 40, 25, 0.09);
-  --hair2: rgba(60, 40, 25, 0.16);
-  --media-r: 4px;
-  --media-sh-1: 0 1px 1px rgba(60, 40, 25, .03);
-}
-.dine-admin .media-library .pg-title { font-weight: 650; letter-spacing: -0.028em; }
-.dine-admin .media-library .btn { border-radius: var(--media-r); }
-.dine-admin .media-library .btn-primary { box-shadow: 0 1px 2px var(--p-glow); }
-.dine-admin .media-library .alert { border-radius: var(--media-r); }
-.dine-admin .media-library .alert-yellow { border-color: var(--hair2); }
-.dine-admin .media-library .tabs { background: var(--bg2); border-radius: var(--media-r); }
-.dine-admin .media-library .tab { border-radius: var(--media-r); }
-.dine-admin .media-library .tab.active { box-shadow: var(--media-sh-1); }
-
-.dine-admin .media-library .featured-photo { display: block; width: 100%; padding: 0; border: 1px solid var(--hair); border-radius: var(--media-r); overflow: hidden; position: relative; cursor: pointer; background: none; }
+.dine-admin .media-library .featured-photo { display: block; width: 100%; padding: 0; border: 1px solid var(--bdr); border-radius: 16px; overflow: hidden; position: relative; cursor: pointer; background: none; box-shadow: var(--shadow-2); }
 .dine-admin .media-library .featured-photo-img { width: 100%; height: 170px; object-fit: cover; display: block; }
-.dine-admin .media-library .featured-photo-badge { position: absolute; top: 10px; left: 10px; background: var(--p); color: #fff; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; }
-.dine-admin .media-library .featured-photo-empty { border: 1.5px dashed var(--hair2); border-radius: var(--media-r); padding: 24px; text-align: center; }
+.dine-admin .media-library .featured-photo-badge { position: absolute; top: 10px; left: 10px; background: var(--p); color: #fff; }
+.dine-admin .media-library .featured-photo-empty { border: 1.5px dashed var(--bdr2); border-radius: 16px; padding: 24px; text-align: center; }
 
 .dine-admin .media-library .media-library-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-.dine-admin .media-library .photo-tile { position: relative; padding: 0; border: 1px solid var(--hair); border-radius: var(--media-r); overflow: hidden; cursor: pointer; background: none; height: 88px; }
+.dine-admin .media-library .photo-tile { position: relative; padding: 0; border: 1px solid var(--bdr); border-radius: 14px; overflow: hidden; cursor: pointer; background: none; height: 88px; box-shadow: var(--shadow-1); }
 .dine-admin .media-library .photo-tile-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.dine-admin .media-library .photo-tile-tag { position: absolute; bottom: 4px; left: 4px; font-size: 8px; font-weight: 700; color: #fff; background: rgba(0,0,0,.55); padding: 1px 5px; border-radius: 2px; }
+.dine-admin .media-library .photo-tile-tag { position: absolute; bottom: 4px; left: 4px; font-size: 8px; font-weight: 700; color: #fff; background: rgba(0,0,0,.55); padding: 1px 5px; border-radius: 20px; }
 .dine-admin .media-library .media-library-caption { font-size: 11px; color: var(--t3); margin-top: 4px; line-height: 1.5; }
 
 .dine-admin .media-library .photo-options-body { display: flex; flex-direction: column; gap: 12px; }
-.dine-admin .media-library .photo-options-preview { width: 100%; height: 180px; object-fit: cover; border-radius: var(--media-r); border: 1px solid var(--hair); }
+.dine-admin .media-library .photo-options-preview { width: 100%; height: 180px; object-fit: cover; border-radius: 14px; border: 1px solid var(--bdr); }
 .dine-admin .media-library .photo-options-usage { font-size: 12.5px; color: var(--t2); }
 .dine-admin .media-library .photo-options-usage-link { color: var(--p); font-weight: 600; text-decoration: none; }
 .dine-admin .media-library .photo-options-actions { display: flex; flex-direction: column; gap: 8px; }
