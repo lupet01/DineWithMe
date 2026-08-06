@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ArrowUpDown } from "lucide-react";
+import { Search, ArrowUpDown, Filter } from "lucide-react";
 import { formatAmount } from "@dinewithme/config/src/payment";
 import { GuestQuickView } from "@/app/admin/components/guest-quick-view";
 
@@ -65,6 +65,13 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
   const [tab, setTab] = useState<TabValue>("upcoming");
   const [dinnerFilter, setDinnerFilter] = useState("");
   const [quickViewGuest, setQuickViewGuest] = useState<GuestUser | null>(null);
+  // Mobile-only "Filter Guests" panel (same filter-sheet pattern as the
+  // Dinners screen) - the desktop toolbar keeps its inline Dinner <select>,
+  // but on mobile that select is replaced by a filter icon that toggles this
+  // panel, staged in draft state and only applied on "Apply" / cleared on
+  // "Reset".
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [draftDinnerFilter, setDraftDinnerFilter] = useState("");
 
   const dinnerOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -133,9 +140,20 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
     );
   }
 
+  const handleApplyFilter = () => {
+    setDinnerFilter(draftDinnerFilter);
+    setShowFilterPanel(false);
+  };
+
+  const handleResetFilter = () => {
+    setDraftDinnerFilter("");
+    setDinnerFilter("");
+  };
+
   return (
     <div>
-      <div className="search-toolbar">
+      {/* Desktop toolbar: search + inline Dinner select + tabs */}
+      <div className="search-toolbar only-desktop-flex">
         <div className="search-bar">
           <Search className="search-icon" />
           <input
@@ -172,6 +190,75 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
           ))}
         </div>
       </div>
+
+      {/* Mobile toolbar: search + filter icon (opens Filter Guests panel below) */}
+      <div className="only-mobile-flex" style={{ alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div className="search-bar" style={{ width: "100%" }}>
+          <Search className="search-icon" />
+          <input
+            className="field-input"
+            placeholder="Search guests…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <button
+          type="button"
+          className="m-icon-btn"
+          aria-label="Toggle Filter Guests panel"
+          onClick={() => {
+            setDraftDinnerFilter(dinnerFilter);
+            setShowFilterPanel((v) => !v);
+          }}
+        >
+          <Filter className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="tabs only-mobile" style={{ marginBottom: 12 }}>
+        {tabItems.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            className={`tab ${tab === item.value ? "active" : ""}`}
+            onClick={() => setTab(item.value as TabValue)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {showFilterPanel && (
+        <div className="card card-pad only-mobile" style={{ marginBottom: 14 }}>
+          <div className="card-title" style={{ fontSize: 13, marginBottom: 12 }}>
+            Filter Guests
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div>
+              <label className="field-label">Dinner</label>
+              <select
+                className="field-input"
+                value={draftDinnerFilter}
+                onChange={(e) => setDraftDinnerFilter(e.target.value)}
+              >
+                <option value="">All Dinners</option>
+                {dinnerOptions.map(([id, title]) => (
+                  <option key={id} value={id}>
+                    {title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+              <button type="button" className="btn btn-sm btn-outline" style={{ flex: 1 }} onClick={handleResetFilter}>
+                Reset
+              </button>
+              <button type="button" className="btn btn-sm btn-primary" style={{ flex: 1 }} onClick={handleApplyFilter}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile: stacked row-cards. Desktop: table. Same filtered data. */}
       <div className="only-mobile">

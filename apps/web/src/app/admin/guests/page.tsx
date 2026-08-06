@@ -30,7 +30,7 @@ export default async function GuestsPage() {
     <div className="guests">
       <div style={{ marginBottom: 20 }}>
         <h1 className="pg-title">Guests &amp; Bookings</h1>
-        <p className="pg-sub">Everyone who has booked a table across all your dinners</p>
+        <p className="pg-sub">Every guest who&apos;s booked a dinner at {restaurant.name}</p>
       </div>
 
       <GuestsTable guests={guests} restaurantId={restaurant.id} />

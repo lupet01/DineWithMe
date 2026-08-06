@@ -126,11 +126,14 @@ export class SeatRepository extends BaseRepository<Seat> {
   }
 
   /**
-   * A user's confirmed bookings at one specific restaurant — the query that
-   * makes the Guest Quick View's gatekeeping real: scoped by
-   * (confirmedByUserId, dinner.restaurantId) together, so it is structurally
-   * incapable of returning another restaurant's booking history for this
-   * guest.
+   * A user's bookings at one specific restaurant — the query that makes the
+   * Guest Quick View's gatekeeping real: scoped by (userId, dinner.restaurantId)
+   * together, so it is structurally incapable of returning another
+   * restaurant's booking history for this guest. Matches on confirmedByUserId
+   * OR heldByUserId so a guest who's only HELD a seat (awaiting payment, not
+   * yet confirmed) still shows up here instead of a false "0 dinners" —
+   * Guests & Bookings' Upcoming tab surfaces HELD guests too, and Quick View
+   * is reachable from there.
    */
   async findByUserAndRestaurant(
     userId: string,
@@ -144,7 +147,7 @@ export class SeatRepository extends BaseRepository<Seat> {
   > {
     return this.prisma.seat.findMany({
       where: {
-        confirmedByUserId: userId,
+        OR: [{ confirmedByUserId: userId }, { heldByUserId: userId }],
         dinner: { restaurantId },
       },
       select: {
