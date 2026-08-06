@@ -56,7 +56,10 @@ export function PayoutHistory({ payouts }: { payouts: PayoutWithDinner[] }) {
                 <tbody>
                   {payouts.map((payout) => (
                     <tr key={payout.id}>
-                      <td className="td-strong">{payout.dinner.theme?.title || "Dinner"}</td>
+                      <td className="td-strong">
+                        {payout.dinner.theme?.title || "Dinner"} ({payout.dinner.bookedSeatCount} seat
+                        {payout.dinner.bookedSeatCount === 1 ? "" : "s"})
+                      </td>
                       <td className="td-muted" style={{ marginTop: 0 }}>
                         {new Date(payout.dinner.startsAt).toLocaleDateString("en-ZA", {
                           month: "short",
@@ -93,7 +96,8 @@ export function PayoutHistory({ payouts }: { payouts: PayoutWithDinner[] }) {
                       {new Date(payout.dinner.startsAt).toLocaleDateString("en-ZA", {
                         month: "short",
                         day: "numeric",
-                      })}
+                      })}{" "}
+                      · {payout.dinner.bookedSeatCount} seat{payout.dinner.bookedSeatCount === 1 ? "" : "s"}
                     </div>
                   </div>
                   <span className={`badge ${STATUS_BADGE[payout.status] || "badge-slate"}`}>
