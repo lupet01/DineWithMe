@@ -31,6 +31,13 @@ export function DinnerStatusActions({ dinnerId, status }: DinnerStatusActionsPro
     void runAction(updateDinnerStatus(dinnerId, "LIVE"));
   };
 
+  const handleComplete = () => {
+    if (isUpdating) return;
+    const confirmed = confirm("Mark this dinner as completed?");
+    if (!confirmed) return;
+    void runAction(updateDinnerStatus(dinnerId, "COMPLETED"));
+  };
+
   const handleCancel = () => {
     if (isUpdating) return;
     const confirmed = confirm(
@@ -49,6 +56,11 @@ export function DinnerStatusActions({ dinnerId, status }: DinnerStatusActionsPro
       {status === "SCHEDULED" && (
         <button type="button" onClick={handleMarkLive} disabled={isUpdating} className="btn btn-green btn-sm">
           → Mark LIVE
+        </button>
+      )}
+      {status === "LIVE" && (
+        <button type="button" onClick={handleComplete} disabled={isUpdating} className="btn btn-outline btn-sm">
+          Complete
         </button>
       )}
       <button type="button" onClick={handleCancel} disabled={isUpdating} className="btn btn-red btn-sm">

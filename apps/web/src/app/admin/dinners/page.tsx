@@ -1,25 +1,26 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { dinnerRepository, userRepository } from "@dinewithme/db";
+import { dinnerRepository, restaurantRepository } from "@dinewithme/db";
+import { getAuthUser } from "@/lib/auth/server";
 import { DinnersTable } from "./components/dinners-table";
 
 export default async function DinnersPage() {
-  const { userId } = await auth();
-  
-  if (!userId) {
+  const user = await getAuthUser();
+
+  if (!user) {
     redirect("/sign-in");
   }
 
-  // Get user from database
-  const dbUser = await userRepository.findByAuthProviderId(userId);
-  
-  if (!dbUser) {
-    redirect("/dashboard");
+  // Get the admin's own restaurant - findManyWithTheme(restaurantId) below
+  // is what actually scopes the query; without it this list would leak
+  // every restaurant's dinners to any restaurant admin.
+  const restaurants = await restaurantRepository.findManyForUser(user.id);
+  const restaurant = restaurants[0];
+  if (!restaurant) {
+    redirect("/admin/restaurant");
   }
 
-  // Fetch all dinners (in production, filter by selected restaurant)
-  const dinners = await dinnerRepository.findManyWithTheme();
+  const dinners = await dinnerRepository.findManyWithTheme(restaurant.id);
 
   return (
     <div className="din">

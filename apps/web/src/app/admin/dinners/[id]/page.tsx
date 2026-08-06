@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download } from "lucide-react";
-import { dinnerRepository, dinnerMediaRepository } from "@dinewithme/db";
+import { ArrowLeft } from "lucide-react";
+import { dinnerRepository, dinnerMediaRepository, restaurantGalleryItemRepository } from "@dinewithme/db";
 import { Role } from "@dinewithme/shared";
 import { formatAmount } from "@dinewithme/config/src/payment";
 import { getAuthUser } from "@/lib/auth/server";
-import { GuestRow } from "./components/guest-row";
 import { TablePhotosManager } from "./components/table-photos-manager";
+import { ListingPhotosManager } from "./components/listing-photos-manager";
+import { MediaTabs } from "./components/media-tabs";
+import { GuestListPanel } from "./components/guest-list-panel";
 import { DinnerDetailTabs } from "./components/dinner-detail-tabs";
 import { DinnerStatusActions } from "./components/dinner-status-actions";
+import { CONVERSATION_STYLES } from "../conversation-styles";
 
 export default async function DinnerDetailPage({
   params,
@@ -32,14 +35,17 @@ export default async function DinnerDetailPage({
   const attendedCount = dinner.seats.filter((seat) => seat.status === "ATTENDED" || seat.status === "COMPLETED").length;
   const canRefund = user.role === Role.PLATFORM_ADMIN;
   const revenueCents = confirmedSeats.length * (dinner.pricePerSeatCents ?? 0);
+  const canEdit = dinner.status === "SCHEDULED" || dinner.status === "LIVE";
 
   const startsAt = new Date(dinner.startsAt);
   const endsAt = new Date(dinner.endsAt);
 
-  const listingPhotoIds = new Set(
-    (await dinnerMediaRepository.findByDinner(dinner.id, "DINNER_LISTING")).map((item) => item.id)
-  );
-  const allMedia = await dinnerMediaRepository.findByDinner(dinner.id);
+  const [listingMedia, allMedia, galleryItems] = await Promise.all([
+    dinnerMediaRepository.findByDinner(dinner.id, "DINNER_LISTING"),
+    dinnerMediaRepository.findByDinner(dinner.id),
+    restaurantGalleryItemRepository.findByRestaurant(dinner.restaurant.id),
+  ]);
+  const listingPhotoIds = new Set(listingMedia.map((item) => item.id));
   const tablePhotos = allMedia
     .filter((item) => !listingPhotoIds.has(item.id))
     .map((item) => ({
@@ -49,12 +55,23 @@ export default async function DinnerDetailPage({
       promotionStatus: item.promotionStatus,
     }));
 
+  const conversationStyleLabel = dinner.conversationStyle
+    ? CONVERSATION_STYLES.find((s) => s.value === dinner.conversationStyle)?.label ?? dinner.conversationStyle
+    : null;
+
   const badgeClass =
     dinner.status === "CANCELLED" ? "badge-red" : dinner.status === "LIVE" ? "badge-green" : "badge-blue";
 
   const detailsPanel = (
     <div className="card card-pad">
-      <div className="card-title" style={{ marginBottom: 14 }}>Dinner Details</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div className="card-title" style={{ marginBottom: 0 }}>Dinner Details</div>
+        {canEdit && (
+          <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-outline btn-sm">
+            Edit Dinner
+          </Link>
+        )}
+      </div>
       <div>
         <div className="breakdown-row">
           <span className="breakdown-label">Theme</span>
@@ -71,6 +88,10 @@ export default async function DinnerDetailPage({
               "—"
             )}
           </span>
+        </div>
+        <div className="breakdown-row">
+          <span className="breakdown-label">Conversation Style</span>
+          <span className="breakdown-value">{conversationStyleLabel || "—"}</span>
         </div>
         <div className="breakdown-row">
           <span className="breakdown-label">Date</span>
@@ -129,47 +150,30 @@ export default async function DinnerDetailPage({
         </div>
       </div>
 
-      <div className="table-wrap">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 0" }}>
-          <div className="card-title">Guest List</div>
-          <span className="pg-sub" style={{ margin: 0 }}>{attendedCount} checked in</span>
-        </div>
-        {confirmedSeats.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--t3)" }}>No confirmed guests yet</div>
-        ) : (
-          <div className="table-scroll" style={{ marginTop: 12 }}>
-            <table className="dtable">
-              <thead>
-                <tr>
-                  <th>Guest</th>
-                  <th>Dietary Notes</th>
-                  <th>Status</th>
-                  <th>Payment</th>
-                  <th className="r">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {confirmedSeats.map((seat) => (
-                  <GuestRow
-                    key={seat.id}
-                    dinnerId={dinner.id}
-                    restaurantId={dinner.restaurant.id}
-                    seat={seat}
-                    canRefund={canRefund}
-                    isPlatformAdmin={canRefund}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <p style={{ fontSize: 11, color: "var(--t3)", margin: "-8px 0 12px" }}>{attendedCount} checked in</p>
+
+      <GuestListPanel
+        dinnerId={dinner.id}
+        restaurantId={dinner.restaurant.id}
+        seats={confirmedSeats}
+        canRefund={canRefund}
+        isPlatformAdmin={canRefund}
+      />
     </>
   );
 
   const mediaPanel = (
     <div id="table-photos">
-      <TablePhotosManager dinnerId={dinner.id} photos={tablePhotos} isPlatformAdmin={canRefund} />
+      <MediaTabs
+        listingPanel={
+          <ListingPhotosManager
+            dinnerId={dinner.id}
+            initialSelectedIds={listingMedia.map((item) => item.mediaAsset.id)}
+            photoPool={galleryItems.map((item) => ({ id: item.mediaAsset.id, url: item.mediaAsset.url }))}
+          />
+        }
+        tablePanel={<TablePhotosManager dinnerId={dinner.id} photos={tablePhotos} isPlatformAdmin={canRefund} />}
+      />
     </div>
   );
 
@@ -202,10 +206,6 @@ export default async function DinnerDetailPage({
         </div>
         <span className={`badge ${badgeClass}`}>{dinner.status}</span>
         <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} />
-        <a href={`/admin/dinners/${dinner.id}/export`} className="btn btn-outline btn-sm">
-          <Download className="h-3.5 w-3.5" />
-          Export CSV
-        </a>
       </div>
 
       <DinnerDetailTabs detailsPanel={detailsPanel} guestsPanel={guestsPanel} mediaPanel={mediaPanel} />

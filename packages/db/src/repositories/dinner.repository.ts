@@ -222,8 +222,16 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     });
   }
 
-  async findManyWithTheme(): Promise<DinnerWithRestaurant[]> {
+  /**
+   * All dinners with theme + restaurant, optionally scoped to one
+   * restaurant. restaurantId is optional so this can still back the
+   * platform-wide Dinners (Ops) list (§sec-ops-dinners), which
+   * legitimately needs every restaurant's dinners - the restaurant admin
+   * Dinners list (§16.3) always passes its own restaurantId.
+   */
+  async findManyWithTheme(restaurantId?: string): Promise<DinnerWithRestaurant[]> {
     return this.prisma.dinner.findMany({
+      where: restaurantId ? { restaurantId } : undefined,
       orderBy: { startsAt: "desc" },
       include: {
         restaurant: {
@@ -285,6 +293,45 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     return this.prisma.dinner.update({
       where: { id },
       data,
+    });
+  }
+
+  /**
+   * Grows or shrinks a dinner's seat pool to match a new seatCount, used
+   * when editing a dinner's seat count after seats already exist. Only
+   * ever removes AVAILABLE seats (falling back to HELD ones if there
+   * aren't enough available) - CONFIRMED/ATTENDED/COMPLETED seats are
+   * never touched. Callers must independently guarantee newSeatCount is
+   * not below the number of already-booked seats (see updateDinner
+   * §16.3's seat-count floor).
+   */
+  async resizeSeatPool(dinnerId: string, newSeatCount: number): Promise<void> {
+    const seats = await this.prisma.seat.findMany({
+      where: { dinnerId },
+      orderBy: { createdAt: "asc" },
+    });
+    const currentCount = seats.length;
+    if (newSeatCount === currentCount) return;
+
+    if (newSeatCount > currentCount) {
+      const toAdd = newSeatCount - currentCount;
+      await this.prisma.seat.createMany({
+        data: Array.from({ length: toAdd }, () => ({
+          dinnerId,
+          status: "AVAILABLE" as const,
+        })),
+      });
+      return;
+    }
+
+    const toRemove = currentCount - newSeatCount;
+    const removable = seats
+      .filter((s) => s.status === "AVAILABLE")
+      .concat(seats.filter((s) => s.status === "HELD"))
+      .slice(0, toRemove);
+
+    await this.prisma.seat.deleteMany({
+      where: { id: { in: removable.map((s) => s.id) } },
     });
   }
 

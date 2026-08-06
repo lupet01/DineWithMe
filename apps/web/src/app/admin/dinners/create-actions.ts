@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { ConversationStyle } from "@prisma/client";
 import {
   dinnerRepository,
   restaurantRepository,
   themeRepository,
   mealRepository,
+  seatRepository,
   auditLogger,
+  AuditAction,
+  AuditEntity,
 } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
 import { track } from "@dinewithme/analytics";
@@ -24,6 +28,7 @@ interface CreateDinnerInput {
   endsAt: string; // ISO string
   description?: string;
   seatCount: number;
+  conversationStyle?: ConversationStyle;
 }
 
 /**
@@ -43,6 +48,10 @@ export async function createDinner(
         success: false,
         error: "Missing required fields",
       };
+    }
+
+    if (!input.conversationStyle) {
+      return { success: false, error: "Conversation Style is required" };
     }
 
     // Validate seat count
@@ -179,6 +188,7 @@ export async function createDinner(
       description: input.description || null,
       seatCount: input.seatCount,
       pricePerSeatCents: input.pricePerSeatCents ?? null,
+      conversationStyle: input.conversationStyle ?? null,
       status: "SCHEDULED",
     });
 
@@ -218,6 +228,150 @@ export async function createDinner(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to create dinner",
+    };
+  }
+}
+
+interface UpdateDinnerInput {
+  dinnerId: string;
+  themeId: string;
+  mealId?: string;
+  pricePerSeatCents?: number;
+  startsAt: string; // ISO string
+  endsAt: string; // ISO string
+  description?: string;
+  seatCount: number;
+  conversationStyle?: ConversationStyle;
+}
+
+/**
+ * Update an existing dinner. Reuses the same Create Dinner form in edit
+ * mode (§16.3 wireframe - the standalone Edit Dinner page is retired in
+ * favor of one component, mode="create"/"edit"). Seat count can't drop
+ * below however many seats are already CONFIRMED/ATTENDED/COMPLETED -
+ * shrinking below that would orphan a paying guest's booking.
+ */
+export async function updateDinner(
+  input: UpdateDinnerInput
+): Promise<ActionResult<{ dinnerId: string }>> {
+  try {
+    const user = await requireAuthUser();
+
+    if (!input.dinnerId || !input.themeId || !input.startsAt || !input.endsAt || !input.seatCount) {
+      return { success: false, error: "Missing required fields" };
+    }
+
+    if (!input.conversationStyle) {
+      return { success: false, error: "Conversation Style is required" };
+    }
+
+    if (input.seatCount < 2 || input.seatCount > 20) {
+      return { success: false, error: "Seat count must be between 2 and 20" };
+    }
+
+    const startsAt = new Date(input.startsAt);
+    const endsAt = new Date(input.endsAt);
+
+    if (isNaN(startsAt.getTime()) || isNaN(endsAt.getTime())) {
+      return { success: false, error: "Invalid date format" };
+    }
+
+    if (startsAt >= endsAt) {
+      return { success: false, error: "End time must be after start time" };
+    }
+
+    const existingDinner = await dinnerRepository.findById(input.dinnerId);
+    if (!existingDinner) {
+      return { success: false, error: "Dinner not found" };
+    }
+
+    const isOwner = await restaurantRepository.isUserOwner(existingDinner.restaurantId, user.id);
+    if (!isOwner) {
+      return { success: false, error: "You do not have permission to edit dinners for this restaurant" };
+    }
+
+    if (existingDinner.status !== "SCHEDULED" && existingDinner.status !== "LIVE") {
+      return { success: false, error: `Cannot edit a dinner that is ${existingDinner.status.toLowerCase()}` };
+    }
+
+    const theme = await themeRepository.findById(input.themeId);
+    if (!theme) {
+      return { success: false, error: "Theme not found" };
+    }
+
+    const isThemeEnabled = await themeRepository.isEnabledForRestaurant(existingDinner.restaurantId, input.themeId);
+    if (!isThemeEnabled) {
+      return {
+        success: false,
+        error: `The "${theme.title}" theme is not enabled for your restaurant. Please enable it in your restaurant settings first.`,
+      };
+    }
+
+    if (input.mealId) {
+      const meal = await mealRepository.findById(input.mealId);
+      if (!meal || meal.restaurantId !== existingDinner.restaurantId) {
+        return { success: false, error: "Meal not found for this restaurant" };
+      }
+    }
+
+    if (
+      input.pricePerSeatCents !== undefined &&
+      (!Number.isInteger(input.pricePerSeatCents) || input.pricePerSeatCents < 0)
+    ) {
+      return { success: false, error: "Price per seat must be a non-negative amount" };
+    }
+
+    // Seat count floor: can't shrink below seats already booked by a guest.
+    const [confirmedCount, attendedCount, completedCount] = await Promise.all([
+      seatRepository.countByDinnerAndStatus(input.dinnerId, "CONFIRMED"),
+      seatRepository.countByDinnerAndStatus(input.dinnerId, "ATTENDED"),
+      seatRepository.countByDinnerAndStatus(input.dinnerId, "COMPLETED"),
+    ]);
+    const bookedSeats = confirmedCount + attendedCount + completedCount;
+    if (input.seatCount < bookedSeats) {
+      return {
+        success: false,
+        error: `${bookedSeats} seats are already booked — cannot reduce below ${bookedSeats}.`,
+      };
+    }
+
+    // Grow/shrink the seat pool to match the new seat count. Only ever
+    // touches AVAILABLE seats - booked ones are never removed, and the
+    // floor check above guarantees seatCount >= bookedSeats.
+    if (input.seatCount !== existingDinner.seatCount) {
+      await dinnerRepository.resizeSeatPool(input.dinnerId, input.seatCount);
+    }
+
+    await dinnerRepository.update(input.dinnerId, {
+      theme: { connect: { id: input.themeId } },
+      ...(input.mealId ? { meal: { connect: { id: input.mealId } } } : { meal: { disconnect: true } }),
+      startsAt,
+      endsAt,
+      description: input.description || null,
+      seatCount: input.seatCount,
+      pricePerSeatCents: input.pricePerSeatCents ?? null,
+      conversationStyle: input.conversationStyle ?? null,
+    });
+
+    await auditLogger.log(
+      user.id,
+      AuditAction.DINNER_UPDATED,
+      AuditEntity.DINNER,
+      input.dinnerId,
+      { restaurantId: existingDinner.restaurantId, themeId: input.themeId, seatCount: input.seatCount }
+    );
+
+    revalidatePath("/admin/dinners");
+    revalidatePath(`/admin/dinners/${input.dinnerId}`);
+    revalidatePath("/discover");
+    revalidatePath(`/dinner/${input.dinnerId}`);
+
+    return { success: true, data: { dinnerId: input.dinnerId } };
+  } catch (error) {
+    console.error("[Dinner] Error updating dinner:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update dinner",
     };
   }
 }

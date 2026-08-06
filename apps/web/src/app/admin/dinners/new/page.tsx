@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, themeRepository, restaurantGalleryItemRepository, mealRepository } from "@dinewithme/db";
-import { DinnerForm } from "../components/dinner-form";
+import { DinnerForm, type MealDishPreview } from "../components/dinner-form";
+import { mealCoursesToDishPreview } from "../meal-preview";
 
 export default async function NewDinnerPage() {
   const user = await getAuthUser();
@@ -31,39 +32,41 @@ export default async function NewDinnerPage() {
   // Get the restaurant's photo pool for the Listing Photos picker
   const galleryItems = await restaurantGalleryItemRepository.findByRestaurant(restaurant.id);
 
-  // Get the restaurant's active Meals for the Meal dropdown
-  const meals = (await mealRepository.findByRestaurant(restaurant.id)).filter((m) => m.isActive);
+  // Get the restaurant's active Meals, with course/dish data for the live
+  // preview's "Tonight's Menu" panel (§16.3 wireframe).
+  const meals = (await mealRepository.findByRestaurantWithCourses(restaurant.id)).filter((m) => m.isActive);
 
   return (
-    <div className="din" style={{ maxWidth: 640, margin: "0 auto" }}>
+    <div className="din">
       {/* Page Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 className="pg-title">Create New Dinner</h1>
-        <p className="pg-sub">Schedule a new dining experience for your guests</p>
+        <h1 className="pg-title">Create Dinner</h1>
+        <p className="pg-sub">Schedule a new dinner event at {restaurant.name}</p>
       </div>
 
-      {/* Form */}
-      <div className="card card-pad">
-        <DinnerForm
-          restaurantId={restaurant.id}
-          restaurantName={restaurant.name}
-          enabledThemes={enabledThemes.map((t) => ({
-            id: t.id,
-            key: t.key,
-            title: t.title,
-            shortDescription: t.shortDescription,
-          }))}
-          photoPool={galleryItems.map((item) => ({
-            id: item.mediaAsset.id,
-            url: item.mediaAsset.url,
-          }))}
-          meals={meals.map((m) => ({
-            id: m.id,
-            name: m.name,
-            suggestedPricePerSeatCents: m.suggestedPricePerSeatCents,
-          }))}
-        />
-      </div>
+      <DinnerForm
+        mode="create"
+        restaurantId={restaurant.id}
+        restaurantName={restaurant.name}
+        restaurantCuisine={restaurant.cuisine}
+        restaurantCity={restaurant.city}
+        enabledThemes={enabledThemes.map((t) => ({
+          id: t.id,
+          key: t.key,
+          title: t.title,
+          shortDescription: t.shortDescription,
+        }))}
+        photoPool={galleryItems.map((item) => ({
+          id: item.mediaAsset.id,
+          url: item.mediaAsset.url,
+        }))}
+        meals={meals.map((m) => ({
+          id: m.id,
+          name: m.name,
+          suggestedPricePerSeatCents: m.suggestedPricePerSeatCents,
+          dishes: mealCoursesToDishPreview(m.courses) as MealDishPreview[],
+        }))}
+      />
     </div>
   );
 }

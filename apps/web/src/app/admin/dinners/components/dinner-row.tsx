@@ -9,11 +9,54 @@ interface DinnerRowProps {
   dinner: DinnerWithRestaurant;
 }
 
-export function DinnerRow({ dinner }: DinnerRowProps) {
+function formatDate(date: Date) {
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatShortDate(date: Date) {
+  return new Date(date).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatTime(date: Date) {
+  return new Date(date).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case "SCHEDULED":
+      return "badge-blue";
+    case "LIVE":
+      return "badge-green";
+    case "CANCELLED":
+      return "badge-red";
+    case "COMPLETED":
+    default:
+      return "badge-slate";
+  }
+}
+
+/**
+ * Shared state/actions behind both the desktop table row and the mobile
+ * row-card (§16.3 wireframe's "Mobile adaptation" note - same data, same
+ * actions, just two different renderings) so seat-count fetching and the
+ * Mark Live / Complete / Cancel handlers aren't duplicated.
+ */
+function useDinnerRowState(dinner: DinnerWithRestaurant) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [seatCounts, setSeatCounts] = useState({ confirmed: 0, available: 0 });
 
-  // Fetch seat counts for this dinner
   useEffect(() => {
     async function fetchSeatCounts() {
       try {
@@ -32,42 +75,9 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
     fetchSeatCounts();
   }, [dinner.id]);
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const getStatusBadgeClass = (status: string): string => {
-    switch (status) {
-      case "SCHEDULED":
-        return "badge-blue";
-      case "LIVE":
-        return "badge-green";
-      case "CANCELLED":
-        return "badge-red";
-      case "COMPLETED":
-      default:
-        return "badge-slate";
-    }
-  };
-
   const handleStatusChange = async (newStatus: "LIVE" | "COMPLETED") => {
     if (isUpdating) return;
-
-    const confirmed = confirm(
-      `Are you sure you want to mark this dinner as ${newStatus}?`
-    );
+    const confirmed = confirm(`Are you sure you want to mark this dinner as ${newStatus}?`);
     if (!confirmed) return;
 
     setIsUpdating(true);
@@ -81,10 +91,7 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
 
   const handleCancel = async () => {
     if (isUpdating) return;
-
-    const confirmed = confirm(
-      "Are you sure you want to cancel this dinner? All seats will be released."
-    );
+    const confirmed = confirm("Are you sure you want to cancel this dinner? All seats will be released.");
     if (!confirmed) return;
 
     setIsUpdating(true);
@@ -96,9 +103,20 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
     }
   };
 
-  const canMarkLive = dinner.status === "SCHEDULED";
-  const canMarkCompleted = dinner.status === "LIVE";
-  const canCancel = dinner.status === "SCHEDULED" || dinner.status === "LIVE";
+  return {
+    isUpdating,
+    seatCounts,
+    handleStatusChange,
+    handleCancel,
+    canMarkLive: dinner.status === "SCHEDULED",
+    canMarkCompleted: dinner.status === "LIVE",
+    canCancel: dinner.status === "SCHEDULED" || dinner.status === "LIVE",
+  };
+}
+
+export function DinnerRow({ dinner }: DinnerRowProps) {
+  const { isUpdating, seatCounts, handleStatusChange, handleCancel, canMarkLive, canMarkCompleted, canCancel } =
+    useDinnerRowState(dinner);
 
   return (
     <tr>
@@ -140,6 +158,11 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
           <Link href={`/admin/dinners/${dinner.id}`} className="btn btn-outline btn-sm">
             View
           </Link>
+          {(canMarkLive || canMarkCompleted) && (
+            <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-outline btn-sm">
+              Edit
+            </Link>
+          )}
           {canMarkLive && (
             <button
               onClick={() => handleStatusChange("LIVE")}
@@ -172,5 +195,72 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
         </div>
       </td>
     </tr>
+  );
+}
+
+/**
+ * Mobile row-card: the 5-column table collapses to a stacked card per
+ * dinner (§16.3 wireframe) - date/theme up top, status badge inline, seat
+ * count as plain text, action buttons full-width side by side.
+ */
+export function DinnerRowCard({ dinner }: DinnerRowProps) {
+  const { isUpdating, seatCounts, handleStatusChange, handleCancel, canMarkLive, canMarkCompleted, canCancel } =
+    useDinnerRowState(dinner);
+
+  const seatSummary =
+    seatCounts.available === 0
+      ? "full"
+      : `${seatCounts.available} available`;
+
+  return (
+    <div className="row-card">
+      <div className="rc-top">
+        <div>
+          <div className="rc-title">{dinner.theme?.title || "No theme"}</div>
+          <div className="rc-sub">
+            {formatShortDate(dinner.startsAt)} · {formatTime(dinner.startsAt)}–{formatTime(dinner.endsAt)}
+          </div>
+        </div>
+        <span className={`badge ${getStatusBadgeClass(dinner.status)}`}>{dinner.status}</span>
+      </div>
+      <div className="rc-meta">
+        {seatCounts.confirmed} / {dinner.seatCount} booked · {seatSummary}
+      </div>
+      <div className="rc-actions">
+        <Link href={`/admin/dinners/${dinner.id}`} className="btn btn-sm btn-outline" style={{ flex: 1, textAlign: "center" }}>
+          View
+        </Link>
+        {(canMarkLive || canMarkCompleted) && (
+          <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-sm btn-outline" style={{ flex: 1, textAlign: "center" }}>
+            Edit
+          </Link>
+        )}
+        {canMarkLive && (
+          <button
+            onClick={() => handleStatusChange("LIVE")}
+            disabled={isUpdating}
+            className="btn btn-sm btn-green"
+            style={{ flex: 1 }}
+          >
+            Mark Live
+          </button>
+        )}
+        {canMarkCompleted && (
+          <button
+            onClick={() => handleStatusChange("COMPLETED")}
+            disabled={isUpdating}
+            className="btn btn-sm btn-outline"
+            style={{ flex: 1 }}
+          >
+            Complete
+          </button>
+        )}
+        {canCancel && (
+          <button onClick={handleCancel} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

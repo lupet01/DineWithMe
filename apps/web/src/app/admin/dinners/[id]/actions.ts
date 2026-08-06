@@ -73,6 +73,55 @@ export async function checkInGuest(dinnerId: string, seatId: string): Promise<Ac
 }
 
 /**
+ * Check in every confirmed-but-not-yet-attended guest at once (§16.1
+ * wireframe's "Check In All") - loops the same per-seat checkIn used by
+ * checkInGuest above rather than a bespoke bulk query, so it stays subject
+ * to the exact same state-machine/policy checks (e.g. the check-in time
+ * window) as checking someone in one at a time. Best-effort: one seat
+ * failing (e.g. outside the check-in window) doesn't block the rest.
+ */
+export async function checkInAllSeats(dinnerId: string): Promise<ActionResult<{ checkedIn: number; failed: number }>> {
+  const authResult = await requireDinnerManager(dinnerId);
+  if ("error" in authResult) {
+    return { success: false, error: authResult.error };
+  }
+
+  try {
+    const seats = await seatRepository.findByDinnerWithStatus(dinnerId, "CONFIRMED");
+    let checkedIn = 0;
+    let failed = 0;
+
+    for (const seat of seats) {
+      if (!seat.confirmedByUserId) {
+        failed += 1;
+        continue;
+      }
+      try {
+        await seatRepository.checkIn(seat.id, seat.confirmedByUserId);
+        await auditLogger.log(
+          authResult.dbUser.id,
+          AuditAction.SEAT_ATTENDED,
+          AuditEntity.SEAT,
+          seat.id,
+          { dinnerId, checkedInBy: "admin", bulk: true }
+        );
+        checkedIn += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+
+    revalidatePath(`/admin/dinners/${dinnerId}`);
+    return { success: true, data: { checkedIn, failed } };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to check in guests",
+    };
+  }
+}
+
+/**
  * Admin-initiated refund for a seat's payment - reuses the same
  * refundPaymentIntent used by the diner-facing refund endpoint and the
  * cancel-on-seat flow, as "dinner_cancelled" reason (bypasses the 24h
