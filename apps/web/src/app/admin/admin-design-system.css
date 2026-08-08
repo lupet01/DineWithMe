@@ -125,18 +125,26 @@
   .dine-admin .d-main { padding: 28px 32px; }
 }
 
-/* ── Shared atoms ── */
-.dine-admin .pg-title { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.4px; }
-@container (min-width: 768px) { .dine-admin .pg-title { font-size: 30px; } }
+/* ── Shared atoms ──
+   pg-title/card/card-pad exact values below are the wireframe's literal
+   spec (h1.pg-title / h1.pg-title.m, .card, .card-pad / .card-pad.m in
+   the wireframe's shared <style> block) — this base layer was never
+   actually diffed against those values before 2026-08-08 (it dates to
+   the very first implementation commit, before wireframe-fidelity
+   auditing existed, and every later Apple/Tesla/wireframe-native pass
+   only ever added PER-PAGE namespace overrides on top, never touched
+   these shared rules) - .pg-title was rendering ~35% oversized
+   (30px/24px vs the wireframe's 22px/19px) and .card had been
+   deliberately "flattened" (14px + shadow-1) away from the wireframe's
+   20px + shadow-2 by the very first pass. */
+.dine-admin .pg-title { font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+@container (min-width: 768px) { .dine-admin .pg-title { font-size: 22px; } }
 .dine-admin .pg-sub { font-size: 12px; color: var(--t3); margin-top: 4px; }
 @container (min-width: 768px) { .dine-admin .pg-sub { font-size: 13px; } }
 
-/* Flatter, quieter card — macOS Settings relies on background contrast and
-   a near-invisible hairline, not a heavy border + drop shadow, to separate
-   a grouped box from the page behind it. */
-.dine-admin .card { background: var(--white); border: 1px solid var(--bdr); border-radius: 14px; box-shadow: var(--shadow-1); }
+.dine-admin .card { background: var(--white); border: 1px solid var(--bdr); border-radius: 20px; box-shadow: var(--shadow-2); }
 .dine-admin .card-pad { padding: 16px; }
-@container (min-width: 768px) { .dine-admin .card-pad { padding: 18px 20px; } }
+@container (min-width: 768px) { .dine-admin .card-pad { padding: 22px; } }
 .dine-admin .card-title { font-size: 16px; font-weight: 700; color: var(--text); }
 .dine-admin .card-title-sub { font-size: 12.5px; color: var(--t3); margin-top: 3px; }
 
