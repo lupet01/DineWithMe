@@ -38,7 +38,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    // clerkJSVersion pins the ClerkJS script load to an exact published
+    // version instead of the unversioned "@5" URL. Unversioned loads via a
+    // 307 redirect that Clerk's own already-executing code then re-verifies
+    // with a second, internal follow-up fetch to the resolved exact
+    // version - that follow-up fetch (not the initial script tag) was
+    // observed hanging indefinitely in the browser's network stack (while
+    // curl reaches the same exact-version URL in ~1s), leaving
+    // window.Clerk.loaded stuck false and the whole app non-interactive.
+    // Pinning here means the initial script tag itself requests the exact
+    // version directly, skipping the redirect + internal re-fetch entirely.
+    <ClerkProvider clerkJSVersion="5.127.1">
       <html lang="en">
         <body className="antialiased">
           {children}
