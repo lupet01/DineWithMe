@@ -22,6 +22,7 @@ const CUISINE_OPTIONS = [
 ];
 
 const DESCRIPTION_MAX = 400;
+const CUISINE_VISIBLE_UNSELECTED = 4;
 
 /**
  * Edit-only - the initial create flow is its own 4-step
@@ -39,6 +40,7 @@ export function RestaurantForm({ restaurant }: RestaurantFormProps) {
     .map((c) => c.trim())
     .filter(Boolean);
   const [cuisines, setCuisines] = useState<string[]>(initialCuisines);
+  const [showAllCuisines, setShowAllCuisines] = useState(false);
 
   const initialFormData: UpdateRestaurantInput = {
     name: restaurant.name || "",
@@ -89,6 +91,7 @@ export function RestaurantForm({ restaurant }: RestaurantFormProps) {
   const handleDiscard = () => {
     setFormData(initialFormData);
     setCuisines(initialCuisines);
+    setShowAllCuisines(false);
     setError(null);
     setFieldErrors({});
   };
@@ -114,6 +117,18 @@ export function RestaurantForm({ restaurant }: RestaurantFormProps) {
       return next;
     });
   };
+
+  // Restaurant.cuisine is a single comma-joined string in the schema (see
+  // toggleCuisine above) - there's no real multi-select column to migrate
+  // to, so the wireframe's "was a single free-text field" multi-select is
+  // implemented the same way the rest of this page already reads cuisine
+  // tags (page.tsx's cuisineTags split), just with add/remove badges here
+  // instead of a plain list.
+  const unselectedCuisines = CUISINE_OPTIONS.filter((option) => !cuisines.includes(option));
+  const visibleUnselectedCuisines = showAllCuisines
+    ? unselectedCuisines
+    : unselectedCuisines.slice(0, CUISINE_VISIBLE_UNSELECTED);
+  const hiddenCuisineCount = unselectedCuisines.length - visibleUnselectedCuisines.length;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -173,26 +188,48 @@ export function RestaurantForm({ restaurant }: RestaurantFormProps) {
           </div>
 
           <div className="frow stack">
-            <div className="rlabel">Cuisine type</div>
+            <div className="rlabel">
+              Cuisine type{" "}
+              <span style={{ color: "var(--t3w)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                (multi-select — was a single free-text field)
+              </span>
+            </div>
             <div className="rctl">
               <div className="chips">
-                {CUISINE_OPTIONS.map((option) => {
-                  const selected = cuisines.includes(option);
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      className="rp-chip"
-                      aria-pressed={selected}
-                      onClick={() => !isPending && toggleCuisine(option)}
-                    >
-                      <svg><use href="#ic-check" /></svg>
-                      {option}
-                    </button>
-                  );
-                })}
+                {cuisines.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className="badge badge-tint"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => !isPending && toggleCuisine(option)}
+                  >
+                    {option} ✕
+                  </button>
+                ))}
+                {visibleUnselectedCuisines.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className="badge badge-slate"
+                    style={{ cursor: "pointer", border: "none" }}
+                    onClick={() => !isPending && toggleCuisine(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+                {hiddenCuisineCount > 0 && (
+                  <button
+                    type="button"
+                    className="badge badge-slate"
+                    style={{ cursor: "pointer", border: "none" }}
+                    onClick={() => setShowAllCuisines(true)}
+                  >
+                    + More
+                  </button>
+                )}
               </div>
-              <div className="hint">Pick up to three. Guests filter dinners by these.</div>
+              <div className="hint">Pick as many as apply. Guests filter dinners by these.</div>
               {fieldErrors.cuisine && <p className="field-error">{fieldErrors.cuisine[0]}</p>}
             </div>
           </div>

@@ -209,51 +209,72 @@ export function ApplicationInfoCard({ restaurant }: ApplicationInfoCardProps) {
   }
 
   // Verified - read-only. Contact support rather than a self-serve edit, so
-  // a "Verified" badge stays trustworthy (§16.1 wireframe).
+  // a "Verified" badge stays trustworthy (§16.1 wireframe). Desktop and
+  // mobile are two literal wireframe frames (only-desktop / only-mobile):
+  // desktop shows all 3 verified fields with a subtitle and a longer
+  // footnote; mobile drops Google Business Profile and uses shorter copy
+  // throughout. Facebook and "heard about us via" aren't part of the
+  // wireframe's "From Your Application" card at all - they stay collected
+  // (still editable via the pre-verification "Add details" path above) but
+  // are no longer displayed here.
   return (
-    <section className="sec" id="sec-app">
-      <div className="sec-head">
-        <div className="sec-label">From your application</div>
-        <span className="seal"><svg><use href="#ic-check" /></svg> Verified by Platform Ops</span>
-      </div>
-      <div className="rp-card">
-        <div className="frow">
-          <div className="rlabel">Business registration <svg className="lockicon"><use href="#ic-lock" /></svg></div>
-          <div className="rval mono">{restaurant.registrationNumber || "—"}</div>
+    <>
+      <div className="card card-pad only-desktop" style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+          <div>
+            <div className="card-title" style={{ padding: 0 }}>From Your Application</div>
+            <div className="card-title-sub" style={{ padding: 0 }}>
+              Submitted during onboarding — shown here so you never re-enter it
+            </div>
+          </div>
+          <span className="badge badge-green" style={{ fontSize: 10 }}>✓ Verified</span>
         </div>
-        <div className="frow">
-          <div className="rlabel">Google Business Profile <svg className="lockicon"><use href="#ic-lock" /></svg></div>
-          <div className="rval">
-            {restaurant.googleBusinessUrl ? (
-              <a className="rlink" href={restaurant.googleBusinessUrl} target="_blank" rel="noopener noreferrer">
-                View listing <svg><use href="#ic-ext" /></svg>
-              </a>
-            ) : "—"}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="breakdown-row">
+            <span className="breakdown-label">Business Registration Number</span>
+            <span className="breakdown-value">{restaurant.registrationNumber || "—"}</span>
+          </div>
+          <div className="breakdown-row">
+            <span className="breakdown-label">Google Business Profile</span>
+            <span className="breakdown-value">
+              {restaurant.googleBusinessUrl ? (
+                <a
+                  href={restaurant.googleBusinessUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--p)", textDecoration: "none", fontWeight: 600 }}
+                >
+                  View listing →
+                </a>
+              ) : "—"}
+            </span>
+          </div>
+          <div className="breakdown-row">
+            <span className="breakdown-label">Instagram</span>
+            <span className="breakdown-value">{restaurant.instagramHandle || "—"}</span>
           </div>
         </div>
-        <div className="frow">
-          <div className="rlabel">Instagram <svg className="lockicon"><use href="#ic-lock" /></svg></div>
-          <div className="rval">{restaurant.instagramHandle || "—"}</div>
-        </div>
-        <div className="frow">
-          <div className="rlabel">Facebook <svg className="lockicon"><use href="#ic-lock" /></svg></div>
-          <div className="rval">
-            {restaurant.facebookUrl ? (
-              <a className="rlink" href={restaurant.facebookUrl} target="_blank" rel="noopener noreferrer">
-                View page <svg><use href="#ic-ext" /></svg>
-              </a>
-            ) : "—"}
-          </div>
-        </div>
-        <div className="frow">
-          <div className="rlabel">Heard about us via <svg className="lockicon"><use href="#ic-lock" /></svg></div>
-          <div className="rval">{restaurant.referralSource || "—"}</div>
-        </div>
+        <p style={{ fontSize: 11, color: "var(--t3)", marginTop: 12 }}>
+          Need to correct something here? These went through Platform Ops verification at
+          onboarding — contact support rather than editing directly, so your verified status stays
+          trustworthy.
+        </p>
       </div>
-      <p className="foot">
-        Collected during onboarding so you never re-enter it. These went through verification, so
-        they are locked here — contact support to correct one and keep your verified badge intact.
-      </p>
-    </section>
+
+      <div className="card card-pad only-mobile" style={{ marginBottom: 14 }}>
+        <div className="card-title" style={{ marginBottom: 10 }}>From Your Application</div>
+        <div className="breakdown-row">
+          <span className="breakdown-label">Registration No.</span>
+          <span className="breakdown-value">{restaurant.registrationNumber || "—"}</span>
+        </div>
+        <div className="breakdown-row">
+          <span className="breakdown-label">Instagram</span>
+          <span className="breakdown-value">{restaurant.instagramHandle || "—"}</span>
+        </div>
+        <p style={{ fontSize: 10.5, color: "var(--t3)", marginTop: 8 }}>
+          Contact support to change verified details.
+        </p>
+      </div>
+    </>
   );
 }

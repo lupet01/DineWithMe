@@ -16,15 +16,6 @@ import { ThemeManager } from "./components/theme-manager";
 import { ComplianceDocumentsManager } from "./components/compliance-documents-manager";
 import { IconSprite } from "./components/icon-sprite";
 
-function getInitials(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const first = words[0];
-  if (!first) return "?";
-  if (words.length === 1) return first.slice(0, 2).toUpperCase();
-  const last = words[words.length - 1] ?? first;
-  return (first.charAt(0) + last.charAt(0)).toUpperCase();
-}
-
 export default async function RestaurantProfilePage() {
   const user = await getAuthUser();
 
@@ -51,7 +42,6 @@ export default async function RestaurantProfilePage() {
 
   // Get compliance documents for this restaurant
   const complianceDocuments = await complianceDocumentRepository.findByRestaurant(restaurant.id);
-  const clearedDocuments = complianceDocuments.filter((d) => d.verifiedAt).length;
 
   // Profile header stats (§16.1 wireframe's "premium header" stat row)
   const [restaurantWithMembers, dinners, avgRating] = await Promise.all([
@@ -109,15 +99,19 @@ export default async function RestaurantProfilePage() {
     );
   }
 
-  const statusPillClass: Record<string, string> = {
-    PENDING: "yellow",
-    ACTIVE: "green",
-    PAUSED: "red",
+  const statusBadgeClass: Record<string, string> = {
+    PENDING: "badge-yellow",
+    ACTIVE: "badge-green",
+    PAUSED: "badge-red",
   };
   const cuisineTags = (restaurant.cuisine || "")
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
+  const partnerSince = new Date(restaurant.createdAt).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
 
   return (
     <div className="rp">
@@ -127,64 +121,129 @@ export default async function RestaurantProfilePage() {
         Single flat scrolling column, matching the wireframe's "restructured
         again" premium-header + stacked-cards layout (§sec-restaurant-profile)
         - no sticky rail, no in-page anchor nav. Those existed here from an
-        earlier, since-superseded "restaurant-profile.html" Apple mockup
-        (see the CSS comment above .dine-admin .rp); the canonical wireframe
+        earlier, since-superseded "restaurant-profile.html" Apple mockup (see
+        the CSS comment above .dine-admin .rp); the canonical wireframe
         dropped that shell entirely once Team/Media Library/Settings were
         promoted to their own sidebar destinations, leaving this page as one
-        continuous identity+compliance story. The .rp-scoped classes below
-        (idcard, rp-card, sec, etc.) are kept as-is - only the shell around
-        them changed.
+        continuous identity+compliance story. As of 2026-08-08 the header,
+        Table Themes, and Compliance Documents sections were further rebuilt
+        to match the wireframe's literal markup 1:1 (plain .card + inline
+        styles / shared .badge/.toggle, not the old bespoke .idcard/.tgrid/
+        .drow component classes) - only Business Details, Contact
+        Information, and the two non-wireframe states of "From Your
+        Application" (the pre-verification prompt + its edit form) still use
+        the original .rp-scoped .sec/.rp-card/.frow system, which is
+        unchanged.
       */}
       <div className="col" style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-        {/* Premium profile header - banner, avatar, name, tags, stat row */}
-        <div className="idcard">
-          <div className="cover">
-            <Link href="/admin/media-library" className="cover-edit">
+        {/* Premium profile header - banner, avatar, name, tags, stat row.
+            Desktop and mobile are two literal wireframe frames (only-desktop /
+            only-mobile, same pattern as admin/page.tsx), not one DOM reflowed
+            by CSS - the wireframe's mobile frame drops "Manage in Media
+            Library", drops "Partner Since" from the stat row (3-up instead of
+            4), and uses shorter stat labels ("Dinners"/"Rating"/"Team"). */}
+        <div className="card only-desktop" style={{ padding: 0, overflow: "hidden", marginBottom: 20 }}>
+          <div style={{ height: 110, background: "linear-gradient(150deg,#3d2b1f,#5c3d28)", position: "relative" }}>
+            <Link
+              href="/admin/media-library"
+              style={{
+                position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,.92)",
+                borderRadius: 20, padding: "4px 10px", fontSize: 10.5, fontWeight: 600,
+                color: "var(--text)", textDecoration: "none",
+              }}
+            >
               Manage in Media Library →
             </Link>
           </div>
-          <div className="id-body">
-            <div className="avatar">{getInitials(restaurant.name)}</div>
-            <div className="id-name">
-              <h2>{restaurant.name}</h2>
-              <span className={`rp-pill ${statusPillClass[restaurant.status] ?? "grey"}`}>
-                {restaurant.status === "ACTIVE" && <svg><use href="#ic-check" /></svg>}
+          <div style={{ padding: "0 20px 18px", position: "relative" }}>
+            <div
+              style={{
+                width: 68, height: 68, borderRadius: 16,
+                background: "linear-gradient(135deg,#8b6b4a,#5c3d28)", border: "4px solid var(--white)",
+                marginTop: -34, marginBottom: 12, boxShadow: "0 4px 10px rgba(0,0,0,.15)",
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <h1 className="pg-title" style={{ margin: 0 }}>{restaurant.name}</h1>
+                  <span className={`badge ${statusBadgeClass[restaurant.status] ?? "badge-slate"}`}>
+                    {restaurant.status}
+                  </span>
+                </div>
+                {cuisineTags.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {cuisineTags.map((tag) => (
+                      <span key={tag} className="badge badge-slate">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", borderTop: "1px solid var(--bdr)", paddingTop: 14 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{dinners.length}</div>
+                <div style={{ fontSize: 11, color: "var(--t3)" }}>Dinners Hosted</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>
+                  {avgRating ? avgRating.average.toFixed(1) : "—"} ★
+                </div>
+                <div style={{ fontSize: 11, color: "var(--t3)" }}>Avg Rating</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{teamCount}</div>
+                <div style={{ fontSize: 11, color: "var(--t3)" }}>
+                  <Link href="/admin/team" style={{ color: "inherit", textDecoration: "none" }}>
+                    Team Members →
+                  </Link>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{partnerSince}</div>
+                <div style={{ fontSize: 11, color: "var(--t3)" }}>Partner Since</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card only-mobile" style={{ padding: 0, overflow: "hidden", marginBottom: 20 }}>
+          <div style={{ height: 90, background: "linear-gradient(150deg,#3d2b1f,#5c3d28)" }} />
+          <div style={{ padding: "0 14px 14px" }}>
+            <div
+              style={{
+                width: 56, height: 56, borderRadius: 14,
+                background: "linear-gradient(135deg,#8b6b4a,#5c3d28)", border: "3px solid var(--white)",
+                marginTop: -28, marginBottom: 10, boxShadow: "0 3px 8px rgba(0,0,0,.15)",
+              }}
+            />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{restaurant.name}</div>
+              <span className={`badge ${statusBadgeClass[restaurant.status] ?? "badge-slate"}`}>
                 {restaurant.status}
               </span>
             </div>
             {cuisineTags.length > 0 && (
-              <div className="taglist">
+              <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
                 {cuisineTags.map((tag) => (
-                  <span key={tag} className="tag">{tag}</span>
+                  <span key={tag} className="badge badge-slate">{tag}</span>
                 ))}
               </div>
             )}
-          </div>
-          <div className="stats">
-            <div className="stat">
-              <div className="stat-l">Dinners hosted</div>
-              <div className="stat-v">{dinners.length}</div>
-            </div>
-            <div className="stat">
-              <div className="stat-l">Avg rating</div>
-              <div className="stat-v">
-                {avgRating ? avgRating.average.toFixed(1) : "—"} <svg><use href="#ic-star" /></svg>
+            <div style={{ display: "flex", gap: 16, borderTop: "1px solid var(--bdr)", paddingTop: 10 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{dinners.length}</div>
+                <div style={{ fontSize: 10, color: "var(--t3)" }}>Dinners</div>
               </div>
-            </div>
-            <div className="stat">
-              <div className="stat-l">Team members</div>
-              <div className="stat-v">{teamCount}</div>
-              <Link className="stat-link" href="/admin/team">
-                Manage <svg><use href="#ic-chev" /></svg>
-              </Link>
-            </div>
-            <div className="stat">
-              <div className="stat-l">Partner since</div>
-              <div className="stat-v sm">
-                {new Date(restaurant.createdAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  year: "numeric",
-                })}
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+                  {avgRating ? avgRating.average.toFixed(1) : "—"}★
+                </div>
+                <div style={{ fontSize: 10, color: "var(--t3)" }}>Rating</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{teamCount}</div>
+                <div style={{ fontSize: 10, color: "var(--t3)" }}>Team</div>
               </div>
             </div>
           </div>
@@ -200,45 +259,30 @@ export default async function RestaurantProfilePage() {
             rendered on this page until now */}
         <OperatingHoursCard restaurantId={restaurant.id} operatingHours={restaurant.operatingHours} />
 
-        {/* Table Themes */}
-        <section className="sec" id="sec-themes">
-          <div className="sec-head">
-            <div className="sec-label">Table themes</div>
-            <span className="sec-aside">Hosting {enabledThemeIds.length} of {allThemes.length}</span>
+        {/* Table Themes - simple nested-card list, no segmented filter/pager/icon */}
+        <div className="card card-pad" style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 16 }}>
+            <div className="card-title">Table Themes</div>
+            <div className="card-title-sub">Choose which types of dining experiences you&apos;d like to host</div>
           </div>
-          <div className="rp-card">
-            <ThemeManager
-              restaurantId={restaurant.id}
-              allThemes={allThemes}
-              enabledThemeIds={enabledThemeIds}
-            />
-          </div>
-          <p className="foot">
-            Themes you host become selectable when you create a dinner. Turning one off never
-            affects dinners already on the calendar.
-          </p>
-        </section>
+          <ThemeManager
+            restaurantId={restaurant.id}
+            allThemes={allThemes}
+            enabledThemeIds={enabledThemeIds}
+          />
+        </div>
 
-        {/* Compliance Documents */}
-        <section className="sec" id="sec-docs">
-          <div className="sec-head">
-            <div className="sec-label">Compliance documents</div>
-            {complianceDocuments.length > 0 ? (
-              <span className="sec-aside">
-                {clearedDocuments} of {complianceDocuments.length} cleared
-              </span>
-            ) : (
-              <span className="sec-aside" style={{ color: "var(--t3w)", fontWeight: 500 }}>None yet</span>
-            )}
+        {/* Compliance Documents - simple bordered rows + inline "Add a Document" form */}
+        <div className="card card-pad" style={{ marginTop: 20 }}>
+          <div style={{ marginBottom: 16 }}>
+            <div className="card-title">Compliance Documents</div>
+            <div className="card-title-sub">
+              Merged in this pass — was its own tab, but it&apos;s part of the same identity story
+              as the rest of this page
+            </div>
           </div>
-          <div className="rp-card">
-            <ComplianceDocumentsManager restaurantId={restaurant.id} documents={complianceDocuments} />
-          </div>
-          <p className="foot">
-            Business registration and food safety must be cleared before your first dinner goes
-            live. A liquor license is only needed if you plan to serve alcohol at the table.
-          </p>
-        </section>
+          <ComplianceDocumentsManager restaurantId={restaurant.id} documents={complianceDocuments} />
+        </div>
       </div>
     </div>
   );
