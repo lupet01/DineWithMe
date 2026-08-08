@@ -208,7 +208,7 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
     useDinnerRowState(dinner);
 
   const seatSummary =
-    seatCounts.available === 0
+    seatCounts.available === 0 && seatCounts.confirmed > 0
       ? "full"
       : `${seatCounts.available} available`;
 
