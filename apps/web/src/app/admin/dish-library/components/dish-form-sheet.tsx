@@ -265,7 +265,7 @@ export function DishFormSheet({
             </select>
           </div>
           <div>
-            <label className="field-label">Price (ZAR)</label>
+            <label className="field-label">Reference Price</label>
             <input
               required
               type="number"
@@ -273,7 +273,7 @@ export function DishFormSheet({
               step="0.01"
               value={values.price}
               onChange={(e) => setValues((v) => ({ ...v, price: e.target.value }))}
-              placeholder="0.00"
+              placeholder="R 165"
               disabled={isSaving}
               className="field-input"
             />

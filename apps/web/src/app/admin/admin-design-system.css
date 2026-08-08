@@ -488,10 +488,25 @@
 .dine-admin .meals .meal-editor-dish-chip { display: flex; align-items: center; gap: 10px; border: 1px solid var(--bdr); border-radius: 14px; padding: 8px 10px 8px 8px; background: var(--white); }
 .dine-admin .meals .meal-editor-dish-chip-body { min-width: 0; }
 .dine-admin .meals .meal-editor-dish-chip-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
-.dine-admin .meals .meal-editor-dish-chip-caption { font-size: 11px; color: var(--t3); }
+/* Wireframe: 48x48 chip thumbnail + "from Dish Library" caption on desktop;
+   38x38 with no caption on mobile (375px frame). Base rules below are the
+   mobile values (this file is mobile-first, like stat-grid-4 above), with a
+   min-width:768px override bumping back up to the desktop spec. */
+.dine-admin .meals .meal-editor-dish-chip-thumb { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+@container (min-width: 768px) { .dine-admin .meals .meal-editor-dish-chip-thumb { width: 48px; height: 48px; } }
+.dine-admin .meals .meal-editor-dish-thumb-empty { background: var(--bg2); border: 1px solid var(--bdr); }
+.dine-admin .meals .meal-editor-dish-chip-caption { font-size: 11px; color: var(--t3); display: none; }
+@container (min-width: 768px) { .dine-admin .meals .meal-editor-dish-chip-caption { display: block; } }
 .dine-admin .meals .meal-editor-picker-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--bdr); border-radius: 14px; padding: 8px; background: var(--white); cursor: pointer; font: inherit; color: inherit; transition: border-color var(--dur-fast) var(--ease), background var(--dur-base) var(--ease); }
 .dine-admin .meals .meal-editor-picker-row:hover { background: var(--bg2); border-color: var(--bdr2); }
 .dine-admin .meals .meal-editor-picker-row:disabled { opacity: .5; cursor: default; }
+.dine-admin .meals .meal-editor-picker-thumb { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+/* Performance stat-grid-4 switches column count at 640px (see .stat-grid-4
+   above); this class hides the 2 desktop-only stat cards (Dinners Served,
+   Avg Feedback) at that same 640px breakpoint rather than only-desktop's
+   768px, so the grid never briefly shows 4 columns with 2 empty cells. */
+.dine-admin .meals .meal-editor-stat-desktop-only { display: none; }
+@container (min-width: 640px) { .dine-admin .meals .meal-editor-stat-desktop-only { display: block; } }
 
 /* ============================================================
  * DISH LIBRARY — reverted to wireframe-native 2026-08-06. Shared
@@ -501,7 +516,10 @@
 .dine-admin .dish-library .dish-library-group-label { font-size: 12px; color: var(--t3); font-weight: 500; margin-bottom: 10px; }
 .dine-admin .dish-library .dish-library-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--bdr); border-radius: 14px; margin-bottom: 8px; }
 .dine-admin .dish-library .dish-library-row:last-child { margin-bottom: 0; }
-.dine-admin .dish-library .dish-library-thumb { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+/* Wireframe: 56x56 row thumbnail on desktop, 48x48 on mobile (375px frame).
+   Mobile-first base value below, bumped up at the desktop breakpoint. */
+.dine-admin .dish-library .dish-library-thumb { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+@container (min-width: 768px) { .dine-admin .dish-library .dish-library-thumb { width: 56px; height: 56px; } }
 .dine-admin .dish-library .dish-library-thumb-empty { background: var(--bg2); border: 1px solid var(--bdr); }
 .dine-admin .dish-library .dish-library-row-body { flex: 1; min-width: 0; }
 .dine-admin .dish-library .dish-library-row-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
@@ -509,6 +527,10 @@
 .dine-admin .dish-library .dish-library-row-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .dine-admin .dish-library .dish-library-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .dine-admin .dish-library .dish-library-row-price { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+/* Mobile: name + price + usage collapse into a single subtitle line
+   ("R 95" or "R 185 · used in 2 Meals") instead of desktop's separate
+   description / dietary-tag row / trailing price. */
+.dine-admin .dish-library .dish-library-row-subtitle-mobile { font-size: 12px; color: var(--t3); margin-top: 2px; font-variant-numeric: tabular-nums; }
 
 .dine-admin .dish-library .dish-form-photo-drop { width: 100%; height: 120px; border-radius: 14px; background: var(--bg2); border: 1.5px dashed var(--bdr2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--t3); cursor: pointer; font: inherit; margin-bottom: 14px; }
 .dine-admin .dish-library .dish-form-photo-selected { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }

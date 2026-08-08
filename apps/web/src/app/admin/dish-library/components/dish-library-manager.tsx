@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, Pencil, Trash2 } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
 import {
   createMenuItem,
@@ -171,15 +171,40 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Link href="/admin/meals" className="m-icon-btn" aria-label="Back to Meals">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="pg-title">Dish Library</h1>
-            <p className="pg-sub">Your dish roster — photographed once, reused in every Meal</p>
-          </div>
+      {/* Desktop: breadcrumb line above the title row, matching the Meal
+          Editor's own "← Meals / …" pattern. Mobile: a compact topbar —
+          back-chevron + centered title + a "+" icon button instead of the
+          text "+ Add Dish" button. */}
+      <div className="only-desktop" style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
+        ←{" "}
+        <Link href="/admin/meals" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
+          Meals
+        </Link>{" "}
+        / Dish Library
+      </div>
+      <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <Link href="/admin/meals" className="m-icon-btn" aria-label="Back to Meals">
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+        <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>
+          Dish Library
+        </h1>
+        <button
+          type="button"
+          onClick={() => {
+            setFormError(null);
+            setSheet({ mode: "add" });
+          }}
+          className="m-icon-btn"
+          aria-label="Add Dish"
+        >
+          +
+        </button>
+      </div>
+      <div className="only-desktop-flex" style={{ justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
+        <div>
+          <h1 className="pg-title">Dish Library</h1>
+          <p className="pg-sub">Your dish roster — photographed once, reused in every Meal</p>
         </div>
         <button
           type="button"
@@ -226,21 +251,32 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
                         )}
                         <div className="dish-library-row-body">
                           <div className="dish-library-row-title">{item.name}</div>
-                          {item.description && <div className="dish-library-row-desc">{item.description}</div>}
-                          {(item.dietaryTags.length > 0 || usageCount > 0) && (
-                            <div className="dish-library-row-tags">
-                              {item.dietaryTags.map((tag) => (
-                                <span key={tag} className="badge badge-slate">
-                                  {DIETARY_TAG_LABELS[tag]}
-                                </span>
-                              ))}
-                              {usageCount > 0 && (
-                                <span className="badge badge-slate">
-                                  Used in {usageCount} {usageCount === 1 ? "Meal" : "Meals"}
-                                </span>
-                              )}
-                            </div>
-                          )}
+                          {/* Desktop: description + dietary/usage badge row, price shown
+                              trailing in dish-library-row-actions. Mobile: wireframe
+                              collapses name + price + usage into one subtitle line
+                              instead ("R 95" / "R 185 · used in 2 Meals"), so description
+                              and the tag row are desktop-only. */}
+                          <div className="only-desktop">
+                            {item.description && <div className="dish-library-row-desc">{item.description}</div>}
+                            {(item.dietaryTags.length > 0 || usageCount > 0) && (
+                              <div className="dish-library-row-tags">
+                                {item.dietaryTags.map((tag) => (
+                                  <span key={tag} className="badge badge-slate">
+                                    {DIETARY_TAG_LABELS[tag]}
+                                  </span>
+                                ))}
+                                {usageCount > 0 && (
+                                  <span className="badge badge-slate">
+                                    Used in {usageCount} {usageCount === 1 ? "Meal" : "Meals"}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="only-mobile dish-library-row-subtitle-mobile">
+                            {formatPrice(item.priceCents)}
+                            {usageCount > 0 ? ` · used in ${usageCount} ${usageCount === 1 ? "Meal" : "Meals"}` : ""}
+                          </div>
                           <button
                             type="button"
                             onClick={() => handleToggleAvailability(item)}
@@ -252,7 +288,7 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
                           </button>
                         </div>
                         <div className="dish-library-row-actions">
-                          <span className="dish-library-row-price">{formatPrice(item.priceCents)}</span>
+                          <span className="dish-library-row-price only-desktop-flex">{formatPrice(item.priceCents)}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -264,11 +300,14 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
+                          {/* Delete is desktop-only per the wireframe's mobile frame
+                              (mobile row gets a single edit-only icon button) — the
+                              action itself is untouched, still reachable from desktop. */}
                           <button
                             type="button"
                             onClick={() => handleDelete(item)}
                             disabled={deletingId === item.id}
-                            className="m-icon-btn"
+                            className="m-icon-btn only-desktop-flex"
                             style={{ color: "var(--red-txt)" }}
                             aria-label={`Delete ${item.name}`}
                           >

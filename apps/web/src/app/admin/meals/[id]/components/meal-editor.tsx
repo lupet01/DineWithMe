@@ -37,35 +37,18 @@ interface MealEditorProps {
 function DishThumb({
   mediaAssetId,
   photoPool,
-  size,
+  className,
 }: {
   mediaAssetId: string | null;
   photoPool: PhotoPoolEntry[];
-  size: number;
+  className: string;
 }) {
   const url = mediaAssetId ? photoPool.find((p) => p.id === mediaAssetId)?.url : null;
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return (
-      <img
-        src={url}
-        alt=""
-        style={{ width: size, height: size, borderRadius: 10, objectFit: "cover", flexShrink: 0 }}
-      />
-    );
+    return <img src={url} alt="" className={className} />;
   }
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 10,
-        background: "var(--bg2)",
-        border: "1px solid var(--bdr)",
-        flexShrink: 0,
-      }}
-    />
-  );
+  return <div className={`${className} meal-editor-dish-thumb-empty`} />;
 }
 
 export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
@@ -79,6 +62,12 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
   const [pickerCourseId, setPickerCourseId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [busyOptionId, setBusyOptionId] = useState<string | null>(null);
+  const [selectedDishId, setSelectedDishId] = useState<string | null>(null);
+
+  const closePicker = () => {
+    setPickerCourseId(null);
+    setSelectedDishId(null);
+  };
 
   const handleSave = async () => {
     setError(null);
@@ -128,7 +117,7 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
       setError(result.error || "Failed to add dish option");
       return;
     }
-    setPickerCourseId(null);
+    closePicker();
     router.refresh();
   };
 
@@ -172,6 +161,7 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
 
       <div>
         <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
+          ←{" "}
           <Link href="/admin/meals" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
             Meals
           </Link>{" "}
@@ -213,7 +203,12 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
         </div>
         {meal.performance ? (
           <div className="stat-grid-4">
-            <div className="stat-card">
+            {/* Dinners Served + Avg Feedback are desktop-only per the wireframe's
+                mobile frame: mobile shows just a 2-stat grid (Fill Rate, Would
+                Return). Hiding these two here leaves exactly those 2 stats in
+                stat-grid-4's mobile 2-col layout, which is visually identical
+                to a dedicated stat-grid-2. */}
+            <div className="stat-card meal-editor-stat-desktop-only">
               <div className="stat-label">Dinners Served</div>
               <div className="stat-value" style={{ fontSize: 18 }}>
                 {meal.performance.totalDinners}
@@ -228,7 +223,7 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
                 {formatPercent(fillRate)}
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card meal-editor-stat-desktop-only">
               <div className="stat-label">Avg Feedback</div>
               <div className="stat-value" style={{ fontSize: 18 }}>
                 {meal.performance.avgFeedbackScore != null ? `${meal.performance.avgFeedbackScore.toFixed(1)} ★` : "—"}
@@ -283,7 +278,11 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                 {course.options.map((option) => (
                   <div key={option.id} className="meal-editor-dish-chip">
-                    <DishThumb mediaAssetId={option.menuItem.mediaAssetId} photoPool={photoPool} size={48} />
+                    <DishThumb
+                      mediaAssetId={option.menuItem.mediaAssetId}
+                      photoPool={photoPool}
+                      className="meal-editor-dish-chip-thumb"
+                    />
                     <div className="meal-editor-dish-chip-body">
                       <div className="meal-editor-dish-chip-name">{option.menuItem.name}</div>
                       <div className="meal-editor-dish-chip-caption">from Dish Library</div>
@@ -339,7 +338,7 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
 
       <FilterSheet
         open={pickerCourseId !== null}
-        onClose={() => setPickerCourseId(null)}
+        onClose={closePicker}
         title={`Choose a ${pickerCourse ? COURSE_LABELS[pickerCourse.courseType] : ""}`}
       >
         <input
@@ -357,30 +356,39 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 280, overflowY: "auto" }}>
-            {pickerChoices.map((dish) => (
-              <button
-                key={dish.id}
-                type="button"
-                onClick={() => pickerCourseId && handleAddOption(pickerCourseId, dish.id)}
-                disabled={busyOptionId === dish.id}
-                className="meal-editor-picker-row"
-              >
-                <DishThumb mediaAssetId={dish.mediaAssetId} photoPool={photoPool} size={40} />
-                <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>
-                    {dish.name}
-                    {usedElsewhereInMeal.has(dish.id) && (
-                      <span style={{ color: "var(--p)", fontWeight: 700, marginLeft: 8, fontSize: 11.5 }}>
-                        ✓ already used above
-                      </span>
-                    )}
+            {pickerChoices.map((dish) => {
+              const alreadyUsed = usedElsewhereInMeal.has(dish.id);
+              const highlighted = alreadyUsed || selectedDishId === dish.id;
+              return (
+                <button
+                  key={dish.id}
+                  type="button"
+                  onClick={() => setSelectedDishId(dish.id)}
+                  className="meal-editor-picker-row"
+                  style={
+                    highlighted
+                      ? { borderColor: "var(--p)", background: "var(--p-tint)" }
+                      : undefined
+                  }
+                >
+                  <DishThumb
+                    mediaAssetId={dish.mediaAssetId}
+                    photoPool={photoPool}
+                    className="meal-editor-picker-thumb"
+                  />
+                  <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)" }}>
+                      {dish.name}
+                      {alreadyUsed && (
+                        <span style={{ color: "var(--p)", fontWeight: 700, marginLeft: 8, fontSize: 11.5 }}>
+                          ✓ already used above
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--p)", flexShrink: 0 }}>
-                  {busyOptionId === dish.id ? "Adding…" : "Add"}
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
         <p style={{ fontSize: 11, color: "var(--t3)", marginTop: 10, textAlign: "center" }}>
@@ -389,6 +397,15 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
             Add it to your Dish Library first →
           </Link>
         </p>
+        <button
+          type="button"
+          onClick={() => pickerCourseId && selectedDishId && handleAddOption(pickerCourseId, selectedDishId)}
+          disabled={!selectedDishId || busyOptionId === selectedDishId}
+          className="btn btn-primary btn-block"
+          style={{ marginTop: 14 }}
+        >
+          {busyOptionId === selectedDishId ? "Adding…" : "Add to Meal"}
+        </button>
       </FilterSheet>
     </div>
   );
