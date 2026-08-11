@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, ShieldAlert } from "lucide-react";
-import { updateBankDetails } from "../actions";
+import { updateBankDetails, BANK_ACCOUNT_TYPES } from "../actions";
 
 interface BankDetailsFormProps {
   restaurantId: string;
   isOwner: boolean;
   bankName: string | null;
+  bankBranchCode: string | null;
+  bankAccountType: string | null;
   maskedAccountNumber: string | null;
   bankAccountHolderName: string | null;
   verifiedAt: string | null;
@@ -18,6 +20,8 @@ export function BankDetailsForm({
   restaurantId,
   isOwner,
   bankName,
+  bankBranchCode,
+  bankAccountType,
   maskedAccountNumber,
   bankAccountHolderName,
   verifiedAt,
@@ -28,6 +32,8 @@ export function BankDetailsForm({
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     bankName: bankName ?? "",
+    bankBranchCode: bankBranchCode ?? "",
+    bankAccountType: bankAccountType ?? BANK_ACCOUNT_TYPES[0],
     bankAccountNumber: "",
     bankAccountHolderName: bankAccountHolderName ?? "",
   });
@@ -86,8 +92,16 @@ export function BankDetailsForm({
                 <div style={{ fontSize: 13.5, color: "var(--text)" }}>{bankName}</div>
               </div>
               <div>
+                <label className="field-label">Branch Code</label>
+                <div style={{ fontSize: 13.5, color: "var(--text)" }}>{bankBranchCode || "—"}</div>
+              </div>
+              <div>
                 <label className="field-label">Account Number</label>
                 <div style={{ fontSize: 13.5, color: "var(--text)" }}>{maskedAccountNumber}</div>
+              </div>
+              <div>
+                <label className="field-label">Account Type</label>
+                <div style={{ fontSize: 13.5, color: "var(--text)" }}>{bankAccountType || "—"}</div>
               </div>
               <div>
                 <label className="field-label">Account Holder Name</label>
@@ -135,6 +149,19 @@ export function BankDetailsForm({
               />
             </div>
             <div>
+              <label className="field-label">Branch Code</label>
+              <input
+                required
+                inputMode="numeric"
+                value={form.bankBranchCode}
+                onChange={(e) => setForm((f) => ({ ...f, bankBranchCode: e.target.value }))}
+                disabled={saving}
+                className="field-input"
+              />
+            </div>
+          </div>
+          <div className="field-grid-2" style={{ marginTop: 16 }}>
+            <div>
               <label className="field-label">Account Number</label>
               <input
                 required
@@ -145,6 +172,22 @@ export function BankDetailsForm({
                 disabled={saving}
                 className="field-input"
               />
+            </div>
+            <div>
+              <label className="field-label">Account Type</label>
+              <select
+                required
+                value={form.bankAccountType}
+                onChange={(e) => setForm((f) => ({ ...f, bankAccountType: e.target.value }))}
+                disabled={saving}
+                className="field-input"
+              >
+                {BANK_ACCOUNT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div style={{ marginTop: 16 }}>
@@ -173,6 +216,8 @@ export function BankDetailsForm({
                 setError(null);
                 setForm({
                   bankName: bankName ?? "",
+                  bankBranchCode: bankBranchCode ?? "",
+                  bankAccountType: bankAccountType ?? BANK_ACCOUNT_TYPES[0],
                   bankAccountNumber: "",
                   bankAccountHolderName: bankAccountHolderName ?? "",
                 });

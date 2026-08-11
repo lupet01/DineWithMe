@@ -89,6 +89,8 @@ export default async function PayoutsPage() {
           restaurantId={restaurant.id}
           isOwner={isOwner}
           bankName={restaurant.bankName}
+          bankBranchCode={restaurant.bankBranchCode}
+          bankAccountType={restaurant.bankAccountType}
           maskedAccountNumber={maskedAccountNumber}
           bankAccountHolderName={restaurant.bankAccountHolderName}
           verifiedAt={restaurant.bankDetailsVerifiedAt?.toISOString() ?? null}

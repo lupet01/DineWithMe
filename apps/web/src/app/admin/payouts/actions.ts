@@ -19,8 +19,18 @@ async function requireOwner(restaurantId: string) {
   return { user };
 }
 
+export const BANK_ACCOUNT_TYPES = [
+  "Business Cheque",
+  "Business Savings",
+  "Personal Cheque",
+  "Personal Savings",
+] as const;
+export type BankAccountType = (typeof BANK_ACCOUNT_TYPES)[number];
+
 export interface BankDetailsInput {
   bankName: string;
+  bankBranchCode: string;
+  bankAccountType: string;
   bankAccountNumber: string;
   bankAccountHolderName: string;
 }
@@ -43,16 +53,30 @@ export async function updateBankDetails(
     return { success: false, error: authResult.error };
   }
 
-  if (!input.bankName.trim() || !input.bankAccountNumber.trim() || !input.bankAccountHolderName.trim()) {
-    return { success: false, error: "Bank name, account number, and account holder name are all required" };
+  if (
+    !input.bankName.trim() ||
+    !input.bankBranchCode.trim() ||
+    !input.bankAccountType.trim() ||
+    !input.bankAccountNumber.trim() ||
+    !input.bankAccountHolderName.trim()
+  ) {
+    return { success: false, error: "All bank detail fields are required" };
   }
   if (!/^[0-9]{4,20}$/.test(input.bankAccountNumber.trim())) {
     return { success: false, error: "Account number must be 4-20 digits" };
+  }
+  if (!/^[0-9]{4,10}$/.test(input.bankBranchCode.trim())) {
+    return { success: false, error: "Branch code must be 4-10 digits" };
+  }
+  if (!BANK_ACCOUNT_TYPES.includes(input.bankAccountType.trim() as BankAccountType)) {
+    return { success: false, error: "Please choose a valid account type" };
   }
 
   try {
     await restaurantRepository.update(restaurantId, {
       bankName: input.bankName.trim(),
+      bankBranchCode: input.bankBranchCode.trim(),
+      bankAccountType: input.bankAccountType.trim(),
       bankAccountNumber: encrypt(input.bankAccountNumber.trim()),
       bankAccountHolderName: input.bankAccountHolderName.trim(),
       bankDetailsVerifiedAt: null,

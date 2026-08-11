@@ -154,6 +154,14 @@ model Restaurant {
   // inherit a stale verification - only a fresh Platform Ops verify action
   // sets it again. Never save-and-verify in the same step.
   bankName                 String?
+  // Branch code and account type are non-sensitive (a branch code is a
+  // public bank routing number, not a secret like the account number), so
+  // unlike bankAccountNumber they're stored in plaintext. Both are part of
+  // the Payout Details form (wireframe §sec-payouts / §sec-update-bank-
+  // details) and, like the rest of these fields, changing either clears
+  // bankDetailsVerifiedAt via the update path.
+  bankBranchCode           String?
+  bankAccountType          String?
   bankAccountNumber        String?
   bankAccountHolderName    String?
   bankDetailsVerifiedAt    DateTime?
