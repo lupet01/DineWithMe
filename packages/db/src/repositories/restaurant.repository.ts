@@ -72,6 +72,53 @@ export class RestaurantRepository extends BaseRepository<Restaurant> {
     });
   }
 
+  /**
+   * Server-side paginated + filterable restaurant list, backing the
+   * platform-wide Restaurant Management (Ops) screen (§sec-restaurant-queue).
+   * Status, city, and name search all resolve in the DB so the page never
+   * loads every restaurant on the platform. Returns the page plus the total
+   * matching count. Status-tab counts and the location dropdown come from the
+   * separate countByStatus()/listCities() helpers below, which stay
+   * full-dataset regardless of the active page/filter.
+   */
+  async findManyWithMembersPaginated(params: {
+    skip: number;
+    take: number;
+    search?: string;
+    status?: RestaurantStatus;
+    city?: string;
+  }): Promise<{ restaurants: RestaurantWithMembers[]; total: number }> {
+    const query = params.search?.trim();
+    const where: Prisma.RestaurantWhereInput = {
+      ...(params.status ? { status: params.status } : {}),
+      ...(params.city ? { city: params.city } : {}),
+      ...(query ? { name: { contains: query, mode: "insensitive" } } : {}),
+    };
+
+    const [restaurants, total] = await this.prisma.$transaction([
+      this.prisma.restaurant.findMany({
+        where,
+        include: { members: { include: { user: true } } },
+        orderBy: { createdAt: "desc" },
+        skip: params.skip,
+        take: params.take,
+      }),
+      this.prisma.restaurant.count({ where }),
+    ]);
+
+    return { restaurants, total };
+  }
+
+  async listCities(): Promise<string[]> {
+    const rows = await this.prisma.restaurant.findMany({
+      where: { city: { not: null } },
+      select: { city: true },
+      distinct: ["city"],
+      orderBy: { city: "asc" },
+    });
+    return rows.map((r) => r.city).filter((c): c is string => Boolean(c));
+  }
+
   async findManyForUser(userId: string): Promise<RestaurantWithMembers[]> {
     return this.prisma.restaurant.findMany({
       where: {

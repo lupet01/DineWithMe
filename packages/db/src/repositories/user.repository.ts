@@ -26,6 +26,43 @@ export class UserRepository extends BaseRepository<User> {
     });
   }
 
+  /**
+   * Server-side paginated + searchable user list, backing the platform-wide
+   * Users (Ops) screen (§sec-users) - that list aggregates every user on the
+   * platform and is genuinely unbounded, so it pages/searches in the DB
+   * rather than loading all rows to the client. Search matches name or email,
+   * case-insensitive. Returns the page plus the total matching count so the
+   * caller can render "Showing X-Y of Z" and page controls.
+   */
+  async findManyPaginated(params: {
+    skip: number;
+    take: number;
+    search?: string;
+  }): Promise<{ users: User[]; total: number }> {
+    const query = params.search?.trim();
+    const where: Prisma.UserWhereInput | undefined = query
+      ? {
+          OR: [
+            { firstName: { contains: query, mode: "insensitive" } },
+            { lastName: { contains: query, mode: "insensitive" } },
+            { email: { contains: query, mode: "insensitive" } },
+          ],
+        }
+      : undefined;
+
+    const [users, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: params.skip,
+        take: params.take,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { users, total };
+  }
+
   async findByRole(role: Role): Promise<User[]> {
     return this.prisma.user.findMany({
       where: { role },

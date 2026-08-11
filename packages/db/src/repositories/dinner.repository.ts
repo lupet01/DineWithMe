@@ -252,6 +252,50 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     });
   }
 
+  /**
+   * Server-side paginated + filterable version of findManyWithTheme, backing
+   * the platform-wide Dinners (Ops) list (§sec-ops-dinners) which spans every
+   * restaurant and is unbounded. Status and search (restaurant name or theme
+   * title) resolve in the DB. Status-tab counts come from countByStatus()
+   * below, which stays full-dataset. The restaurant-admin Dinners list keeps
+   * its own client-side pagination (bounded to one restaurant's dinners).
+   */
+  async findManyWithThemePaginated(params: {
+    skip: number;
+    take: number;
+    search?: string;
+    status?: DinnerStatus;
+  }): Promise<{ dinners: DinnerWithRestaurant[]; total: number }> {
+    const query = params.search?.trim();
+    const where: Prisma.DinnerWhereInput = {
+      ...(params.status ? { status: params.status } : {}),
+      ...(query
+        ? {
+            OR: [
+              { restaurant: { name: { contains: query, mode: "insensitive" } } },
+              { theme: { title: { contains: query, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [dinners, total] = await this.prisma.$transaction([
+      this.prisma.dinner.findMany({
+        where,
+        orderBy: { startsAt: "desc" },
+        skip: params.skip,
+        take: params.take,
+        include: {
+          restaurant: { select: { id: true, name: true } },
+          theme: { select: { id: true, key: true, title: true, shortDescription: true } },
+        },
+      }),
+      this.prisma.dinner.count({ where }),
+    ]);
+
+    return { dinners, total };
+  }
+
   async create(data: Prisma.DinnerCreateInput): Promise<Dinner> {
     // Check if restaurant is active before creating dinner
     const restaurant = await this.prisma.restaurant.findUnique({
