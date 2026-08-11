@@ -324,6 +324,64 @@ export class FeedbackRepository extends BaseRepository<Feedback> {
   }
 
   /**
+   * Table-level (not targeting a specific guest), rated feedback across all
+   * of a restaurant's dinners - the Reviews Inbox's (/admin/reviews) data
+   * source. Excludes social feedback about a specific table-mate
+   * (targetUserId set) and feedback with no star rating (skipped the "How
+   * Was It?" screen), matching getAverageRatingForRestaurant's own filter.
+   */
+  async findRatedForRestaurant(restaurantId: string): Promise<FeedbackWithRelations[]> {
+    return this.prisma.feedback.findMany({
+      where: {
+        targetUserId: null,
+        rating: { not: null },
+        dinner: { restaurantId },
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        target: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        dinner: {
+          select: {
+            id: true,
+            theme: { select: { id: true, key: true, title: true, shortDescription: true } },
+            startsAt: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
+   * Set/clear a restaurant's private note on a guest's review. Scoped by
+   * restaurantId in the WHERE clause (via the dinner relation) so this can't
+   * write a note onto another restaurant's feedback row even if a caller
+   * passed the wrong feedbackId - `updateMany` returns a 0 count instead of
+   * throwing when that happens, which the caller treats as "not found."
+   */
+  async setRestaurantNote(feedbackId: string, restaurantId: string, note: string | null): Promise<boolean> {
+    const result = await this.prisma.feedback.updateMany({
+      where: { id: feedbackId, dinner: { restaurantId } },
+      data: { restaurantNote: note },
+    });
+    return result.count > 0;
+  }
+
+  /**
    * Average dinner rating across all of a restaurant's dinners, for the
    * restaurant admin Dashboard's "Avg Dinner Rating" stat.
    *

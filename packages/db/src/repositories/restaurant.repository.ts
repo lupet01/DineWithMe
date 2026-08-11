@@ -157,6 +157,15 @@ export class RestaurantRepository extends BaseRepository<Restaurant> {
     return member?.role === "OWNER";
   }
 
+  /** Owner or Manager - the two roles that exist (§sec-team). Used for
+   * actions the wireframe scopes to "any team member", like Restaurant
+   * Profile's Edit Profile, as opposed to isUserOwner's stricter gate for
+   * Owner-only actions (Danger Zone, bank details). */
+  async isUserMember(restaurantId: string, userId: string): Promise<boolean> {
+    const member = await this.getUserRole(restaurantId, userId);
+    return member !== null;
+  }
+
   /**
    * Adds an already-existing User to a restaurant's team - used by Accept
    * Invite once the invitee has a real User row (see TeamInvite's own
@@ -176,6 +185,41 @@ export class RestaurantRepository extends BaseRepository<Restaurant> {
     return this.prisma.restaurantMember.create({
       data: { restaurantId, userId, role },
     });
+  }
+
+  /**
+   * Changes a team member's role. Only ever called on a MANAGER row - the
+   * Team screen's Owner row has no select at all, since there's always
+   * exactly one restaurant creator. Promoting a Manager to Owner is
+   * therefore an ownership *transfer*, not an addition: the previous
+   * Owner is demoted to Manager in the same transaction so the
+   * exactly-one-Owner invariant never breaks, even for a moment.
+   * Demoting a Manager back to Manager (a no-op) or setting one back to
+   * MANAGER explicitly both skip the transfer path.
+   */
+  async updateMemberRole(
+    restaurantId: string,
+    memberUserId: string,
+    newRole: "OWNER" | "MANAGER"
+  ): Promise<void> {
+    if (newRole === "MANAGER") {
+      await this.prisma.restaurantMember.updateMany({
+        where: { restaurantId, userId: memberUserId, role: "MANAGER" },
+        data: { role: "MANAGER" },
+      });
+      return;
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.restaurantMember.updateMany({
+        where: { restaurantId, role: "OWNER" },
+        data: { role: "MANAGER" },
+      }),
+      this.prisma.restaurantMember.updateMany({
+        where: { restaurantId, userId: memberUserId, role: "MANAGER" },
+        data: { role: "OWNER" },
+      }),
+    ]);
   }
 
   /**

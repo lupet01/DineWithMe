@@ -649,6 +649,7 @@ export class DinnerRepository extends BaseRepository<Dinner> {
     });
 
     const counts: Record<DinnerStatus, number> = {
+      DRAFT: 0,
       SCHEDULED: 0,
       LIVE: 0,
       COMPLETED: 0,

@@ -2,6 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft, Search } from "lucide-react";
 import type { MediaLibraryItem } from "@dinewithme/db";
 import { requestMediaUploadUrl, saveMediaAsset, setFeaturedPhoto, deleteMediaAsset } from "../actions";
 import { MediaTabs } from "./media-tabs";
@@ -26,6 +28,7 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<MediaTab>("ALL");
+  const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [optionsItem, setOptionsItem] = useState<MediaLibraryItem | null>(null);
@@ -49,8 +52,31 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
   // regardless of which tab is active - it's always shown once, up top,
   // never duplicated in the grid, rather than reappearing when its own
   // category tab is selected.
-  const filtered = activeTab === "ALL" ? items : items.filter((i) => i.source === SOURCE_BY_TAB[activeTab]);
+  const query = search.trim().toLowerCase();
+  const filtered = (activeTab === "ALL" ? items : items.filter((i) => i.source === SOURCE_BY_TAB[activeTab])).filter(
+    (i) =>
+      query === "" ||
+      i.sourceLabel.toLowerCase().includes(query) ||
+      (i.caption?.toLowerCase().includes(query) ?? false)
+  );
   const gridItems = filtered.filter((i) => i.id !== featured?.id);
+
+  // "By Dinner" restructures the flat grid into per-dinner sections, each
+  // under its own date heading, so photos from different dinners run the same
+  // week never blur together (wireframe §sec-media-library). Every other tab
+  // shares the flat grid. Insertion order of the Map preserves the
+  // repository's ordering (newest dinner first).
+  const dinnerGroups = useMemo(() => {
+    if (activeTab !== "DINNER") return [] as [string, MediaLibraryItem[]][];
+    const groups = new Map<string, MediaLibraryItem[]>();
+    for (const item of gridItems) {
+      const existing = groups.get(item.sourceLabel);
+      if (existing) existing.push(item);
+      else groups.set(item.sourceLabel, [item]);
+    }
+    return Array.from(groups.entries());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, gridItems]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -115,7 +141,24 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+      {/* Back-chevron to Restaurant Profile, not a Profile/Team/Media/Settings
+          tab row — see Team's identical fix for the full reasoning. */}
+      <div className="only-mobile-flex" style={{ justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <Link href="/admin/restaurant" className="m-icon-btn" aria-label="Back to Restaurant Profile">
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+        <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>Media Library</h1>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="m-icon-btn"
+          aria-label="Add Photo"
+        >
+          {uploading ? "…" : "+"}
+        </button>
+      </div>
+      <div className="only-desktop-flex" style={{ justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 className="pg-title">Media Library</h1>
           <p className="pg-sub">
@@ -126,15 +169,15 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
         <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="btn btn-primary">
           {uploading ? "Uploading…" : "+ Add Photo"}
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={handleFileSelect}
-          className="hidden"
-          disabled={uploading}
-        />
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={uploading}
+      />
 
       {error && (
         <div className="alert alert-yellow">
@@ -142,12 +185,55 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
         </div>
       )}
 
-      <MediaTabs active={activeTab} counts={counts} onChange={setActiveTab} />
+      {/* Desktop: search folds into the same toolbar row as the tabs, matching
+          Guests & Bookings. Mobile: full-width search row above the tabs. */}
+      <div className="search-toolbar only-desktop-flex">
+        <div className="search-bar">
+          <Search className="search-icon" />
+          <input
+            className="field-input"
+            placeholder="Search by filename or tag…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <MediaTabs active={activeTab} counts={counts} onChange={setActiveTab} />
+      </div>
+
+      <div className="only-mobile-flex" style={{ flexDirection: "column", gap: 10, alignItems: "stretch" }}>
+        <div className="search-bar" style={{ width: "100%" }}>
+          <Search className="search-icon" />
+          <input
+            className="field-input"
+            placeholder="Search by filename or tag…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <MediaTabs active={activeTab} counts={counts} onChange={setActiveTab} />
+      </div>
 
       <FeaturedPhoto item={featured} onOpenOptions={setOptionsItem} />
 
       {items.length === 0 ? (
         <p style={{ fontSize: 13, color: "var(--t3)" }}>No photos uploaded yet.</p>
+      ) : gridItems.length === 0 ? (
+        <p style={{ fontSize: 13, color: "var(--t3)" }}>
+          {query ? "No photos match your search." : "No photos in this category yet."}
+        </p>
+      ) : activeTab === "DINNER" ? (
+        <div>
+          {dinnerGroups.map(([label, groupItems]) => (
+            <div key={label} className="media-group">
+              <div className="media-group-heading">{label}</div>
+              <div className="media-library-grid">
+                {groupItems.map((item) => (
+                  <PhotoTile key={item.id} item={item} onOpenOptions={setOptionsItem} hideTag />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="media-library-grid">
           {gridItems.map((item) => (

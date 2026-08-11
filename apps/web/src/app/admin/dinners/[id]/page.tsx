@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { dinnerRepository, dinnerMediaRepository, restaurantGalleryItemRepository } from "@dinewithme/db";
+import { dinnerRepository, dinnerMediaRepository, restaurantGalleryItemRepository, payoutRepository, feedbackRepository } from "@dinewithme/db";
 import { Role } from "@dinewithme/shared";
 import { formatAmount } from "@dinewithme/config/src/payment";
 import { getAuthUser } from "@/lib/auth/server";
@@ -11,7 +11,16 @@ import { MediaTabs } from "./components/media-tabs";
 import { GuestListPanel } from "./components/guest-list-panel";
 import { DinnerDetailTabs } from "./components/dinner-detail-tabs";
 import { DinnerStatusActions } from "./components/dinner-status-actions";
+import { DuplicateDinnerButton } from "./components/duplicate-dinner-button";
 import { CONVERSATION_STYLES } from "../conversation-styles";
+
+function formatPayoutStatus(payout: { status: string; paidAt: Date | null; scheduledAt: Date } | null): string {
+  if (!payout) return "—";
+  const shortDate = (d: Date) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (payout.status === "PAID") return payout.paidAt ? `✓ Paid ${shortDate(payout.paidAt)}` : "✓ Paid";
+  if (payout.status === "READY") return "Ready to Pay";
+  return `Pending (pays ${shortDate(payout.scheduledAt)})`;
+}
 
 export default async function DinnerDetailPage({
   params,
@@ -33,18 +42,34 @@ export default async function DinnerDetailPage({
   );
   const availableCount = dinner.seats.filter((seat) => seat.status === "AVAILABLE").length;
   const attendedCount = dinner.seats.filter((seat) => seat.status === "ATTENDED" || seat.status === "COMPLETED").length;
+  const noShowCount = dinner.seats.filter((seat) => seat.status === "NO_SHOW").length;
   const canRefund = user.role === Role.PLATFORM_ADMIN;
   const revenueCents = confirmedSeats.length * (dinner.pricePerSeatCents ?? 0);
   const canEdit = dinner.status === "SCHEDULED" || dinner.status === "LIVE";
+  const isCompleted = dinner.status === "COMPLETED";
 
   const startsAt = new Date(dinner.startsAt);
   const endsAt = new Date(dinner.endsAt);
+  const dinnerLabel = `${dinner.theme?.title || "Dinner"} (${startsAt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })})`;
 
-  const [listingMedia, allMedia, galleryItems] = await Promise.all([
+  const [listingMedia, allMedia, galleryItems, payout, dinnerFeedback] = await Promise.all([
     dinnerMediaRepository.findByDinner(dinner.id, "DINNER_LISTING"),
     dinnerMediaRepository.findByDinner(dinner.id),
     restaurantGalleryItemRepository.findByRestaurant(dinner.restaurant.id),
+    isCompleted ? payoutRepository.findByDinnerId(dinner.id) : Promise.resolve(null),
+    isCompleted ? feedbackRepository.findByDinner(dinner.id) : Promise.resolve([]),
   ]);
+
+  // Table-level ("how was the dinner overall") feedback only, not diner-to-
+  // diner ratings — targetUserId is null for that row shape.
+  const tableFeedback = dinnerFeedback.filter((f) => f.targetUserId === null && f.rating != null);
+  const avgRating = tableFeedback.length > 0
+    ? tableFeedback.reduce((sum, f) => sum + (f.rating ?? 0), 0) / tableFeedback.length
+    : null;
+  const ratingsByGuestId: Record<string, number> = {};
+  for (const f of tableFeedback) {
+    if (f.rating != null) ratingsByGuestId[f.authorId] = f.rating;
+  }
   const listingPhotoIds = new Set(listingMedia.map((item) => item.id));
   const tablePhotos = allMedia
     .filter((item) => !listingPhotoIds.has(item.id))
@@ -126,39 +151,83 @@ export default async function DinnerDetailPage({
     </div>
   );
 
+  const fillRate = dinner._count.seats > 0 ? Math.round((attendedCount / dinner._count.seats) * 100) : 0;
+
   const guestsPanel = (
     <>
-      <div className="stat-grid-4" style={{ marginBottom: 16 }}>
-        <div className="stat-card">
-          <div className="stat-label">Seats Total</div>
-          <div className="stat-value">{dinner._count.seats}</div>
+      {isCompleted ? (
+        <div className="stat-grid-4" style={{ marginBottom: 16 }}>
+          <div className="stat-card">
+            <div className="stat-label">Final Attendance</div>
+            <div className="stat-value">{attendedCount}</div>
+            <div className="stat-sub" style={{ color: "var(--green-txt)" }}>
+              {attendedCount} / {dinner._count.seats} · {fillRate}% fill
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Gross Revenue</div>
+            <div className="stat-value">{formatAmount(revenueCents)}</div>
+            {dinner.pricePerSeatCents != null && (
+              <div className="stat-sub">{formatAmount(dinner.pricePerSeatCents)} × {confirmedSeats.length} seats</div>
+            )}
+          </div>
+          <Link href="/admin/payouts" className="stat-card" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+            <div className="stat-label">Net Payout</div>
+            <div className="stat-value">{payout ? formatAmount(payout.netAmountCents) : "—"}</div>
+            <div className="stat-sub" style={{ color: "var(--blue-txt)" }}>{formatPayoutStatus(payout)}</div>
+          </Link>
+          <Link href="/admin/reviews" className="stat-card" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+            <div className="stat-label">Dinner Rating</div>
+            <div className="stat-value" style={{ color: "var(--yellow-txt)" }}>
+              {avgRating != null ? `${avgRating.toFixed(1)} ★` : "—"}
+            </div>
+            <div className="stat-sub" style={{ color: "var(--p)", fontWeight: 600 }}>
+              {tableFeedback.length} review{tableFeedback.length === 1 ? "" : "s"} →
+            </div>
+          </Link>
         </div>
-        <div className="stat-card">
-          <div className="stat-label">Confirmed</div>
-          <div className="stat-value">{confirmedSeats.length}</div>
+      ) : (
+        <div className="stat-grid-4" style={{ marginBottom: 16 }}>
+          <div className="stat-card">
+            <div className="stat-label">Seats Total</div>
+            <div className="stat-value">{dinner._count.seats}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Confirmed</div>
+            <div className="stat-value">{confirmedSeats.length}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Available</div>
+            <div className="stat-value">{availableCount}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Revenue</div>
+            <div className="stat-value" style={{ fontSize: 20 }}>{formatAmount(revenueCents)}</div>
+            {dinner.pricePerSeatCents != null && (
+              <div className="stat-sub">{confirmedSeats.length} × {formatAmount(dinner.pricePerSeatCents)}</div>
+            )}
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-label">Available</div>
-          <div className="stat-value">{availableCount}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Revenue</div>
-          <div className="stat-value" style={{ fontSize: 20 }}>{formatAmount(revenueCents)}</div>
-          {dinner.pricePerSeatCents != null && (
-            <div className="stat-sub">{confirmedSeats.length} × {formatAmount(dinner.pricePerSeatCents)}</div>
-          )}
-        </div>
-      </div>
+      )}
 
-      <p style={{ fontSize: 11, color: "var(--t3)", margin: "-8px 0 12px" }}>{attendedCount} checked in</p>
+      {!isCompleted && (
+        <p style={{ fontSize: 11, color: "var(--t3)", margin: "-8px 0 12px" }}>{attendedCount} checked in</p>
+      )}
 
       <GuestListPanel
         dinnerId={dinner.id}
         restaurantId={dinner.restaurant.id}
-        seats={confirmedSeats}
+        seats={isCompleted ? dinner.seats.filter((seat) => seat.status !== "AVAILABLE") : confirmedSeats}
         canRefund={canRefund}
         isPlatformAdmin={canRefund}
+        isCompleted={isCompleted}
+        ratingsByGuestId={ratingsByGuestId}
       />
+      {isCompleted && noShowCount > 0 && (
+        <p style={{ fontSize: 11, color: "var(--t3)", marginTop: 10 }}>
+          No-show guests are listed but grayed — their seat was held and paid. No-show revenue is included in the gross payout.
+        </p>
+      )}
     </>
   );
 
@@ -179,19 +248,25 @@ export default async function DinnerDetailPage({
 
   return (
     <div className="din">
-      <p className="pg-sub" style={{ marginBottom: 12 }}>
+      <p className="pg-sub only-desktop" style={{ marginBottom: 12 }}>
         <Link href="/admin/dinners" style={{ color: "var(--p)", fontWeight: 600 }}>
           ← Dinners
         </Link>{" "}
         / {dinner.theme?.title || "Dinner"} ·{" "}
         {startsAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
       </p>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 20, flexWrap: "wrap" }}>
-        <Link href="/admin/dinners" className="m-icon-btn" style={{ marginTop: 2 }}>
+      <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <Link href="/admin/dinners" className="m-icon-btn" aria-label="Back to Dinners">
           <ArrowLeft className="h-4 w-4" />
         </Link>
+        <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>
+          {dinner.theme?.title || "Dinner"}
+        </h1>
+        <div style={{ width: 44 }} />
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 20, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <h1 className="pg-title">{dinner.theme?.title || "Dinner"}</h1>
+          <h1 className="pg-title only-desktop">{dinner.theme?.title || "Dinner"}</h1>
           <p className="pg-sub">
             {dinner.restaurant.name} ·{" "}
             {startsAt.toLocaleDateString("en-US", {
@@ -205,10 +280,35 @@ export default async function DinnerDetailPage({
           </p>
         </div>
         <span className={`badge ${badgeClass}`}>{dinner.status}</span>
-        <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} />
+        {isCompleted ? (
+          <div className="only-desktop-flex" style={{ gap: 8 }}>
+            <DuplicateDinnerButton dinnerId={dinner.id} className="btn btn-outline btn-sm" />
+            <Link href={`/admin/dinners/${dinner.id}#table-photos`} className="btn btn-outline btn-sm" style={{ textDecoration: "none" }}>
+              📷 View Photos
+            </Link>
+          </div>
+        ) : (
+          <div className="only-desktop-flex">
+            <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} dinnerLabel={dinnerLabel} layout="inline" />
+          </div>
+        )}
       </div>
 
       <DinnerDetailTabs detailsPanel={detailsPanel} guestsPanel={guestsPanel} mediaPanel={mediaPanel} />
+
+      {canEdit && (
+        <div className="m-action-bar">
+          <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} dinnerLabel={dinnerLabel} layout="bar" />
+        </div>
+      )}
+      {isCompleted && (
+        <div className="m-action-bar only-mobile-flex">
+          <Link href={`/admin/dinners/${dinner.id}#table-photos`} className="btn btn-outline btn-block" style={{ flex: 1, textDecoration: "none" }}>
+            📷 View Photos
+          </Link>
+          <DuplicateDinnerButton dinnerId={dinner.id} className="btn btn-outline btn-block" style={{ flex: 1 }} />
+        </div>
+      )}
     </div>
   );
 }

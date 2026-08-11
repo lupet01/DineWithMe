@@ -166,6 +166,65 @@ export class SeatRepository extends BaseRepository<Seat> {
   }
 
   /**
+   * Full visit history for Guest Profile (CRM View), /admin/guests/[id] —
+   * same (userId, restaurantId) scoping as findByUserAndRestaurant, plus
+   * what that summary view doesn't need: per-dinner spend (this guest's own
+   * SUCCEEDED payment intent) and the rating this guest left (their own
+   * authored Feedback for that dinner, not feedback about them).
+   */
+  async findVisitHistoryByUserAndRestaurant(
+    userId: string,
+    restaurantId: string
+  ): Promise<
+    Array<{
+      status: SeatStatus;
+      dietaryNotes: string | null;
+      dinner: { id: string; startsAt: Date; theme: { title: string } | null };
+      paymentIntents: Array<{ status: string; amount: number }>;
+      dinnerFeedback: Array<{ rating: number | null }>;
+    }>
+  > {
+    return this.prisma.seat.findMany({
+      where: {
+        OR: [{ confirmedByUserId: userId }, { heldByUserId: userId }],
+        dinner: { restaurantId },
+      },
+      select: {
+        status: true,
+        dietaryNotes: true,
+        dinner: {
+          select: {
+            id: true,
+            startsAt: true,
+            theme: { select: { title: true } },
+          },
+        },
+        paymentIntents: {
+          where: { userId, status: "SUCCEEDED" },
+          select: { status: true, amount: true },
+        },
+      },
+      orderBy: { dinner: { startsAt: "desc" } },
+    }).then(async (seats) => {
+      // Rating-left isn't reachable through Seat directly (Feedback links to
+      // Dinner + authorId, not seatId) - fetch this guest's own authored
+      // feedback for these dinners in one extra query rather than N+1.
+      const dinnerIds = seats.map((s) => s.dinner.id);
+      const feedback = dinnerIds.length
+        ? await this.prisma.feedback.findMany({
+            where: { dinnerId: { in: dinnerIds }, authorId: userId },
+            select: { dinnerId: true, rating: true },
+          })
+        : [];
+      const ratingByDinner = new Map(feedback.map((f) => [f.dinnerId, f.rating]));
+      return seats.map((seat) => ({
+        ...seat,
+        dinnerFeedback: [{ rating: ratingByDinner.get(seat.dinner.id) ?? null }],
+      }));
+    });
+  }
+
+  /**
    * Find seats for a specific dinner and user
    */
   async findByDinnerAndUser(dinnerId: string, userId: string): Promise<Seat[]> {
@@ -259,6 +318,44 @@ export class SeatRepository extends BaseRepository<Seat> {
         status,
       },
     });
+  }
+
+  /**
+   * Bucket a restaurant's bookings (seat creation time, i.e. when the
+   * guest actually booked - not the dinner's own start time) into
+   * Morning/Afternoon/Evening/Night, for Restaurant Analytics' "Bookings
+   * by Time of Day" breakdown (wireframe §sec-restaurant-analytics).
+   * Needs no new schema - Seat.createdAt already exists - so this is a
+   * single grouped aggregation via raw SQL (Prisma's query builder can't
+   * express EXTRACT(HOUR ...) bucketing directly). Aggregated in the
+   * database, not loaded row-by-row.
+   */
+  async countBookingsByTimeOfDayForRestaurantSince(
+    restaurantId: string,
+    since: Date
+  ): Promise<{ morning: number; afternoon: number; evening: number; night: number }> {
+    const rows = await this.prisma.$queryRaw<Array<{ bucket: string; count: bigint }>>`
+      SELECT
+        CASE
+          WHEN EXTRACT(HOUR FROM s."createdAt") BETWEEN 5 AND 11 THEN 'morning'
+          WHEN EXTRACT(HOUR FROM s."createdAt") BETWEEN 12 AND 16 THEN 'afternoon'
+          WHEN EXTRACT(HOUR FROM s."createdAt") BETWEEN 17 AND 21 THEN 'evening'
+          ELSE 'night'
+        END AS bucket,
+        COUNT(*)::bigint AS count
+      FROM seats s
+      JOIN dinners d ON d.id = s."dinnerId"
+      WHERE d."restaurantId" = ${restaurantId} AND s."createdAt" >= ${since}
+      GROUP BY bucket
+    `;
+
+    const counts = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+    for (const row of rows) {
+      if (row.bucket in counts) {
+        counts[row.bucket as keyof typeof counts] = Number(row.count);
+      }
+    }
+    return counts;
   }
 
   async create(data: Prisma.SeatCreateInput): Promise<Seat> {

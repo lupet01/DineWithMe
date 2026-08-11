@@ -113,6 +113,28 @@ export async function revokeInvite(restaurantId: string, inviteId: string): Prom
   }
 }
 
+export async function changeRole(
+  restaurantId: string,
+  memberUserId: string,
+  newRole: "OWNER" | "MANAGER"
+): Promise<ActionResult> {
+  const authResult = await requireOwner(restaurantId);
+  if ("error" in authResult) {
+    return { success: false, error: authResult.error };
+  }
+
+  try {
+    await restaurantRepository.updateMemberRole(restaurantId, memberUserId, newRole);
+    revalidatePath("/admin/team");
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to change role",
+    };
+  }
+}
+
 export async function removeMember(restaurantId: string, memberUserId: string): Promise<ActionResult> {
   const authResult = await requireOwner(restaurantId);
   if ("error" in authResult) {

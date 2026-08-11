@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatAmount } from "@dinewithme/config/src/payment";
-import { GuestQuickView } from "@/app/admin/components/guest-quick-view";
 import { checkInGuest, refundSeat } from "../actions";
 
 interface Seat {
@@ -40,23 +39,27 @@ interface GuestRowProps {
   seat: Seat;
   canRefund: boolean;
   isPlatformAdmin: boolean;
+  /** COMPLETED dinner: renders as a read-only results row (dietary/check-in/rating) instead of the live check-in/payment/actions row. */
+  isCompleted?: boolean;
+  rating?: number;
 }
 
 function statusBadgeClass(status: string): string {
   if (status === "ATTENDED" || status === "COMPLETED") return "badge-green";
   if (status === "CONFIRMED") return "badge-blue";
+  if (status === "NO_SHOW") return "badge-red";
   return "badge-slate";
 }
 
 export function GuestRow({
   dinnerId,
-  restaurantId,
   seat,
   canRefund,
   isPlatformAdmin,
+  isCompleted = false,
+  rating,
 }: GuestRowProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   const guest = seat.confirmedByUser;
   const name = guest
@@ -91,35 +94,46 @@ export function GuestRow({
   const canCheckIn = seat.status === "CONFIRMED";
   const payment = paymentBadge(seat);
 
+  const nameCell = (
+    <td>
+      {guest && isPlatformAdmin ? (
+        <Link href={`/admin/ops/users/${guest.id}`} className="td-strong" style={{ textDecoration: "none" }}>
+          {name}
+        </Link>
+      ) : guest ? (
+        <Link href={`/admin/guests/${guest.id}`} className="td-strong" style={{ textDecoration: "none" }}>
+          {name}
+        </Link>
+      ) : (
+        <div className="td-strong">{name}</div>
+      )}
+      {guest && !isCompleted && <div className="td-muted">{guest.email}</div>}
+    </td>
+  );
+
+  if (isCompleted) {
+    const isNoShow = seat.status === "NO_SHOW";
+    return (
+      <tr style={isNoShow ? { opacity: 0.6 } : undefined}>
+        {nameCell}
+        <td style={{ color: "var(--t2)" }}>{seat.dietaryNotes || "—"}</td>
+        <td>
+          <span className={`badge ${statusBadgeClass(seat.status)}`}>{seat.status}</span>
+        </td>
+        <td className="r">
+          {rating != null ? (
+            <span style={{ fontWeight: 700, color: "var(--yellow-txt)" }}>{rating.toFixed(1)} ★</span>
+          ) : (
+            <span style={{ color: "var(--t3)" }}>—</span>
+          )}
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <tr>
-      <td>
-        {guest && isPlatformAdmin ? (
-          <Link href={`/admin/ops/users/${guest.id}`} className="td-strong" style={{ textDecoration: "none" }}>
-            {name}
-          </Link>
-        ) : guest ? (
-          <button
-            type="button"
-            onClick={() => setQuickViewOpen(true)}
-            className="td-strong"
-            style={{ background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}
-          >
-            {name}
-          </button>
-        ) : (
-          <div className="td-strong">{name}</div>
-        )}
-        {guest && <div className="td-muted">{guest.email}</div>}
-        {guest && !isPlatformAdmin && (
-          <GuestQuickView
-            open={quickViewOpen}
-            onClose={() => setQuickViewOpen(false)}
-            restaurantId={restaurantId}
-            guest={guest}
-          />
-        )}
-      </td>
+      {nameCell}
       <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--t2)" }}>
         {seat.dietaryNotes || "—"}
       </td>
@@ -132,7 +146,7 @@ export function GuestRow({
       <td>
         <div className="td-actions">
           {canCheckIn && (
-            <button onClick={handleCheckIn} disabled={isUpdating} className="btn btn-sm btn-green">
+            <button onClick={handleCheckIn} disabled={isUpdating} className="btn btn-green">
               Check In
             </button>
           )}

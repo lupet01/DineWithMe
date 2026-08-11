@@ -18,6 +18,7 @@ import { DangerZoneCard } from "./danger-zone-card";
 
 interface RestaurantLifecycleSettingsProps {
   restaurant: Restaurant;
+  isOwner: boolean;
   pendingClosureRequest: RestaurantClosureRequest | null;
   nextPayoutAmountCents: number | null;
   nextPayoutDate: string | null;
@@ -28,6 +29,7 @@ interface RestaurantLifecycleSettingsProps {
 
 export function RestaurantLifecycleSettings({
   restaurant,
+  isOwner,
   pendingClosureRequest,
   nextPayoutAmountCents,
   nextPayoutDate,
@@ -105,45 +107,51 @@ export function RestaurantLifecycleSettings({
 
   return (
     <>
+      {/* Cards space themselves via the parent .settings flex column's
+          gap:20 — matching every other stacked-card screen (Dashboard,
+          Restaurant Profile, Analytics) per the wireframe's frame-note. No
+          per-card margin wrappers, which previously stacked on top of the
+          gap and produced uneven 36px spacing. */}
       {error && (
-        <div className="alert alert-yellow" style={{ marginBottom: 16 }}>
+        <div className="alert alert-yellow">
           <p style={{ fontSize: 13, color: "var(--yellow-txt)" }}>{error}</p>
         </div>
       )}
 
-      <div style={{ marginBottom: 16 }}>
-        <PauseListingCard
-          status={restaurant.status}
-          onPause={handlePause}
-          onReactivate={handleReactivate}
-          isPending={isPending}
-        />
-      </div>
-
-      <div style={{ marginBottom: 16 }}>
-        <NotificationPreferencesCard
-          preferences={preferences}
-          onChange={handlePreferenceChange}
-          isSaving={savingPreferences}
-        />
-      </div>
-
-      <div style={{ marginBottom: 16 }}>
-        <PayoutsSnapshotCard
-          nextPayoutAmountCents={nextPayoutAmountCents}
-          nextPayoutDate={nextPayoutDate}
-          bankName={bankName}
-          maskedAccountNumber={maskedAccountNumber}
-          verifiedAt={verifiedAt}
-        />
-      </div>
-
-      <DangerZoneCard
-        pendingClosureRequest={pendingClosureRequest}
-        onSubmitClosure={handleSubmitClosure}
-        onCancelClosure={handleCancelClosure}
+      <PauseListingCard
+        status={restaurant.status}
+        onPause={handlePause}
+        onReactivate={handleReactivate}
         isPending={isPending}
       />
+
+      <NotificationPreferencesCard
+        preferences={preferences}
+        onChange={handlePreferenceChange}
+        isSaving={savingPreferences}
+      />
+
+      <PayoutsSnapshotCard
+        nextPayoutAmountCents={nextPayoutAmountCents}
+        nextPayoutDate={nextPayoutDate}
+        bankName={bankName}
+        maskedAccountNumber={maskedAccountNumber}
+        verifiedAt={verifiedAt}
+      />
+
+      {/* Owner-only, not just disabled-for-Manager — requesting to close the
+          restaurant is the single highest-blast-radius action in this app.
+          A Manager doesn't see this card at all, matching the identical
+          rule already applied to Team's role-select/Remove and Payouts'
+          Update Bank Details. */}
+      {isOwner && (
+        <DangerZoneCard
+          pendingClosureRequest={pendingClosureRequest}
+          onSubmitClosure={handleSubmitClosure}
+          onCancelClosure={handleCancelClosure}
+          isPending={isPending}
+        />
+      )}
     </>
   );
 }

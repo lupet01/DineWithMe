@@ -2,6 +2,7 @@ import { z } from "zod";
 
 // Dinner status enum
 export const dinnerStatusSchema = z.enum([
+  "DRAFT",
   "SCHEDULED",
   "LIVE",
   "COMPLETED",

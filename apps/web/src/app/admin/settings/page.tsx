@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { getAuthUser } from "@/lib/auth/server";
 import {
   restaurantRepository,
@@ -7,6 +9,20 @@ import {
   maskAccountNumber,
 } from "@dinewithme/db";
 import { RestaurantLifecycleSettings } from "./components/restaurant-lifecycle-settings";
+
+function SettingsMobileHeader() {
+  // Back-chevron to Restaurant Profile, not a Profile/Team/Media/Settings
+  // tab row — see Team's identical fix for the full reasoning.
+  return (
+    <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10 }}>
+      <Link href="/admin/restaurant" className="m-icon-btn" aria-label="Back to Restaurant Profile">
+        <ChevronLeft className="h-4 w-4" />
+      </Link>
+      <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>Settings</h1>
+      <div style={{ width: 44 }} />
+    </div>
+  );
+}
 
 export default async function SettingsPage() {
   const user = await getAuthUser();
@@ -21,7 +37,8 @@ export default async function SettingsPage() {
   if (!restaurant) {
     return (
       <div className="settings mx-auto max-w-2xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div>
+        <SettingsMobileHeader />
+        <div className="only-desktop">
           <h1 className="pg-title">Settings</h1>
         </div>
         <div className="card card-pad">
@@ -32,6 +49,8 @@ export default async function SettingsPage() {
       </div>
     );
   }
+
+  const isOwner = restaurant.members.some((m) => m.userId === user.id && m.role === "OWNER");
 
   const pendingClosureRequest = await restaurantClosureRequestRepository.findPendingByRestaurant(
     restaurant.id
@@ -53,13 +72,15 @@ export default async function SettingsPage() {
 
   return (
     <div className="settings mx-auto max-w-2xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div>
+      <SettingsMobileHeader />
+      <div className="only-desktop">
         <h1 className="pg-title">Settings</h1>
         <p className="pg-sub">Quick management for {restaurant.name}</p>
       </div>
 
       <RestaurantLifecycleSettings
         restaurant={restaurant}
+        isOwner={isOwner}
         pendingClosureRequest={pendingClosureRequest}
         nextPayoutAmountCents={nextPayoutAmountCents}
         nextPayoutDate={nextPayoutDate ? nextPayoutDate.toISOString() : null}

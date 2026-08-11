@@ -5,14 +5,8 @@ import { formatAmount as formatCurrency } from "@dinewithme/config/src/payment";
 import { payoutPolicy } from "@dinewithme/config/src/payout-policy";
 import { PayoutHistory } from "./components/payout-history";
 import { BankDetailsForm } from "./components/bank-details-form";
-import { RevenueRangePicker } from "../components/revenue-range-picker";
-import { rangeToSince } from "../lib/date-range";
 
-export default async function PayoutsPage({
-  searchParams,
-}: {
-  searchParams: { range?: string };
-}) {
+export default async function PayoutsPage() {
   const user = await getAuthUser();
   if (!user) {
     redirect("/sign-in");
@@ -24,8 +18,7 @@ export default async function PayoutsPage({
     redirect("/admin/restaurant");
   }
 
-  const range = searchParams.range || "30d";
-  const since = rangeToSince(range);
+  const isOwner = restaurant.members.some((m) => m.userId === user.id && m.role === "OWNER");
 
   const payouts = await payoutRepository.findByRestaurant(restaurant.id);
 
@@ -36,11 +29,14 @@ export default async function PayoutsPage({
     .map((p) => p.scheduledAt)
     .sort((a, b) => a.getTime() - b.getTime())[0];
 
-  // Period-scoped by paidAt - only payouts that actually paid out within
-  // the selected range count toward "Paid Out" / "Total Commission".
-  const paidInRange = payouts.filter((p) => p.status === "PAID" && p.paidAt && p.paidAt >= since);
-  const paidCents = paidInRange.reduce((sum, p) => sum + p.netAmountCents, 0);
-  const commissionCents = paidInRange.reduce((sum, p) => sum + p.commissionAmountCents, 0);
+  // Also all-time, not period-scoped — a range picker here used to gate
+  // only these two stats while Pending Payout/Next Payout Date stayed
+  // always-current, which was confusing (change the range, wonder why half
+  // the row didn't move) rather than useful. Removed per the wireframe's
+  // own fix; these are now plain all-time figures like the other two.
+  const paidPayouts = payouts.filter((p) => p.status === "PAID");
+  const paidCents = paidPayouts.reduce((sum, p) => sum + p.netAmountCents, 0);
+  const commissionCents = paidPayouts.reduce((sum, p) => sum + p.commissionAmountCents, 0);
 
   // Bank account number is decrypted here, server-side, only to produce a
   // masked display string - the raw decrypted value never leaves this
@@ -51,21 +47,9 @@ export default async function PayoutsPage({
 
   return (
     <div className="payouts">
-      <div
-        style={{
-          marginBottom: 20,
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          gap: 12,
-        }}
-      >
-        <div>
-          <h1 className="pg-title">Payouts</h1>
-          <p className="pg-sub">What you&apos;ve earned, and when it lands in your account</p>
-        </div>
-        <RevenueRangePicker current={range} />
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="pg-title">Payouts</h1>
+        <p className="pg-sub">What you&apos;ve earned, and when it lands in your account</p>
       </div>
 
       <div className="stat-grid-4" style={{ marginBottom: 20 }}>
@@ -81,7 +65,7 @@ export default async function PayoutsPage({
         <div className="stat-card">
           <div className="stat-label">Paid Out</div>
           <div className="stat-value">{formatCurrency(paidCents)}</div>
-          <div className="stat-sub">in selected period</div>
+          <div className="stat-sub">All-time</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Next Payout Date</div>
@@ -96,13 +80,14 @@ export default async function PayoutsPage({
           <div className="stat-value" style={{ color: "var(--t3)" }}>
             {formatCurrency(commissionCents)}
           </div>
-          <div className="stat-sub">{Math.round(payoutPolicy.commissionRate * 100)}% platform rate, in period</div>
+          <div className="stat-sub">{Math.round(payoutPolicy.commissionRate * 100)}% platform rate, all-time</div>
         </div>
       </div>
 
       <div style={{ marginBottom: 20 }}>
         <BankDetailsForm
           restaurantId={restaurant.id}
+          isOwner={isOwner}
           bankName={restaurant.bankName}
           maskedAccountNumber={maskedAccountNumber}
           bankAccountHolderName={restaurant.bankAccountHolderName}

@@ -4,6 +4,12 @@ import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, mealRepository } from "@dinewithme/db";
 import { NewMealButton } from "./components/new-meal-button";
 import { MealsList } from "./components/meals-list";
+import { MobileSubTabs } from "../components/mobile-sub-tabs";
+
+const dishTabs = [
+  { label: "Meals", href: "/admin/meals" },
+  { label: "Dish Library", href: "/admin/dish-library" },
+];
 
 export default async function MealsPage() {
   const user = await getAuthUser();
@@ -21,6 +27,7 @@ export default async function MealsPage() {
 
   return (
     <div className="meals mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <MobileSubTabs tabs={dishTabs} />
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 className="pg-title">Meals</h1>

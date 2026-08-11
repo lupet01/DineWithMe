@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, themeRepository, restaurantGalleryItemRepository, mealRepository } from "@dinewithme/db";
 import { DinnerForm, type MealDishPreview } from "../components/dinner-form";
@@ -38,8 +40,22 @@ export default async function NewDinnerPage() {
 
   return (
     <div className="din">
-      {/* Page Header */}
-      <div style={{ marginBottom: 20 }}>
+      <p className="pg-sub only-desktop" style={{ marginBottom: 12 }}>
+        <Link href="/admin/dinners" style={{ color: "var(--p)", fontWeight: 600 }}>
+          ← Dinners
+        </Link>{" "}
+        / Create Dinner
+      </p>
+      <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <Link href="/admin/dinners" className="m-icon-btn" aria-label="Back to Dinners">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>
+          Create Dinner
+        </h1>
+        <div style={{ width: 44 }} />
+      </div>
+      <div className="only-desktop" style={{ marginBottom: 20 }}>
         <h1 className="pg-title">Create Dinner</h1>
         <p className="pg-sub">Schedule a new dinner event at {restaurant.name}</p>
       </div>

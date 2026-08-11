@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inviteMember, revokeInvite, removeMember } from "../actions";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { inviteMember, revokeInvite, removeMember, changeRole } from "../actions";
 import { TeamRoster } from "./team-roster";
 import { PendingInvites } from "./pending-invites";
 import { InviteMemberSheet } from "./invite-member-sheet";
@@ -83,9 +85,48 @@ export function TeamManager({
     router.refresh();
   };
 
+  const handleChangeRole = async (userId: string, newRole: "OWNER" | "MANAGER") => {
+    setError(null);
+    setBusyId(userId);
+    const result = await changeRole(restaurantId, userId, newRole);
+    setBusyId(null);
+    if (!result.success) {
+      setError(result.error || "Failed to change role");
+      return;
+    }
+    router.refresh();
+  };
+
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+      {/* Back-chevron to Restaurant Profile, not a Profile/Team/Media/Settings
+          tab row — that switcher went stale once Restaurant Profile's own
+          Overview stopped using it (Team/Media are inline sections there
+          now, Settings a header icon); this is a drill-down reached from a
+          specific entry point, same convention as Guest Profile/Dinner
+          Detail. */}
+      <div className="only-mobile-flex" style={{ justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <Link href="/admin/restaurant" className="m-icon-btn" aria-label="Back to Restaurant Profile">
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+        <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>Team</h1>
+        {isOwner ? (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setInviting(true);
+            }}
+            className="m-icon-btn"
+            aria-label="Invite Member"
+          >
+            +
+          </button>
+        ) : (
+          <div style={{ width: 44 }} />
+        )}
+      </div>
+      <div className="only-desktop-flex" style={{ justifyContent: "space-between", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 className="pg-title">Team</h1>
           <p className="pg-sub">Who has access to manage {restaurantName}</p>
@@ -111,7 +152,14 @@ export function TeamManager({
       )}
 
       <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <TeamRoster members={members} isOwner={isOwner} onRemove={handleRemove} busyId={busyId} currentUserId={currentUserId} />
+        <TeamRoster
+          members={members}
+          isOwner={isOwner}
+          onRemove={handleRemove}
+          onChangeRole={handleChangeRole}
+          busyId={busyId}
+          currentUserId={currentUserId}
+        />
         <PendingInvites invites={pendingInvites} isOwner={isOwner} onRevoke={handleRevoke} busyId={busyId} />
       </div>
 

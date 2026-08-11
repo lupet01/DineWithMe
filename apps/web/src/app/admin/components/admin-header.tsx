@@ -1,33 +1,22 @@
 "use client";
 
-import { Menu, UtensilsCrossed } from "lucide-react";
+import { Utensils } from "lucide-react";
 import { Role } from "@dinewithme/shared";
 import { UserButton } from "@clerk/nextjs";
 
 interface AdminHeaderProps {
   userRole: Role;
   userName: string;
-  onMenuClick?: () => void;
 }
 
-export function AdminHeader({ userRole, userName, onMenuClick }: AdminHeaderProps) {
+export function AdminHeader({ userRole, userName }: AdminHeaderProps) {
   const roleLabel = userRole === Role.PLATFORM_ADMIN ? "Platform Admin" : "Restaurant Admin";
 
   return (
     <header className="d-topbar">
       <div className="d-logo">
-        {onMenuClick && (
-          <button
-            type="button"
-            onClick={onMenuClick}
-            aria-label="Open navigation menu"
-            className="m-hamburger"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-        )}
         <div className="d-logo-mark">
-          <UtensilsCrossed className="h-3.5 w-3.5" />
+          <Utensils className="h-3.5 w-3.5" />
         </div>
         <div className="d-logo-text">DineWithMe</div>
         <div className="d-logo-chip only-desktop">Admin</div>

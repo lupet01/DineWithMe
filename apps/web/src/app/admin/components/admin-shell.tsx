@@ -1,9 +1,7 @@
-"use client";
-
-import { useState } from "react";
 import { Role } from "@dinewithme/shared";
 import { AdminHeader } from "./admin-header";
 import { AdminSidebar } from "./admin-sidebar";
+import { AdminBottomNav } from "./admin-bottom-nav";
 
 interface AdminShellProps {
   userRole: Role;
@@ -13,24 +11,14 @@ interface AdminShellProps {
 }
 
 export function AdminShell({ userRole, userName, isOnboarding, children }: AdminShellProps) {
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-
   return (
     <div className="dine-admin">
-      <AdminHeader
-        userRole={userRole}
-        userName={userName}
-        onMenuClick={() => setIsMobileNavOpen(true)}
-      />
+      <AdminHeader userRole={userRole} userName={userName} />
       <div className="d-body">
-        <AdminSidebar
-          userRole={userRole}
-          isOnboarding={isOnboarding}
-          isOpen={isMobileNavOpen}
-          onClose={() => setIsMobileNavOpen(false)}
-        />
+        <AdminSidebar userRole={userRole} isOnboarding={isOnboarding} />
         <main className="d-main">{children}</main>
       </div>
+      <AdminBottomNav isOnboarding={isOnboarding} />
     </div>
   );
 }

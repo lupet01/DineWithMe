@@ -1,6 +1,12 @@
 import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, seatRepository } from "@dinewithme/db";
 import { GuestsTable } from "./components/guests-table";
+import { MobileSubTabs } from "../components/mobile-sub-tabs";
+
+const dinnersTabs = [
+  { label: "Dinners", href: "/admin/dinners" },
+  { label: "Guests & Bookings", href: "/admin/guests" },
+];
 
 export default async function GuestsPage() {
   const user = await getAuthUser();
@@ -14,6 +20,7 @@ export default async function GuestsPage() {
   if (!restaurant) {
     return (
       <div className="guests">
+        <MobileSubTabs tabs={dinnersTabs} marginBottom={14} />
         <h1 className="pg-title" style={{ marginBottom: 16 }}>
           Guests &amp; Bookings
         </h1>
@@ -28,6 +35,7 @@ export default async function GuestsPage() {
 
   return (
     <div className="guests">
+      <MobileSubTabs tabs={dinnersTabs} marginBottom={14} />
       <div style={{ marginBottom: 20 }}>
         <h1 className="pg-title">Guests &amp; Bookings</h1>
         <p className="pg-sub">Every guest who&apos;s booked a dinner at {restaurant.name}</p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Filter } from "lucide-react";
+import { Filter, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import type { DinnerWithRestaurant } from "@dinewithme/db";
 import { SortableColumnHeader, type SortDirection } from "@/components/ui/sortable-column-header";
 import { DinnerRow, DinnerRowCard } from "./dinner-row";
@@ -10,11 +10,7 @@ interface DinnersTableProps {
   dinners: DinnerWithRestaurant[];
 }
 
-const filterTabs = [
-  { value: "all", label: "All Dinners", mobileLabel: "All" },
-  { value: "upcoming", label: "Upcoming", mobileLabel: "Upcoming" },
-  { value: "past", label: "Past", mobileLabel: "Past" },
-] as const;
+type FilterValue = "all" | "upcoming" | "past";
 
 interface DateThemeFilter {
   from: string;
@@ -23,18 +19,34 @@ interface DateThemeFilter {
 }
 
 const EMPTY_FILTER: DateThemeFilter = { from: "", to: "", themeTitle: "" };
+const PAGE_SIZE = 10;
+
+function isUpcoming(dinner: DinnerWithRestaurant, now: Date) {
+  const dinnerDate = new Date(dinner.startsAt);
+  return dinnerDate >= now && dinner.status !== "CANCELLED" && dinner.status !== "COMPLETED";
+}
+
+function isPast(dinner: DinnerWithRestaurant, now: Date) {
+  const dinnerDate = new Date(dinner.startsAt);
+  return dinnerDate < now || dinner.status === "COMPLETED" || dinner.status === "CANCELLED";
+}
 
 export function DinnersTable({ dinners }: DinnersTableProps) {
-  const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
+  const [filter, setFilter] = useState<FilterValue>("all");
   const [dateSort, setDateSort] = useState<SortDirection>("asc");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   // Mobile-only "Filter Dinners" panel (§16.3 wireframe) - date range +
   // theme, staged in draft state and only applied to the list on "Apply"
   // (or cleared on "Reset"), matching the wireframe's explicit Reset/Apply
-  // pair rather than filtering live on every keystroke.
+  // pair rather than filtering live on every keystroke. Desktop applies
+  // its date/theme fields live instead - it already has room to show the
+  // toolbar inline, so there's no panel to open/close in the first place.
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [draftFilter, setDraftFilter] = useState<DateThemeFilter>(EMPTY_FILTER);
   const [appliedFilter, setAppliedFilter] = useState<DateThemeFilter>(EMPTY_FILTER);
+  const [desktopFilter, setDesktopFilter] = useState<DateThemeFilter>(EMPTY_FILTER);
 
   const themeOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -44,22 +56,47 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
     return Array.from(seen).sort();
   }, [dinners]);
 
-  // Filter dinners based on selected tab + the mobile date/theme panel
+  const tabCounts = useMemo(() => {
+    const now = new Date();
+    let upcoming = 0;
+    let past = 0;
+    for (const dinner of dinners) {
+      if (isUpcoming(dinner, now)) upcoming += 1;
+      if (isPast(dinner, now)) past += 1;
+    }
+    return { all: dinners.length, upcoming, past };
+  }, [dinners]);
+
+  const filterTabs = [
+    { value: "all" as const, label: `All (${tabCounts.all})` },
+    { value: "upcoming" as const, label: `Upcoming (${tabCounts.upcoming})` },
+    { value: "past" as const, label: `Past (${tabCounts.past})` },
+  ];
+
+  const isMobileFilterActive = appliedFilter.from !== "" || appliedFilter.to !== "" || appliedFilter.themeTitle !== "";
+  const isDesktopFilterActive = desktopFilter.from !== "" || desktopFilter.to !== "" || desktopFilter.themeTitle !== "";
+
+  // Filter dinners based on selected tab + search + the date/theme filter
+  // (mobile's applied-on-submit panel, desktop's live inline toolbar).
   const filteredDinners = useMemo(() => {
+    const now = new Date();
+    const activeFilter = isDesktopFilterActive ? desktopFilter : appliedFilter;
+
     const filtered = dinners.filter((dinner) => {
-      const now = new Date();
       const dinnerDate = new Date(dinner.startsAt);
 
-      if (filter === "upcoming") {
-        if (!(dinnerDate >= now && dinner.status !== "CANCELLED" && dinner.status !== "COMPLETED")) return false;
-      }
-      if (filter === "past") {
-        if (!(dinnerDate < now || dinner.status === "COMPLETED" || dinner.status === "CANCELLED")) return false;
+      if (filter === "upcoming" && !isUpcoming(dinner, now)) return false;
+      if (filter === "past" && !isPast(dinner, now)) return false;
+
+      if (search.trim()) {
+        const term = search.trim().toLowerCase();
+        const haystack = `${dinner.theme?.title ?? ""} ${dinner.description ?? ""}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
       }
 
-      if (appliedFilter.from && dinnerDate < new Date(appliedFilter.from)) return false;
-      if (appliedFilter.to && dinnerDate > new Date(`${appliedFilter.to}T23:59:59`)) return false;
-      if (appliedFilter.themeTitle && dinner.theme?.title !== appliedFilter.themeTitle) return false;
+      if (activeFilter.from && dinnerDate < new Date(activeFilter.from)) return false;
+      if (activeFilter.to && dinnerDate > new Date(`${activeFilter.to}T23:59:59`)) return false;
+      if (activeFilter.themeTitle && dinner.theme?.title !== activeFilter.themeTitle) return false;
 
       return true;
     });
@@ -68,7 +105,18 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
       const diff = new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
       return dateSort === "asc" ? diff : -diff;
     });
-  }, [dinners, filter, dateSort, appliedFilter]);
+  }, [dinners, filter, dateSort, search, appliedFilter, desktopFilter, isDesktopFilterActive]);
+
+  const totalCount = filteredDinners.length;
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pagedDinners = filteredDinners.slice(pageStart, pageStart + PAGE_SIZE);
+
+  const changeFilter = (next: FilterValue) => {
+    setFilter(next);
+    setPage(1);
+  };
 
   if (dinners.length === 0) {
     return (
@@ -85,27 +133,71 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
   const handleApplyFilter = () => {
     setAppliedFilter(draftFilter);
     setShowFilterPanel(false);
+    setPage(1);
   };
 
   const handleResetFilter = () => {
     setDraftFilter(EMPTY_FILTER);
     setAppliedFilter(EMPTY_FILTER);
+    setPage(1);
   };
 
   return (
     <div>
-      {/* Desktop tabs */}
-      <div className="tabs only-desktop-flex" style={{ marginBottom: 16 }}>
-        {filterTabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            className={`tab ${filter === tab.value ? "active" : ""}`}
-            onClick={() => setFilter(tab.value)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Desktop: search + date range + theme select + tabs, all inline —
+          every other list screen (Guests, Reviews, Restaurant Queue) already
+          surfaces filters this way; Dinners was the one screen still hiding
+          them behind mobile's icon-triggered panel with no way to narrow by
+          date/theme on desktop at all. */}
+      <div className="search-toolbar only-desktop-flex">
+        <div className="search-bar">
+          <Search className="h-4 w-4" />
+          <input
+            className="field-input"
+            placeholder="Search by dinner name…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+        <input
+          type="date"
+          className="field-input"
+          style={{ width: "auto" }}
+          title="From"
+          value={desktopFilter.from}
+          onChange={(e) => { setDesktopFilter((f) => ({ ...f, from: e.target.value })); setPage(1); }}
+        />
+        <input
+          type="date"
+          className="field-input"
+          style={{ width: "auto" }}
+          title="To"
+          value={desktopFilter.to}
+          onChange={(e) => { setDesktopFilter((f) => ({ ...f, to: e.target.value })); setPage(1); }}
+        />
+        <select
+          className="field-input"
+          style={{ width: "auto" }}
+          value={desktopFilter.themeTitle}
+          onChange={(e) => { setDesktopFilter((f) => ({ ...f, themeTitle: e.target.value })); setPage(1); }}
+        >
+          <option value="">All Themes</option>
+          {themeOptions.map((title) => (
+            <option key={title} value={title}>{title}</option>
+          ))}
+        </select>
+        <div className="tabs">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              className={`tab ${filter === tab.value ? "active" : ""}`}
+              onClick={() => changeFilter(tab.value)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Mobile: tabs + filter toggle */}
@@ -116,16 +208,17 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
               key={tab.value}
               type="button"
               className={`tab ${filter === tab.value ? "active" : ""}`}
-              onClick={() => setFilter(tab.value)}
+              onClick={() => changeFilter(tab.value)}
             >
-              {tab.mobileLabel}
+              {tab.label}
             </button>
           ))}
         </div>
         <button
           type="button"
-          className="m-icon-btn"
+          className={`m-icon-btn${isMobileFilterActive ? " filter-active" : ""}`}
           aria-label="Toggle Filter Dinners panel"
+          title={isMobileFilterActive ? "1 filter applied" : undefined}
           onClick={() => setShowFilterPanel((v) => !v)}
         >
           <Filter className="h-4 w-4" />
@@ -185,14 +278,14 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
         </div>
       )}
 
-      {/* Mobile: stacked row-cards. Desktop: table. Same filtered data. */}
+      {/* Mobile: stacked row-cards. Desktop: table. Same filtered+paged data. */}
       <div className="only-mobile">
-        {filteredDinners.length === 0 ? (
+        {pagedDinners.length === 0 ? (
           <div className="card card-pad" style={{ textAlign: "center", color: "var(--t3)" }}>
             No dinners found for this filter
           </div>
         ) : (
-          filteredDinners.map((dinner) => <DinnerRowCard key={dinner.id} dinner={dinner} />)
+          pagedDinners.map((dinner) => <DinnerRowCard key={dinner.id} dinner={dinner} />)
         )}
       </div>
 
@@ -211,19 +304,20 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
                 </th>
                 <th>Theme</th>
                 <th>Seats</th>
+                <th>Revenue</th>
                 <th>Status</th>
                 <th className="r">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredDinners.length === 0 ? (
+              {pagedDinners.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", color: "var(--t3)" }}>
+                  <td colSpan={6} style={{ textAlign: "center", color: "var(--t3)" }}>
                     No dinners found for this filter
                   </td>
                 </tr>
               ) : (
-                filteredDinners.map((dinner) => (
+                pagedDinners.map((dinner) => (
                   <DinnerRow key={dinner.id} dinner={dinner} />
                 ))
               )}
@@ -231,6 +325,35 @@ export function DinnersTable({ dinners }: DinnersTableProps) {
           </table>
         </div>
       </div>
+
+      {totalCount > 0 && (
+        <div className="pagination">
+          <div className="pagination-info">
+            Showing {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, totalCount)} of {totalCount}
+          </div>
+          <div className="pagination-controls">
+            <button
+              type="button"
+              className={`m-icon-btn${currentPage <= 1 ? " disabled" : ""}`}
+              aria-label="Previous page"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="pagination-page">Page {currentPage} of {pageCount}</span>
+            <button
+              type="button"
+              className={`m-icon-btn${currentPage >= pageCount ? " disabled" : ""}`}
+              aria-label="Next page"
+              disabled={currentPage >= pageCount}
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

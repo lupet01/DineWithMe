@@ -12,11 +12,12 @@ interface TeamRosterProps {
   members: Member[];
   isOwner: boolean;
   onRemove: (userId: string, name: string) => void;
+  onChangeRole: (userId: string, newRole: "OWNER" | "MANAGER") => void;
   busyId: string | null;
   currentUserId: string;
 }
 
-export function TeamRoster({ members, isOwner, onRemove, busyId, currentUserId }: TeamRosterProps) {
+export function TeamRoster({ members, isOwner, onRemove, onChangeRole, busyId, currentUserId }: TeamRosterProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {members.map((member) => {
@@ -34,9 +35,29 @@ export function TeamRoster({ members, isOwner, onRemove, busyId, currentUserId }
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              <span className={`badge ${member.role === "OWNER" ? "badge-purple" : "badge-blue"}`}>
-                {member.role}
-              </span>
+              {/* Owner's own row has no select — there's always exactly one
+                  restaurant creator. A Manager viewer also always sees
+                  plain text, same as a pending invite's role — only the
+                  Owner viewer gets a live select on a MANAGER row, and
+                  choosing OWNER there is a real ownership transfer (see
+                  restaurant.repository.ts's updateMemberRole doc comment). */}
+              {isOwner && member.role === "MANAGER" ? (
+                <select
+                  className="badge badge-blue"
+                  style={{ border: "none", cursor: "pointer", font: "inherit" }}
+                  value={member.role}
+                  disabled={busyId === member.userId}
+                  onChange={(e) => onChangeRole(member.userId, e.target.value as "OWNER" | "MANAGER")}
+                  aria-label={`Change ${name}'s role`}
+                >
+                  <option value="MANAGER">MANAGER</option>
+                  <option value="OWNER">OWNER</option>
+                </select>
+              ) : (
+                <span className={`badge ${member.role === "OWNER" ? "badge-purple" : "badge-blue"}`}>
+                  {member.role}
+                </span>
+              )}
               {isOwner && member.role === "MANAGER" && (
                 <button
                   type="button"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
 import {
   createMenuItem,
@@ -18,6 +18,7 @@ import {
   emptyDishFormValues,
   type DishFormValues,
 } from "./dish-form-sheet";
+import { ConfirmModal } from "../../components/confirm-modal";
 
 interface DishLibraryManagerProps {
   restaurantId: string;
@@ -33,6 +34,7 @@ function formatPrice(cents: number): string {
 export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCounts }: DishLibraryManagerProps) {
   const [items, setItems] = useState<MenuItem[]>(menuItems);
   const [sheet, setSheet] = useState<{ mode: "add" } | { mode: "edit"; item: MenuItem } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<MenuItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -150,10 +152,6 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
   };
 
   const handleDelete = async (item: MenuItem) => {
-    if (!confirm(`Remove "${item.name}" from the Dish Library?`)) {
-      return;
-    }
-
     setListError(null);
     setDeletingId(item.id);
     const result = await deleteMenuItem(item.id);
@@ -165,6 +163,7 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
     }
 
     setItems((prev) => prev.filter((i) => i.id !== item.id));
+    setPendingDelete(null);
   };
 
   const photo = (item: MenuItem) => (item.mediaAssetId ? photoPool.find((p) => p.id === item.mediaAssetId) : undefined);
@@ -172,9 +171,12 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
   return (
     <>
       {/* Desktop: breadcrumb line above the title row, matching the Meal
-          Editor's own "← Meals / …" pattern. Mobile: a compact topbar —
-          back-chevron + centered title + a "+" icon button instead of the
-          text "+ Add Dish" button. */}
+          Editor's own "← Meals / …" pattern. Mobile: Meals and Dish Library
+          are peer destinations switched via the MobileSubTabs pill row
+          (page.tsx) now, not a drill-down — so mobile gets the same plain
+          title + "+" icon button treatment as Meals' own header, no
+          back-chevron (that used to point back to Meals, which now reads
+          as a lateral switch, not "back"). */}
       <div className="only-desktop" style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
         ←{" "}
         <Link href="/admin/meals" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
@@ -183,10 +185,7 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
         / Dish Library
       </div>
       <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <Link href="/admin/meals" className="m-icon-btn" aria-label="Back to Meals">
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>
+        <h1 className="pg-title" style={{ flex: 1 }}>
           Dish Library
         </h1>
         <button
@@ -305,7 +304,7 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
                               action itself is untouched, still reachable from desktop. */}
                           <button
                             type="button"
-                            onClick={() => handleDelete(item)}
+                            onClick={() => setPendingDelete(item)}
                             disabled={deletingId === item.id}
                             className="m-icon-btn only-desktop-flex"
                             style={{ color: "var(--red-txt)" }}
@@ -349,6 +348,22 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
         isSaving={isSaving}
         error={formError}
       />
+
+      {pendingDelete && (
+        <ConfirmModal
+          open
+          onClose={() => setPendingDelete(null)}
+          onConfirm={() => handleDelete(pendingDelete)}
+          tone="red"
+          title={`Remove "${pendingDelete.name}"?`}
+          description={
+            (usageCounts[pendingDelete.id] ?? 0) > 0
+              ? `Used in ${usageCounts[pendingDelete.id]} ${usageCounts[pendingDelete.id] === 1 ? "Meal" : "Meals"} — those Meals simply lose this option, they aren't deleted. Removing it from the Dish Library only, not from any dinner that's already happened.`
+              : "Removing it from the Dish Library only, not from any dinner that's already happened."
+          }
+          confirmLabel="Remove"
+        />
+      )}
     </>
   );
 }

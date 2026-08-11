@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
 import type { MealWithCourses } from "@dinewithme/db";
 import { FilterSheet } from "@/components/ui/filter-sheet";
 import { updateMeal, deleteMeal, addCourseOption, removeCourseOption } from "../../actions";
+import { ConfirmModal } from "../../../components/confirm-modal";
+import { DishFormSheet, emptyDishFormValues, type DishFormValues } from "../../../dish-library/components/dish-form-sheet";
+import { createMenuItem, type MenuItemInput } from "../../../dish-library/actions";
 
 const COURSE_LABELS: Record<string, string> = {
   STARTER: "Starter",
@@ -63,10 +66,40 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
   const [search, setSearch] = useState("");
   const [busyOptionId, setBusyOptionId] = useState<string | null>(null);
   const [selectedDishId, setSelectedDishId] = useState<string | null>(null);
+  const [addDishOpen, setAddDishOpen] = useState(false);
+  const [isSavingDish, setIsSavingDish] = useState(false);
+  const [addDishError, setAddDishError] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [unsavedNavTarget, setUnsavedNavTarget] = useState<string | null>(null);
+
+  const isDirty =
+    name !== meal.name || price !== formatPrice(meal.suggestedPricePerSeatCents) || isActive !== meal.isActive;
+
+  // Guards actual tab close/reload. Guarding in-app navigation (the
+  // back-chevron/breadcrumb below, which is the common case) is handled
+  // separately since Next.js Link clicks don't fire beforeunload — the
+  // sidebar/bottom-nav links rendered by AdminShell are outside this
+  // component's reach and aren't guarded.
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const closePicker = () => {
     setPickerCourseId(null);
     setSelectedDishId(null);
+  };
+
+  const handleBackNav = (href: string) => (e: React.MouseEvent) => {
+    if (isDirty) {
+      e.preventDefault();
+      setUnsavedNavTarget(href);
+    }
   };
 
   const handleSave = async () => {
@@ -88,21 +121,14 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
     router.refresh();
   };
 
-  const handleCancel = () => {
-    setName(meal.name);
-    setPrice(formatPrice(meal.suggestedPricePerSeatCents));
-    setIsActive(meal.isActive);
-    setError(null);
-  };
-
   const handleDelete = async () => {
-    if (!confirm(`Delete "${meal.name}"? This cannot be undone.`)) return;
     setDeleting(true);
     const result = await deleteMeal(meal.id);
     setDeleting(false);
 
     if (!result.success) {
       setError(result.error || "Failed to delete meal");
+      setDeleteConfirmOpen(false);
       return;
     }
     router.push("/admin/meals");
@@ -119,6 +145,41 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
     }
     closePicker();
     router.refresh();
+  };
+
+  const handleCreateDish = async (values: DishFormValues) => {
+    setAddDishError(null);
+    const priceCents = Math.round(parseFloat(values.price) * 100);
+    if (Number.isNaN(priceCents) || priceCents < 0) {
+      setAddDishError("Enter a valid price");
+      return;
+    }
+    if (!pickerCourseId) return;
+
+    const input: MenuItemInput = {
+      course: values.course,
+      name: values.name,
+      description: values.description || null,
+      ingredients: values.ingredients || null,
+      priceCents,
+      isAvailable: values.isAvailable,
+      mediaAssetId: values.mediaAssetId,
+      dietaryTags: values.dietaryTags,
+    };
+
+    setIsSavingDish(true);
+    const result = await createMenuItem(meal.restaurantId, input);
+    setIsSavingDish(false);
+
+    if (!result.success || !result.data) {
+      setAddDishError(result.error || "Failed to create dish");
+      return;
+    }
+
+    setAddDishOpen(false);
+    // Adds the new dish straight to the course it was created for, so the
+    // in-progress Meal picker never loses state to the round trip.
+    await handleAddOption(pickerCourseId, result.data.menuItemId);
   };
 
   const handleRemoveOption = async (optionId: string) => {
@@ -160,12 +221,30 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
       )}
 
       <div>
-        <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
+        <div className="only-desktop" style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
           ←{" "}
-          <Link href="/admin/meals" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
+          <Link
+            href="/admin/meals"
+            onClick={handleBackNav("/admin/meals")}
+            style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}
+          >
             Meals
           </Link>{" "}
           / {meal.name}
+        </div>
+        <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <Link
+            href="/admin/meals"
+            onClick={handleBackNav("/admin/meals")}
+            className="m-icon-btn"
+            aria-label="Back to Meals"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>
+            Edit Meal
+          </h1>
+          <div style={{ width: 44 }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 220 }}>
@@ -186,10 +265,15 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
               {isActive ? "ACTIVE" : "INACTIVE"}
             </button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button type="button" onClick={handleCancel} disabled={saving} className="btn btn-outline btn-sm">
-              Cancel
-            </button>
+          {/* Desktop: Save only, no Cancel — the wireframe's rule is a
+              full-page edit form reached via its own back-chevron doesn't
+              need a redundant Cancel next to Save. The old Cancel button
+              here did an in-place field reset (not just "leave the page"),
+              but the new unsaved-changes guard on the back-chevron now
+              covers that same "don't lose my edits by accident" concern
+              more completely (it also catches navigating away, which
+              in-place reset never did). */}
+          <div className="only-desktop-flex" style={{ alignItems: "center", gap: 10 }}>
             <button type="button" onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm">
               {saving ? "Saving…" : "Save"}
             </button>
@@ -320,7 +404,7 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
       <div>
         <button
           type="button"
-          onClick={handleDelete}
+          onClick={() => setDeleteConfirmOpen(true)}
           disabled={deleting}
           style={{
             fontSize: 12,
@@ -333,6 +417,12 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
           }}
         >
           {deleting ? "Deleting…" : "Delete Meal"}
+        </button>
+      </div>
+
+      <div className="m-action-bar">
+        <button type="button" onClick={handleSave} disabled={saving} className="btn btn-primary btn-block">
+          {saving ? "Saving…" : "Save"}
         </button>
       </div>
 
@@ -393,9 +483,16 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
         )}
         <p style={{ fontSize: 11, color: "var(--t3)", marginTop: 10, textAlign: "center" }}>
           Dish missing?{" "}
-          <Link href="/admin/dish-library" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
-            Add it to your Dish Library first →
-          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setAddDishError(null);
+              setAddDishOpen(true);
+            }}
+            style={{ color: "var(--p)", fontWeight: 600, background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}
+          >
+            + Add a new dish
+          </button>
         </p>
         <button
           type="button"
@@ -407,6 +504,54 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
           {busyOptionId === selectedDishId ? "Adding…" : "Add to Meal"}
         </button>
       </FilterSheet>
+
+      {/* Nested on top of the picker above — creating a dish here never
+          navigates away from Meal Editor, so in-progress course selections
+          survive the round trip. Saving returns to the picker with the new
+          dish pre-selected via handleCreateDish -> handleAddOption. */}
+      {pickerCourseId && (
+        <DishFormSheet
+          key={pickerCourseId}
+          open={addDishOpen}
+          onClose={() => setAddDishOpen(false)}
+          title="Add New Dish"
+          restaurantId={meal.restaurantId}
+          photoPool={photoPool}
+          initialValues={{ ...emptyDishFormValues, course: pickerCourse?.courseType ?? emptyDishFormValues.course }}
+          onSubmit={handleCreateDish}
+          isSaving={isSavingDish}
+          error={addDishError}
+        />
+      )}
+
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleDelete}
+        tone="red"
+        title={`Delete "${meal.name}"?`}
+        description={
+          meal.performance && meal.performance.totalDinners > 0
+            ? `This Meal is used in ${meal.performance.totalDinners} past ${meal.performance.totalDinners === 1 ? "dinner" : "dinners"} — those records are unaffected. It won't be selectable for any new Create Dinner going forward. This cannot be undone.`
+            : "It won't be selectable for any new Create Dinner going forward. This cannot be undone."
+        }
+        confirmLabel="Delete"
+      />
+
+      <ConfirmModal
+        open={unsavedNavTarget !== null}
+        onClose={() => setUnsavedNavTarget(null)}
+        onConfirm={() => {
+          const target = unsavedNavTarget;
+          setUnsavedNavTarget(null);
+          if (target) router.push(target);
+        }}
+        tone="yellow"
+        title="Discard unsaved changes?"
+        description="You've made changes that haven't been saved yet. Leaving now discards them."
+        confirmLabel="Discard"
+        cancelLabel="Keep Editing"
+      />
     </div>
   );
 }

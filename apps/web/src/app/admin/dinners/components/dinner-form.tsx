@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ConversationStyle } from "@prisma/client";
@@ -114,6 +114,18 @@ export function DinnerForm({
     });
   };
 
+  // Create mode has two distinct submit actions (Save as Draft / Publish);
+  // which one was actually clicked is tracked here since a single <form
+  // onSubmit> can't otherwise tell them apart. A ref (not state) is the
+  // source of truth read inside handleSubmit — it's set synchronously by
+  // the button's onClick moments before the form's onSubmit fires in the
+  // same event, ahead of when a state update would actually re-render;
+  // reading state here would still see the previous render's value.
+  // `pendingStatus` state is kept alongside purely so the "Saving…" vs
+  // "Publishing…" loading label on the two buttons updates correctly.
+  const pendingStatusRef = useRef<"DRAFT" | "SCHEDULED">("DRAFT");
+  const [pendingStatus, setPendingStatus] = useState<"DRAFT" | "SCHEDULED">("DRAFT");
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -145,7 +157,7 @@ export function DinnerForm({
     const result =
       mode === "edit" && dinnerId
         ? await updateDinner({ dinnerId, ...shared })
-        : await createDinner({ restaurantId, ...shared });
+        : await createDinner({ restaurantId, ...shared, status: pendingStatusRef.current });
 
     if (result.success) {
       await saveDinnerListingPhotos(result.data.dinnerId, selectedPhotoIds);
@@ -508,14 +520,37 @@ export function DinnerForm({
           )}
         </div>
 
-        {/* Actions */}
+        {/* Actions — Edit mode: a single Save Changes button, no Cancel
+            next to it (the back-chevron/breadcrumb is already the way
+            out, matching this file's now-established rule for full-page
+            edit forms reached that way). Create mode: Save as Draft
+            (outline) + Publish (primary), also no Cancel — matches the
+            wireframe's Create Dinner action row on both breakpoints. */}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid var(--hair)" }}>
-          <button type="button" onClick={() => router.back()} disabled={loading} className="btn btn-outline">
-            Cancel
-          </button>
-          <button type="submit" disabled={loading || enabledThemes.length === 0} className="btn btn-primary">
-            {loading ? (mode === "edit" ? "Saving..." : "Creating...") : mode === "edit" ? "Save Changes" : "Create Dinner"}
-          </button>
+          {mode === "edit" ? (
+            <button type="submit" disabled={loading || enabledThemes.length === 0} className="btn btn-primary">
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
+          ) : (
+            <>
+              <button
+                type="submit"
+                disabled={loading || enabledThemes.length === 0}
+                className="btn btn-outline"
+                onClick={() => { pendingStatusRef.current = "DRAFT"; setPendingStatus("DRAFT"); }}
+              >
+                {loading && pendingStatus === "DRAFT" ? "Saving..." : "Save as Draft"}
+              </button>
+              <button
+                type="submit"
+                disabled={loading || enabledThemes.length === 0}
+                className="btn btn-primary"
+                onClick={() => { pendingStatusRef.current = "SCHEDULED"; setPendingStatus("SCHEDULED"); }}
+              >
+                {loading && pendingStatus === "SCHEDULED" ? "Publishing..." : "Publish"}
+              </button>
+            </>
+          )}
         </div>
       </form>
 

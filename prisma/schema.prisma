@@ -55,6 +55,11 @@ enum DinnerMediaPromotionStatus {
 }
 
 enum DinnerStatus {
+  // Not yet published — invisible on Discover, not bookable. Only a DRAFT
+  // dinner's content (date/price/seats/description) can still be edited;
+  // once Publish flips it to SCHEDULED, a guest may already be looking at
+  // or booking it, so content locks for good. See wireframe §6.3/§6.4.
+  DRAFT
   SCHEDULED
   LIVE
   COMPLETED
@@ -132,6 +137,9 @@ model Restaurant {
   longitude                Float?
   phone                    String?
   website                  String?
+  // Business-level contact email, distinct from any Team member's personal
+  // login email — shown on Restaurant Profile's Contact Information card.
+  contactEmail             String?
   heroImageUrl             String?
   status                   RestaurantStatus @default(PENDING)
   defaultPricePerSeatCents Int?
@@ -572,6 +580,10 @@ model Feedback {
   // "GOOD_FOOD"). Native Postgres array, defaults to empty rather than
   // null so callers can always treat it as a list.
   vibeTags          String[]           @default([])
+  // Restaurant-only memo attached to a guest's table-level review, set from
+  // the Reviews Inbox (/admin/reviews). Internal to the restaurant - never
+  // shown to the guest or exposed on any diner-facing feedback record.
+  restaurantNote    String?
   createdAt         DateTime           @default(now())
 
   dinner Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)

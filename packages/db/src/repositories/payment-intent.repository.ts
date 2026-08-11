@@ -453,4 +453,45 @@ export class PaymentIntentRepository extends BaseRepository<PaymentIntent> {
 
     return result._sum.amount ?? 0;
   }
+
+  /**
+   * Revenue summed into 7 equal-width buckets spanning [since, now] - the
+   * data behind Restaurant Analytics' revenue line chart (wireframe
+   * §sec-restaurant-analytics, matching Dashboard's own chart's shape:
+   * a handful of labeled points, not a point per day). Bucket boundaries
+   * are computed in JS (cheap, 7 Date objects) but the sums themselves
+   * are one grouped raw-SQL aggregation, not 7 separate queries.
+   */
+  async sumSucceededAmountByBucketForRestaurantSince(
+    restaurantId: string,
+    since: Date,
+    bucketCount = 7
+  ): Promise<Array<{ bucketStart: Date; amount: number }>> {
+    const now = new Date();
+    const spanMs = now.getTime() - since.getTime();
+    const bucketMs = spanMs / bucketCount;
+
+    const rows = await this.prisma.$queryRaw<Array<{ amount: bigint | null; createdAt: Date }>>`
+      SELECT amount, "createdAt"
+      FROM payment_intents
+      WHERE status = 'SUCCEEDED' AND "createdAt" >= ${since}
+        AND "dinnerId" IN (SELECT id FROM dinners WHERE "restaurantId" = ${restaurantId})
+    `;
+
+    const buckets = Array.from({ length: bucketCount }, (_, i) => ({
+      bucketStart: new Date(since.getTime() + i * bucketMs),
+      amount: 0,
+    }));
+
+    for (const row of rows) {
+      const offset = row.createdAt.getTime() - since.getTime();
+      const index = Math.min(bucketCount - 1, Math.max(0, Math.floor(offset / bucketMs)));
+      const bucket = buckets[index];
+      if (bucket) {
+        bucket.amount += Number(row.amount ?? 0);
+      }
+    }
+
+    return buckets;
+  }
 }

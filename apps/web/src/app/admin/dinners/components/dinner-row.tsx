@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { MoreVertical } from "lucide-react";
 import type { DinnerWithRestaurant } from "@dinewithme/db";
-import { updateDinnerStatus, cancelDinner } from "../actions";
+import { updateDinnerStatus, cancelDinner, publishDinner, deleteDinner } from "../actions";
 
 interface DinnerRowProps {
   dinner: DinnerWithRestaurant;
@@ -33,8 +34,14 @@ function formatTime(date: Date) {
   });
 }
 
+function formatRands(cents: number) {
+  return `R ${(cents / 100).toLocaleString("en-ZA", { maximumFractionDigits: 0 })}`;
+}
+
 function getStatusBadgeClass(status: string): string {
   switch (status) {
+    case "DRAFT":
+      return "badge-draft";
     case "SCHEDULED":
       return "badge-blue";
     case "LIVE":
@@ -51,7 +58,8 @@ function getStatusBadgeClass(status: string): string {
  * Shared state/actions behind both the desktop table row and the mobile
  * row-card (§16.3 wireframe's "Mobile adaptation" note - same data, same
  * actions, just two different renderings) so seat-count fetching and the
- * Mark Live / Complete / Cancel handlers aren't duplicated.
+ * Publish / Mark Live / Complete / Cancel / Delete handlers aren't
+ * duplicated.
  */
 function useDinnerRowState(dinner: DinnerWithRestaurant) {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -59,6 +67,9 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
 
   useEffect(() => {
     async function fetchSeatCounts() {
+      // A DRAFT dinner has no seat pool yet - nothing can be booked before
+      // it's published, so skip the fetch rather than show a spurious 0/0.
+      if (dinner.status === "DRAFT") return;
       try {
         const response = await fetch(`/api/dinners/${dinner.id}/seats`);
         if (response.ok) {
@@ -73,7 +84,7 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
       }
     }
     fetchSeatCounts();
-  }, [dinner.id]);
+  }, [dinner.id, dinner.status]);
 
   const handleStatusChange = async (newStatus: "LIVE" | "COMPLETED") => {
     if (isUpdating) return;
@@ -86,6 +97,34 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
 
     if (!result.success) {
       alert(result.error || "Failed to update dinner status");
+    }
+  };
+
+  const handlePublish = async () => {
+    if (isUpdating) return;
+    const confirmed = confirm("Publish this dinner? It becomes visible on Discover and bookable — its content locks after this.");
+    if (!confirmed) return;
+
+    setIsUpdating(true);
+    const result = await publishDinner(dinner.id);
+    setIsUpdating(false);
+
+    if (!result.success) {
+      alert(result.error || "Failed to publish dinner");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (isUpdating) return;
+    const confirmed = confirm("Delete this draft dinner? This can't be undone.");
+    if (!confirmed) return;
+
+    setIsUpdating(true);
+    const result = await deleteDinner(dinner.id);
+    setIsUpdating(false);
+
+    if (!result.success) {
+      alert(result.error || "Failed to delete dinner");
     }
   };
 
@@ -103,11 +142,22 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
     }
   };
 
+  const revenueCents =
+    dinner.status === "CANCELLED" || dinner.status === "DRAFT"
+      ? 0
+      : seatCounts.confirmed * (dinner.pricePerSeatCents ?? 0);
+  const potentialCents = (dinner.pricePerSeatCents ?? 0) * dinner.seatCount;
+
   return {
     isUpdating,
     seatCounts,
+    revenueCents,
+    potentialCents,
     handleStatusChange,
+    handlePublish,
+    handleDelete,
     handleCancel,
+    isDraft: dinner.status === "DRAFT",
     canMarkLive: dinner.status === "SCHEDULED",
     canMarkCompleted: dinner.status === "LIVE",
     canCancel: dinner.status === "SCHEDULED" || dinner.status === "LIVE",
@@ -115,8 +165,20 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
 }
 
 export function DinnerRow({ dinner }: DinnerRowProps) {
-  const { isUpdating, seatCounts, handleStatusChange, handleCancel, canMarkLive, canMarkCompleted, canCancel } =
-    useDinnerRowState(dinner);
+  const {
+    isUpdating,
+    seatCounts,
+    revenueCents,
+    potentialCents,
+    handleStatusChange,
+    handlePublish,
+    handleDelete,
+    handleCancel,
+    isDraft,
+    canMarkLive,
+    canMarkCompleted,
+    canCancel,
+  } = useDinnerRowState(dinner);
 
   return (
     <tr>
@@ -131,20 +193,52 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
       {/* Theme */}
       <td>
         <div>{dinner.theme?.title || "No theme"}</div>
-        {dinner.description && (
-          <div className="td-muted" style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {dinner.description}
-          </div>
+        {isDraft ? (
+          <div className="td-muted">Not listed yet — still being set up</div>
+        ) : (
+          dinner.description && (
+            <div className="td-muted" style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {dinner.description}
+            </div>
+          )
         )}
       </td>
 
       {/* Seats */}
       <td>
-        <div>
-          <span className="td-strong">{seatCounts.confirmed}</span>
-          <span className="td-muted"> / {dinner.seatCount}</span>
-        </div>
-        <div className="td-muted">{seatCounts.available} available</div>
+        {isDraft ? (
+          <>
+            <div className="td-strong" style={{ color: "var(--t3)" }}>—</div>
+            <div className="td-muted">not open for booking</div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span className="td-strong">{seatCounts.confirmed}</span>
+              <span className="td-muted"> / {dinner.seatCount}</span>
+            </div>
+            <div className="td-muted">{seatCounts.available} available</div>
+          </>
+        )}
+      </td>
+
+      {/* Revenue */}
+      <td>
+        {isDraft ? (
+          <div className="td-strong" style={{ color: "var(--t3)" }}>—</div>
+        ) : dinner.status === "CANCELLED" ? (
+          <>
+            <div className="td-strong" style={{ color: "var(--t3)" }}>R 0</div>
+            <div className="td-muted">refunded</div>
+          </>
+        ) : (
+          <>
+            <div className="td-strong">{formatRands(revenueCents)}</div>
+            <div className="td-muted">
+              {dinner.status === "COMPLETED" ? "collected" : `of ${formatRands(potentialCents)} potential`}
+            </div>
+          </>
+        )}
       </td>
 
       {/* Status */}
@@ -155,42 +249,53 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
       {/* Actions */}
       <td>
         <div className="td-actions">
-          <Link href={`/admin/dinners/${dinner.id}`} className="btn btn-outline btn-sm">
-            View
-          </Link>
-          {(canMarkLive || canMarkCompleted) && (
-            <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-outline btn-sm">
-              Edit
-            </Link>
-          )}
-          {canMarkLive && (
-            <button
-              onClick={() => handleStatusChange("LIVE")}
-              disabled={isUpdating}
-              className="btn btn-green btn-sm"
-            >
-              Mark Live
-            </button>
-          )}
-
-          {canMarkCompleted && (
-            <button
-              onClick={() => handleStatusChange("COMPLETED")}
-              disabled={isUpdating}
-              className="btn btn-outline btn-sm"
-            >
-              Complete
-            </button>
-          )}
-
-          {canCancel && (
-            <button
-              onClick={handleCancel}
-              disabled={isUpdating}
-              className="btn btn-red btn-sm"
-            >
-              Cancel
-            </button>
+          {isDraft ? (
+            <>
+              <button onClick={handlePublish} disabled={isUpdating} className="btn btn-primary btn-sm">
+                Publish
+              </button>
+              <details className="row-menu">
+                <summary className="m-icon-btn" aria-label="More actions">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </summary>
+                <div className="row-menu-panel">
+                  <Link href={`/admin/dinners/${dinner.id}/edit`} className="row-menu-item">
+                    Edit
+                  </Link>
+                  <button type="button" onClick={handleDelete} disabled={isUpdating} className="row-menu-item danger">
+                    Delete
+                  </button>
+                </div>
+              </details>
+            </>
+          ) : (
+            <>
+              <Link href={`/admin/dinners/${dinner.id}`} className="btn btn-outline btn-sm">
+                View
+              </Link>
+              {canMarkLive && (
+                <button onClick={() => handleStatusChange("LIVE")} disabled={isUpdating} className="btn btn-green btn-sm">
+                  Mark Live
+                </button>
+              )}
+              {canMarkCompleted && (
+                <button onClick={() => handleStatusChange("COMPLETED")} disabled={isUpdating} className="btn btn-outline btn-sm">
+                  Complete
+                </button>
+              )}
+              {canCancel && (
+                <details className="row-menu">
+                  <summary className="m-icon-btn" aria-label="More actions">
+                    <MoreVertical className="h-3.5 w-3.5" />
+                  </summary>
+                  <div className="row-menu-panel">
+                    <button type="button" onClick={handleCancel} disabled={isUpdating} className="row-menu-item danger">
+                      Cancel Dinner
+                    </button>
+                  </div>
+                </details>
+              )}
+            </>
           )}
         </div>
       </td>
@@ -199,13 +304,24 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
 }
 
 /**
- * Mobile row-card: the 5-column table collapses to a stacked card per
+ * Mobile row-card: the 6-column table collapses to a stacked card per
  * dinner (§16.3 wireframe) - date/theme up top, status badge inline, seat
- * count as plain text, action buttons full-width side by side.
+ * count + revenue as plain text, action buttons full-width side by side.
  */
 export function DinnerRowCard({ dinner }: DinnerRowProps) {
-  const { isUpdating, seatCounts, handleStatusChange, handleCancel, canMarkLive, canMarkCompleted, canCancel } =
-    useDinnerRowState(dinner);
+  const {
+    isUpdating,
+    seatCounts,
+    revenueCents,
+    handleStatusChange,
+    handlePublish,
+    handleDelete,
+    handleCancel,
+    isDraft,
+    canMarkLive,
+    canMarkCompleted,
+    canCancel,
+  } = useDinnerRowState(dinner);
 
   const seatSummary =
     seatCounts.available === 0 && seatCounts.confirmed > 0
@@ -224,41 +340,46 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
         <span className={`badge ${getStatusBadgeClass(dinner.status)}`}>{dinner.status}</span>
       </div>
       <div className="rc-meta">
-        {seatCounts.confirmed} / {dinner.seatCount} booked · {seatSummary}
+        {isDraft
+          ? "Not listed yet — still being set up"
+          : dinner.status === "CANCELLED"
+            ? "R 0 refunded"
+            : `${seatCounts.confirmed} / ${dinner.seatCount} booked · ${seatSummary} · ${formatRands(revenueCents)}`}
       </div>
       <div className="rc-actions">
-        <Link href={`/admin/dinners/${dinner.id}`} className="btn btn-sm btn-outline" style={{ flex: 1, textAlign: "center" }}>
-          View
-        </Link>
-        {(canMarkLive || canMarkCompleted) && (
-          <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-sm btn-outline" style={{ flex: 1, textAlign: "center" }}>
-            Edit
-          </Link>
-        )}
-        {canMarkLive && (
-          <button
-            onClick={() => handleStatusChange("LIVE")}
-            disabled={isUpdating}
-            className="btn btn-sm btn-green"
-            style={{ flex: 1 }}
-          >
-            Mark Live
-          </button>
-        )}
-        {canMarkCompleted && (
-          <button
-            onClick={() => handleStatusChange("COMPLETED")}
-            disabled={isUpdating}
-            className="btn btn-sm btn-outline"
-            style={{ flex: 1 }}
-          >
-            Complete
-          </button>
-        )}
-        {canCancel && (
-          <button onClick={handleCancel} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
-            Cancel
-          </button>
+        {isDraft ? (
+          <>
+            <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-sm btn-outline" style={{ flex: 1, textAlign: "center" }}>
+              Edit
+            </Link>
+            <button onClick={handlePublish} disabled={isUpdating} className="btn btn-sm btn-primary" style={{ flex: 1 }}>
+              Publish
+            </button>
+            <button onClick={handleDelete} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
+              Delete
+            </button>
+          </>
+        ) : (
+          <>
+            <Link href={`/admin/dinners/${dinner.id}`} className="btn btn-sm btn-outline" style={{ flex: 1, textAlign: "center" }}>
+              View
+            </Link>
+            {canMarkLive && (
+              <button onClick={() => handleStatusChange("LIVE")} disabled={isUpdating} className="btn btn-sm btn-green" style={{ flex: 1 }}>
+                Mark Live
+              </button>
+            )}
+            {canMarkCompleted && (
+              <button onClick={() => handleStatusChange("COMPLETED")} disabled={isUpdating} className="btn btn-sm btn-outline" style={{ flex: 1 }}>
+                Complete
+              </button>
+            )}
+            {canCancel && (
+              <button onClick={handleCancel} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
+                Cancel
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

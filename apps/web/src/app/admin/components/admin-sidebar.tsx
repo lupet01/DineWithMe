@@ -16,9 +16,10 @@ import {
   CreditCard,
   TrendingUp,
   Image,
-  UtensilsCrossed,
+  Utensils,
   FileText,
   UsersRound,
+  Star,
   Settings,
   X,
 } from "lucide-react";
@@ -28,13 +29,14 @@ import { Role } from "@dinewithme/shared";
 const restaurantNav = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { name: "Restaurant Profile", href: "/admin/restaurant", icon: Store },
-  { name: "Meals", href: "/admin/meals", icon: UtensilsCrossed },
+  { name: "Meals", href: "/admin/meals", icon: Utensils },
   { name: "Media Library", href: "/admin/media-library", icon: Image },
   { name: "Team", href: "/admin/team", icon: UsersRound },
   { name: "Dinners", href: "/admin/dinners", icon: Calendar },
   { name: "Guests & Bookings", href: "/admin/guests", icon: ClipboardList },
   { name: "Payouts", href: "/admin/payouts", icon: FileText },
   { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
+  { name: "Guest Feedback", href: "/admin/reviews", icon: Star },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

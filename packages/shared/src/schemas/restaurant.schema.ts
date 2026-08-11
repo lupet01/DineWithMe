@@ -39,6 +39,7 @@ export const updateRestaurantSchema = z.object({
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   phone: z.string().optional(),
+  contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
   website: z.string().url("Invalid website URL").optional().or(z.literal("")),
   heroImageUrl: z.string().url("Invalid image URL").optional().or(z.literal("")),
   registrationNumber: z.string().optional(),

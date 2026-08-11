@@ -7,14 +7,19 @@ import {
   complianceDocumentRepository,
   dinnerRepository,
   feedbackRepository,
+  mediaAssetRepository,
 } from "@dinewithme/db";
-import { RestaurantForm } from "./components/restaurant-form";
-import { ApplicationInfoCard } from "./components/application-info-card";
+import { RestaurantOverview } from "./components/restaurant-overview";
 import { RestaurantOnboardingWizard } from "./components/restaurant-onboarding-wizard";
-import { OperatingHoursCard } from "./components/operating-hours-card";
-import { ThemeManager } from "./components/theme-manager";
-import { ComplianceDocumentsManager } from "./components/compliance-documents-manager";
 import { IconSprite } from "./components/icon-sprite";
+import { MobileSubTabs } from "../components/mobile-sub-tabs";
+
+const profileTabs = [
+  { label: "Profile", href: "/admin/restaurant" },
+  { label: "Team", href: "/admin/team" },
+  { label: "Media Library", href: "/admin/media-library" },
+  { label: "Settings", href: "/admin/settings" },
+];
 
 export default async function RestaurantProfilePage() {
   const user = await getAuthUser();
@@ -44,10 +49,11 @@ export default async function RestaurantProfilePage() {
   const complianceDocuments = await complianceDocumentRepository.findByRestaurant(restaurant.id);
 
   // Profile header stats (§16.1 wireframe's "premium header" stat row)
-  const [restaurantWithMembers, dinners, avgRating] = await Promise.all([
+  const [restaurantWithMembers, dinners, avgRating, mediaItems] = await Promise.all([
     restaurantRepository.findByIdWithMembers(restaurant.id),
     dinnerRepository.findByRestaurant(restaurant.id),
     feedbackRepository.getAverageRatingForRestaurant(restaurant.id),
+    mediaAssetRepository.findLibraryByRestaurant(restaurant.id),
   ]);
   const teamCount = restaurantWithMembers?.members.length ?? 0;
 
@@ -58,6 +64,7 @@ export default async function RestaurantProfilePage() {
   if (restaurant.status === "ARCHIVED") {
     return (
       <div>
+        <MobileSubTabs tabs={profileTabs} marginBottom={14} />
         <h1 className="pg-title" style={{ marginBottom: 16 }}>
           Restaurant Profile
         </h1>
@@ -116,6 +123,7 @@ export default async function RestaurantProfilePage() {
   return (
     <div className="rp">
       <IconSprite />
+      <MobileSubTabs tabs={profileTabs} marginBottom={14} />
 
       {/*
         Single flat scrolling column, matching the wireframe's "restructured
@@ -249,40 +257,19 @@ export default async function RestaurantProfilePage() {
           </div>
         </div>
 
-        {/* From Your Application - identity-first, ahead of the editable form (§16.1) */}
-        <ApplicationInfoCard restaurant={restaurant} />
-
-        {/* Business Details + Contact Information */}
-        <RestaurantForm restaurant={restaurant} />
-
-        {/* Operating Hours - §6.2 wireframe, "NEW" badge; built but never
-            rendered on this page until now */}
-        <OperatingHoursCard restaurantId={restaurant.id} operatingHours={restaurant.operatingHours} />
-
-        {/* Table Themes - simple nested-card list, no segmented filter/pager/icon */}
-        <div className="card card-pad" style={{ marginBottom: 20 }}>
-          <div style={{ marginBottom: 16 }}>
-            <div className="card-title">Table Themes</div>
-            <div className="card-title-sub">Choose which types of dining experiences you&apos;d like to host</div>
-          </div>
-          <ThemeManager
-            restaurantId={restaurant.id}
-            allThemes={allThemes}
-            enabledThemeIds={enabledThemeIds}
-          />
-        </div>
-
-        {/* Compliance Documents - simple bordered rows + inline "Add a Document" form */}
-        <div className="card card-pad" style={{ marginTop: 20 }}>
-          <div style={{ marginBottom: 16 }}>
-            <div className="card-title">Compliance Documents</div>
-            <div className="card-title-sub">
-              Merged in this pass — was its own tab, but it&apos;s part of the same identity story
-              as the rest of this page
-            </div>
-          </div>
-          <ComplianceDocumentsManager restaurantId={restaurant.id} documents={complianceDocuments} />
-        </div>
+        {/* Read-only Overview - identity, business details, team/media
+            previews, table themes, compliance documents. Every editable
+            field lives behind Edit Profile → /admin/restaurant/edit
+            instead (§sec-restaurant-profile, "two modes, not one"). */}
+        <RestaurantOverview
+          restaurant={restaurant}
+          members={restaurantWithMembers?.members ?? []}
+          allThemes={allThemes}
+          enabledThemeIds={enabledThemeIds}
+          documents={complianceDocuments}
+          mediaItems={mediaItems}
+          mediaTotalCount={mediaItems.length}
+        />
       </div>
     </div>
   );

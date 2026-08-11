@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import {
   dinnerRepository,
   restaurantRepository,
@@ -41,8 +42,9 @@ export default async function EditDinnerPage({ params }: { params: { id: string 
     redirect("/admin/dinners");
   }
 
-  if (dinner.status !== "SCHEDULED" && dinner.status !== "LIVE") {
-    // Completed/cancelled dinners aren't editable - back to the detail page.
+  if (dinner.status !== "DRAFT") {
+    // Only a DRAFT dinner's content is editable - once published its
+    // content locks for good, a guest may already be looking at it.
     redirect(`/admin/dinners/${dinner.id}`);
   }
 
@@ -67,13 +69,22 @@ export default async function EditDinnerPage({ params }: { params: { id: string 
 
   return (
     <div className="din">
-      <p className="pg-sub" style={{ marginBottom: 12 }}>
-        <Link href="/admin/dinners" style={{ color: "var(--p)", fontWeight: 600 }}>
-          ← Dinners
+      <p className="pg-sub only-desktop" style={{ marginBottom: 12 }}>
+        <Link href={`/admin/dinners/${dinner.id}`} style={{ color: "var(--p)", fontWeight: 600 }}>
+          ← {dinner.theme?.title || "Dinner"}
         </Link>{" "}
         / Edit Dinner
       </p>
-      <div style={{ marginBottom: 20 }}>
+      <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <Link href={`/admin/dinners/${dinner.id}`} className="m-icon-btn" aria-label="Back to Dinner">
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>
+          Edit Dinner
+        </h1>
+        <div style={{ width: 44 }} />
+      </div>
+      <div className="only-desktop" style={{ marginBottom: 20 }}>
         <h1 className="pg-title">Edit Dinner</h1>
         <p className="pg-sub">
           {dinner.theme?.title || "Dinner"} · {startsAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}

@@ -3,6 +3,12 @@ import Link from "next/link";
 import { dinnerRepository, restaurantRepository } from "@dinewithme/db";
 import { getAuthUser } from "@/lib/auth/server";
 import { DinnersTable } from "./components/dinners-table";
+import { MobileSubTabs } from "../components/mobile-sub-tabs";
+
+const dinnersTabs = [
+  { label: "Dinners", href: "/admin/dinners" },
+  { label: "Guests & Bookings", href: "/admin/guests" },
+];
 
 export default async function DinnersPage() {
   const user = await getAuthUser();
@@ -24,6 +30,7 @@ export default async function DinnersPage() {
 
   return (
     <div className="din">
+      <MobileSubTabs tabs={dinnersTabs} marginBottom={14} />
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>

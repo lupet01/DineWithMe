@@ -125,12 +125,15 @@ export async function updateRestaurant(
 
     const data = validationResult.data;
 
-    // Check if user is owner of the restaurant
-    const isOwner = await restaurantRepository.isUserOwner(
+    // Edit Profile is reachable by Owner and Manager both (§sec-restaurant-
+    // profile) - stricter Owner-only gating is reserved for genuinely
+    // higher-blast-radius actions (Danger Zone, bank details), not general
+    // profile editing.
+    const isMember = await restaurantRepository.isUserMember(
       restaurantId,
       user.id
     );
-    if (!isOwner) {
+    if (!isMember) {
       return {
         success: false,
         error: "You do not have permission to edit this restaurant",
@@ -171,6 +174,7 @@ export async function updateRestaurant(
       ...(data.latitude !== undefined && { latitude: data.latitude || null }),
       ...(data.longitude !== undefined && { longitude: data.longitude || null }),
       ...(data.phone !== undefined && { phone: data.phone || null }),
+      ...(data.contactEmail !== undefined && { contactEmail: data.contactEmail || null }),
       ...(data.website !== undefined && { website: data.website || null }),
       ...(data.heroImageUrl !== undefined && { heroImageUrl: data.heroImageUrl || null }),
       ...(data.registrationNumber !== undefined && { registrationNumber: data.registrationNumber || null }),
@@ -228,8 +232,8 @@ export async function updateOperatingHours(
       return { success: false, error: "Invalid operating hours" };
     }
 
-    const isOwner = await restaurantRepository.isUserOwner(restaurantId, user.id);
-    if (!isOwner) {
+    const isMember = await restaurantRepository.isUserMember(restaurantId, user.id);
+    if (!isMember) {
       return {
         success: false,
         error: "You do not have permission to edit this restaurant",

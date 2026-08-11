@@ -88,14 +88,50 @@
 .dine-admin .d-user-name { font-size: 12px; font-weight: 600; color: var(--text); text-align: right; }
 .dine-admin .d-user-role { font-size: 11px; color: var(--t3); text-align: right; }
 .dine-admin .d-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #3d2b1f, #5c3d28); flex-shrink: 0; }
-.dine-admin .m-hamburger,
 .dine-admin .m-icon-btn {
-  width: 32px; height: 32px; border-radius: 10px; background: var(--bg2);
+  /* 44px, not the old 32px: below Apple's 44pt / Android's 48dp minimum is
+     a genuine Play Store touch-target flag, not just a preference — see
+     wireframe §Action Modals / cross-cutting touch-target pass. */
+  width: 44px; height: 44px; border-radius: 12px; background: var(--bg2);
   display: flex; align-items: center; justify-content: center; color: var(--t2); flex-shrink: 0; cursor: pointer; border: none;
+  position: relative;
+}
+.dine-admin .m-icon-btn.filter-active { background: var(--p-tint); color: var(--p); }
+.dine-admin .m-icon-btn.filter-active::after {
+  content: ""; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--p); border: 2px solid var(--white);
+}
+.dine-admin .m-text-btn { font-size: 13px; font-weight: 700; color: var(--p); cursor: pointer; padding: 4px 2px; white-space: nowrap; flex-shrink: 0; background: none; border: none; }
+.dine-admin .m-topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Sticky bottom action bar - mobile-only Save/primary-action affordance
+   for drill-down screens (Meal Editor, Dinner Detail status actions). */
+.dine-admin .m-action-bar {
+  position: sticky; bottom: 0; background: rgba(250,249,247,0.97); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--bdr); padding: 12px 14px calc(18px + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 8px; box-shadow: 0 -8px 20px -8px rgba(0,0,0,0.08); margin: 0 -14px -28px;
 }
 @container (min-width: 768px) {
-  .dine-admin .m-hamburger { display: none; }
+  .dine-admin .m-action-bar { display: none; }
 }
+
+/* Mobile-only 5-tab bottom navigation, matching the wireframe's own
+   .d-bottom-nav (Home/Dish/Dinners/Payouts/Profile), built to replace the
+   old hamburger + drawer pattern this app shipped with originally. */
+/* display is handled by the only-mobile-flex utility class on the element */
+.dine-admin .d-bottom-nav {
+  position: sticky; bottom: 0; z-index: 30;
+  background: rgba(250, 249, 247, 0.97); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--bdr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 20px -8px rgba(0, 0, 0, 0.08);
+}
+.dine-admin .d-bottom-nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 2px; text-decoration: none; color: var(--t3);
+}
+.dine-admin .d-bottom-nav-item svg { width: 20px; height: 20px; }
+.dine-admin .d-bottom-nav-item span { font-size: 10px; font-weight: 600; }
+.dine-admin .d-bottom-nav-item.active { color: var(--p); }
 
 /* ── Shell: body / sidebar ── */
 .dine-admin .d-body { display: flex; }
@@ -173,10 +209,15 @@
 }
 .dine-admin .field-input:focus { outline: none; border-color: var(--p); background: var(--white); }
 .dine-admin .field-input::placeholder { color: var(--t3); }
+.dine-admin .field-input.error { border-color: var(--red-txt); background: var(--red-bg); }
+.dine-admin .field-input.error:focus { border-color: var(--red-txt); }
 .dine-admin .field-input.ta { resize: none; }
 .dine-admin .field-input:disabled { opacity: 0.6; cursor: not-allowed; }
 .dine-admin .field-grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
 @container (min-width: 640px) { .dine-admin .field-grid-2 { grid-template-columns: 1fr 1fr; gap: 16px; } }
+
+.dine-admin .cards-grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@container (min-width: 640px) { .dine-admin .cards-grid-2 { grid-template-columns: 1fr 1fr; } }
 .dine-admin .req { color: var(--red-txt); }
 .dine-admin .field-error { margin-top: 6px; font-size: 12px; color: var(--red-txt); }
 
@@ -223,6 +264,11 @@
 .dine-admin .badge-blue { background: var(--blue-bg); color: var(--blue-txt); }
 .dine-admin .badge-slate { background: var(--bg3); color: var(--t2); }
 .dine-admin .badge-purple { background: var(--purple-bg); color: var(--purple-txt); }
+/* Dashed outline, not the solid .badge-slate COMPLETED uses — the two used
+   to be visually identical gray pills despite meaning opposite things
+   ("not yet real" vs. "already happened"). Dashed reads as still
+   open/editable, matching the pending-invite convention elsewhere. */
+.dine-admin .badge-draft { background: transparent; color: var(--t2); border: 1.5px dashed var(--bdr2); }
 .dine-admin .badge-tint { background: var(--p-tint); color: var(--p); border: 1px solid var(--p); }
 
 .dine-admin .chip-select {
@@ -234,6 +280,8 @@
 
 .dine-admin .stat-grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 @container (min-width: 640px) { .dine-admin .stat-grid-4 { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
+.dine-admin .stat-grid-3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@container (min-width: 640px) { .dine-admin .stat-grid-3 { grid-template-columns: repeat(3, 1fr); gap: 14px; } }
 .dine-admin .stat-card { background: var(--white); border: 1px solid var(--bdr); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-2); }
 .dine-admin .stat-label { font-size: 12px; color: var(--t3); margin-bottom: 5px; font-weight: 500; }
 .dine-admin .stat-value { font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.1; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
@@ -283,6 +331,35 @@
 .dine-admin .table-wrap { background: var(--white); border: 1px solid var(--bdr); border-radius: 20px; overflow: hidden; }
 .dine-admin .table-scroll { overflow-x: auto; }
 
+/* Row-level overflow menu (native <details>/<summary>, no JS needed) for
+   the one destructive table-row action — a menu item doesn't need its own
+   button chrome to read as an action, so these render as plain red text. */
+.dine-admin .row-menu { position: relative; }
+.dine-admin .row-menu > summary { list-style: none; }
+.dine-admin .row-menu > summary::-webkit-details-marker { display: none; }
+.dine-admin .row-menu[open] > summary { background: var(--bg3); color: var(--text); }
+.dine-admin .row-menu-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 150px;
+  background: var(--white); border: 1px solid var(--bdr); border-radius: 14px;
+  box-shadow: var(--shadow-3); padding: 6px; display: flex; flex-direction: column; gap: 1px;
+}
+.dine-admin .row-menu-item {
+  display: block; width: 100%; text-align: left; font-size: 12.5px; font-weight: 600; color: var(--text);
+  background: none; border: none; border-radius: 9px; padding: 8px 10px; cursor: pointer;
+  font-family: inherit; text-decoration: none;
+}
+.dine-admin .row-menu-item:hover { background: var(--bg2); }
+.dine-admin .row-menu-item.danger { color: var(--red-txt); }
+
+/* "Showing X–Y of Z" + Prev/Next — deliberately no numbered page pills,
+   just scanning back through recent activity. Desktop: icon-button pair.
+   Mobile: full-width Prev/Next stacked under a centered count. */
+.dine-admin .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; margin-top: 2px; flex-wrap: wrap; }
+.dine-admin .pagination-info { font-size: 12px; color: var(--t3); }
+.dine-admin .pagination-controls { display: flex; align-items: center; gap: 10px; }
+.dine-admin .pagination-page { font-size: 12.5px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.dine-admin .pagination .m-icon-btn.disabled { opacity: 0.35; cursor: not-allowed; }
+
 .dine-admin .row-card { background: var(--white); border: 1px solid var(--bdr); border-radius: 20px; padding: 16px; box-shadow: var(--shadow-2); }
 .dine-admin .row-card + .row-card { margin-top: 10px; }
 .dine-admin .rc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
@@ -301,7 +378,7 @@
 .dine-admin .toggle.off .toggle-dot { left: 2px; }
 
 .dine-admin .tabs { display: flex; gap: 3px; overflow-x: auto; background: var(--bg2); border-radius: 50px; padding: 4px; width: fit-content; }
-.dine-admin .tab { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--t2); border-radius: 50px; white-space: nowrap; cursor: pointer; border: none; background: none; transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease); }
+.dine-admin .tab { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--t2); border-radius: 50px; white-space: nowrap; cursor: pointer; border: none; background: none; text-decoration: none; display: inline-block; transition: background var(--dur-base) var(--ease), color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease); }
 .dine-admin .tab.active { color: var(--text); background: var(--white); box-shadow: var(--shadow-3); }
 
 .dine-admin .progress-track { flex: 1; background: var(--bg3); border-radius: 9999px; height: 8px; overflow: hidden; }
@@ -359,6 +436,34 @@
 
 .dine-admin .section-block-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
 
+/* Confirm Modal — shared destructive/status-change confirmation dialog.
+   Mobile-first: a full-screen sheet (close X pinned top-right, actions
+   pinned bottom) below 768px; a centered floating card (380px simple /
+   460px with a reason field via .wide) at 768px+. Matches the wireframe's
+   Action Modals section. */
+.dine-admin .confirm-modal-backdrop {
+  position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.4);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+@container (min-width: 768px) {
+  .dine-admin .confirm-modal-backdrop { align-items: center; padding: 16px; }
+}
+.dine-admin .confirm-modal-card {
+  width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; background: var(--white);
+  box-shadow: var(--shadow-4); padding: 24px 20px; text-align: center;
+  max-height: 92vh; overflow-y: auto; position: relative;
+}
+@container (min-width: 768px) {
+  .dine-admin .confirm-modal-card {
+    max-width: 380px; border-radius: 20px; border: 1px solid var(--bdr);
+    padding: 28px; max-height: calc(100vh - 32px);
+  }
+  .dine-admin .confirm-modal-card.wide { max-width: 460px; }
+}
+.dine-admin .confirm-modal-close {
+  position: absolute; top: 14px; right: 14px;
+}
+
 .dine-admin .onboarding-confirm {
   width: 100%; max-width: 520px; margin: 40px auto; border-radius: 16px; background: var(--white);
   box-shadow: var(--shadow-2); border: 1px solid var(--bdr); padding: 32px 24px; text-align: center;
@@ -395,83 +500,6 @@
 @container (min-width: 700px) {
   .dine-admin .rp .col { gap: 30px; }
 }
-
-/* ---- identity card ----
-   Rebuilt 2026-08-08 to the wireframe's literal header markup (plain .card
-   + inline styles in page.tsx, duplicated per only-desktop/only-mobile
-   frame) instead of a bespoke .idcard/.cover/.avatar/.stats component
-   system - none of those classes exist anymore. */
-
-/* ---- inset grouped sections ---- */
-.dine-admin .rp .sec { scroll-margin-top: 56px; padding: 0 14px; }
-@container (min-width: 700px) { .dine-admin .rp .sec { padding: 0; scroll-margin-top: 14px; } }
-.dine-admin .rp .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 4px 8px; }
-.dine-admin .rp .sec-label { font-size: 11px; font-weight: 600; letter-spacing: .075em; text-transform: uppercase; color: var(--t3w); }
-.dine-admin .rp .sec-aside { font-size: 11.5px; font-weight: 600; color: var(--t2w); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
-.dine-admin .rp .rp-card { background: var(--card2); border: 1px solid var(--hair); border-radius: var(--r-m); box-shadow: var(--rp-sh-1); overflow: hidden; }
-@container (min-width: 700px) { .dine-admin .rp .rp-card { border-radius: var(--r-l); } }
-.dine-admin .rp .foot { margin: 9px 6px 0; font-size: 12px; line-height: 1.55; color: var(--t3w); max-width: 62ch; }
-@container (min-width: 700px) { .dine-admin .rp .foot { margin: 9px 4px 0; } }
-.dine-admin .rp .foot a { color: var(--p); text-decoration: none; font-weight: 600; }
-
-/* ---- settings rows ---- */
-.dine-admin .rp .frow { display: grid; grid-template-columns: 1fr; gap: 2px; padding: 11px 14px; min-height: 0; }
-.dine-admin .rp .frow + .frow { border-top: 1px solid var(--hair); }
-.dine-admin .rp .frow.stack { padding-top: 12px; }
-.dine-admin .rp .frow.stack .rlabel { padding-top: 0; }
-.dine-admin .rp .rlabel { font-size: 12px; font-weight: 600; letter-spacing: .03em; color: var(--t3w); text-transform: uppercase; display: flex; align-items: center; gap: 5px; line-height: 1.35; }
-.dine-admin .rp .req { width: 5px; height: 5px; border-radius: 50%; background: var(--p); flex: none; display: inline-block; }
-.dine-admin .rp .rctl { min-width: 0; }
-@container (min-width: 700px) {
-  .dine-admin .rp .frow { grid-template-columns: 186px minmax(0, 1fr); align-items: center; gap: 14px; padding: 9px 16px; min-height: 52px; }
-  .dine-admin .rp .frow.stack { align-items: start; padding-top: 14px; padding-bottom: 15px; }
-  .dine-admin .rp .rlabel { font-size: 13.5px; font-weight: 500; color: var(--t2w); text-transform: none; letter-spacing: 0; }
-  .dine-admin .rp .frow.stack .rlabel { padding-top: 9px; }
-}
-
-.dine-admin .rp .inp {
-  width: 100%; font: inherit; font-size: 15px; font-weight: 500; color: var(--text);
-  background: transparent; border: 1px solid transparent; border-radius: var(--r-s);
-  padding: 4px 0; transition: background .14s ease, border-color .14s ease;
-}
-.dine-admin .rp .inp::placeholder { color: var(--t3w); font-weight: 400; }
-.dine-admin .rp .inp:focus { outline: none; background: var(--inset); border-color: var(--p); box-shadow: var(--rp-ring); padding: 4px 8px; margin: 0 -8px; }
-.dine-admin .rp textarea.inp { resize: none; line-height: 1.55; font-size: 14px; font-weight: 400; min-height: 96px; display: block; }
-.dine-admin .rp .hint { font-size: 11.5px; color: var(--t3w); margin: 5px 0 0 0; }
-.dine-admin .rp .hint.right { text-align: right; font-variant-numeric: tabular-nums; }
-.dine-admin .rp .ctl-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-@container (min-width: 700px) {
-  .dine-admin .rp .inp { padding: 7px 10px; font-size: 14.5px; }
-  .dine-admin .rp .inp:hover { background: var(--inset); }
-  .dine-admin .rp .inp:focus { padding: 7px 10px; margin: 0; }
-  .dine-admin .rp .hint { margin: 5px 0 0 10px; }
-  .dine-admin .rp .hint.right { margin-right: 2px; }
-}
-
-/* chips (reused by restaurant-form.tsx's Cuisine Type badge multi-select -
-   the badges themselves are the shared .badge/.badge-tint/.badge-slate
-   classes now, not a bespoke .rp-chip) */
-.dine-admin .rp .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0; }
-
-/* verification prompt (alternate state) */
-.dine-admin .rp .prompt { display: flex; gap: 13px; align-items: flex-start; padding: 16px 17px; background: linear-gradient(180deg, var(--p-tint), transparent 70%); }
-.dine-admin .rp .prompt-ico { width: 34px; height: 34px; border-radius: 10px; flex: none; background: var(--p-tint); color: var(--p); display: flex; align-items: center; justify-content: center; }
-.dine-admin .rp .prompt-ico svg { width: 17px; height: 17px; }
-.dine-admin .rp .prompt-t { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
-.dine-admin .rp .prompt-b { font-size: 13px; color: var(--t2w); line-height: 1.55; margin-top: 4px; max-width: 52ch; }
-
-/* buttons + save bar */
-.dine-admin .rp .rp-btn { font: inherit; font-size: 13.5px; font-weight: 600; border-radius: 10px; padding: 8px 16px; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: transform .12s ease, box-shadow .16s ease, background .16s ease; }
-.dine-admin .rp .rp-btn svg { width: 14px; height: 14px; }
-.dine-admin .rp .rp-btn:active { transform: translateY(.5px); }
-.dine-admin .rp .rp-btn:disabled { opacity: .5; cursor: not-allowed; }
-.dine-admin .rp .rp-btn-p { background: linear-gradient(160deg, var(--p), var(--p2)); color: #fff; box-shadow: 0 2px 10px -2px var(--p-glow); }
-.dine-admin .rp .rp-btn-p:hover:not(:disabled) { box-shadow: 0 5px 16px -3px var(--p-glow); }
-.dine-admin .rp .rp-btn-o { background: var(--card2); border-color: var(--hair2); color: var(--text); }
-.dine-admin .rp .rp-btn-o:hover:not(:disabled) { background: var(--bg2); }
-.dine-admin .rp .rp-btn-q { background: transparent; color: var(--t2w); }
-.dine-admin .rp .rp-btn-q:hover:not(:disabled) { background: var(--bg2); color: var(--text); }
-.dine-admin .rp .rp-btn-sm { font-size: 12.5px; padding: 6px 12px; }
 
 /* ============================================================
  * MEALS — reverted to wireframe-native ("Apple-native" cream/
@@ -591,6 +619,11 @@
 .dine-admin .media-library .photo-tile-tag { position: absolute; bottom: 4px; left: 4px; font-size: 8px; font-weight: 700; color: #fff; background: rgba(0,0,0,.55); padding: 1px 5px; border-radius: 20px; }
 .dine-admin .media-library .media-library-caption { font-size: 11px; color: var(--t3); margin-top: 4px; line-height: 1.5; }
 
+/* "By Dinner" tab restructures the flat grid into per-dinner sections, each
+   with a date heading (wireframe §sec-media-library). */
+.dine-admin .media-library .media-group + .media-group { margin-top: 18px; }
+.dine-admin .media-library .media-group-heading { font-size: 10.5px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+
 .dine-admin .media-library .photo-options-body { display: flex; flex-direction: column; gap: 12px; }
 .dine-admin .media-library .photo-options-preview { width: 100%; height: 180px; object-fit: cover; border-radius: 14px; border: 1px solid var(--bdr); }
 .dine-admin .media-library .photo-options-usage { font-size: 12.5px; color: var(--t2); }
@@ -601,16 +634,32 @@
   .dine-admin .media-library .media-library-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
-.dine-admin .rp .savebar { position: static; margin-top: 4px; padding-top: 0; z-index: 5; }
-@container (min-width: 700px) {
-  .dine-admin .rp .savebar { position: sticky; bottom: 0; margin-top: -8px; padding-top: 12px; background: linear-gradient(180deg, transparent, var(--bg) 55%); }
+/* ── Empty states — shared pattern across every list screen: emoji/icon,
+   bold heading, one description line, primary CTA. Two variants: the
+   default (genuinely no data yet — CTA creates the first record) and
+   .filtered (data exists but doesn't match the current filter/search —
+   CTA is always "Clear filter", never "+ Create X"). See wireframe
+   §Empty States. ── */
+.dine-admin .empty-state {
+  text-align: center; padding: 40px 32px; display: flex; flex-direction: column; align-items: center;
 }
-.dine-admin .rp .savebar-in { display: flex; align-items: center; gap: 12px; background: var(--card2); border: 1px solid var(--hair); border-radius: 15px; padding: 11px 12px 11px 17px; box-shadow: var(--rp-sh-2); flex-wrap: wrap; }
-.dine-admin .rp .dirty { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; font-size: 13px; color: var(--t2w); }
-.dine-admin .rp .dirty b { color: var(--text); font-weight: 600; }
-.dine-admin .rp .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--p); flex: none; box-shadow: 0 0 0 0 var(--p-glow); animation: rp-pulse 2.4s ease-out infinite; }
-@keyframes rp-pulse {
-  0% { box-shadow: 0 0 0 0 var(--p-glow); }
-  70% { box-shadow: 0 0 0 7px rgba(255, 107, 61, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 107, 61, 0); }
+.dine-admin .empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+.dine-admin .empty-state-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.dine-admin .empty-state-desc {
+  font-size: 13px; color: var(--t2); line-height: 1.6; margin-bottom: 20px; max-width: 320px;
 }
+.dine-admin .empty-state-caption { font-size: 11.5px; color: var(--t3); margin-top: 16px; }
+
+/* ── Loading / skeleton states ── */
+.dine-admin .skeleton {
+  background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 37%, var(--bg2) 63%);
+  background-size: 400% 100%; animation: skeleton-shimmer 1.4s ease infinite; border-radius: 10px;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+.dine-admin .skeleton-text { height: 12px; border-radius: 6px; }
+.dine-admin .skeleton-title { height: 18px; width: 40%; border-radius: 6px; margin-bottom: 10px; }
+.dine-admin .skeleton-card { height: 96px; border-radius: 20px; }
+.dine-admin .btn.is-loading { opacity: 0.7; cursor: wait; pointer-events: none; }

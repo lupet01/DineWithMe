@@ -2,6 +2,12 @@ import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, menuItemRepository, mediaAssetRepository } from "@dinewithme/db";
 import { DishLibraryManager } from "./components/dish-library-manager";
+import { MobileSubTabs } from "../components/mobile-sub-tabs";
+
+const dishTabs = [
+  { label: "Meals", href: "/admin/meals" },
+  { label: "Dish Library", href: "/admin/dish-library" },
+];
 
 export default async function DishLibraryPage() {
   const user = await getAuthUser();
@@ -23,6 +29,7 @@ export default async function DishLibraryPage() {
 
   return (
     <div className="dish-library mx-auto max-w-3xl" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <MobileSubTabs tabs={dishTabs} />
       <DishLibraryManager
         restaurantId={restaurant.id}
         menuItems={menuItems}

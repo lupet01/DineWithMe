@@ -29,6 +29,10 @@ interface CreateDinnerInput {
   description?: string;
   seatCount: number;
   conversationStyle?: ConversationStyle;
+  /** DRAFT (default) is invisible on Discover and not bookable, and stays
+   * editable. SCHEDULED ("Publish") makes it live and locks its content —
+   * see dinnerRepository/DinnerStatus and the wireframe's §6.3/§6.4 notes. */
+  status?: "DRAFT" | "SCHEDULED";
 }
 
 /**
@@ -189,7 +193,7 @@ export async function createDinner(
       seatCount: input.seatCount,
       pricePerSeatCents: input.pricePerSeatCents ?? null,
       conversationStyle: input.conversationStyle ?? null,
-      status: "SCHEDULED",
+      status: input.status ?? "DRAFT",
     });
 
     // Emit analytics event
@@ -290,8 +294,12 @@ export async function updateDinner(
       return { success: false, error: "You do not have permission to edit dinners for this restaurant" };
     }
 
-    if (existingDinner.status !== "SCHEDULED" && existingDinner.status !== "LIVE") {
-      return { success: false, error: `Cannot edit a dinner that is ${existingDinner.status.toLowerCase()}` };
+    // Only a DRAFT dinner's content is editable — once Publish flips it to
+    // SCHEDULED, a guest may already be looking at or booking it, so its
+    // date/price/seats/description lock for good. Status itself can still
+    // change after that (Mark Live/Complete/Cancel), just not content.
+    if (existingDinner.status !== "DRAFT") {
+      return { success: false, error: `Cannot edit a dinner that is ${existingDinner.status.toLowerCase()} — only drafts can be edited.` };
     }
 
     const theme = await themeRepository.findById(input.themeId);

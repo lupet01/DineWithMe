@@ -5,6 +5,8 @@ import { dinnerRepository, seatRepository, userRepository, paymentIntentReposito
 import { revalidatePath } from "next/cache";
 import { refundPaymentIntent } from "@/app/api/payments/refund/service";
 
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 interface ActionResult<T = void> {
   success: boolean;
   data?: T;
@@ -165,6 +167,60 @@ export async function refundSeat(dinnerId: string, seatId: string): Promise<Acti
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to refund seat",
+    };
+  }
+}
+
+/**
+ * "Duplicate Dinner" — the key post-event CTA on Completed Dinner Summary
+ * (wireframe §Completed Dinner Summary). Copies the format (theme, meal,
+ * price, seats, conversation style, description) into a brand-new DRAFT
+ * dinner one week out at the same time of day; nothing about it is
+ * bookable until the admin reviews and publishes it from Edit Dinner.
+ */
+export async function duplicateDinner(dinnerId: string): Promise<ActionResult<{ newDinnerId: string }>> {
+  const authResult = await requireDinnerManager(dinnerId);
+  if ("error" in authResult) {
+    return { success: false, error: authResult.error };
+  }
+
+  try {
+    const source = await dinnerRepository.findByIdWithRestaurant(dinnerId);
+    if (!source) {
+      return { success: false, error: "Dinner not found" };
+    }
+
+    const durationMs = source.endsAt.getTime() - source.startsAt.getTime();
+    const newStartsAt = new Date(source.startsAt.getTime() + ONE_WEEK_MS);
+    const newEndsAt = new Date(newStartsAt.getTime() + durationMs);
+
+    const created = await dinnerRepository.create({
+      restaurant: { connect: { id: source.restaurantId } },
+      theme: { connect: { id: source.themeId } },
+      ...(source.mealId ? { meal: { connect: { id: source.mealId } } } : {}),
+      startsAt: newStartsAt,
+      endsAt: newEndsAt,
+      description: source.description,
+      seatCount: source.seatCount,
+      pricePerSeatCents: source.pricePerSeatCents,
+      conversationStyle: source.conversationStyle,
+      status: "DRAFT",
+    });
+
+    await auditLogger.log(
+      authResult.dbUser.id,
+      AuditAction.DINNER_CREATED,
+      AuditEntity.DINNER,
+      created.id,
+      { duplicatedFrom: dinnerId }
+    );
+
+    revalidatePath("/admin/dinners");
+    return { success: true, data: { newDinnerId: created.id } };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to duplicate dinner",
     };
   }
 }

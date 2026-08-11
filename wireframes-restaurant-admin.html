@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DineWithMe — Restaurant Admin Wireframe v3</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #EAE3D6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: 32px 20px 80px;
+}
+
+/* ── Tokens ── */
+:root {
+  --p: #FF6B3D; --p2: #E85A2E; --p-glow: rgba(255,107,61,.28); --p-tint: rgba(255,107,61,.08);
+  --bg: #FDFBF7; --bg2: #F7F4EF; --bg3: #EFECE5;
+  --white: #ffffff; --bdr: rgba(0,0,0,.07); --bdr2: rgba(0,0,0,.12);
+  --text: #1c1c1e; --t2: #6b7280; --t3: #9ca3af;
+  --green-bg: #dcfce7; --green-txt: #16a34a;
+  --red-bg: #fee2e2; --red-txt: #dc2626;
+  --yellow-bg: #fef9c3; --yellow-txt: #a16207; --yellow-bdr: #fde68a;
+  --blue-bg: #dbeafe; --blue-txt: #1e40af;
+  --shadow-2: 0 4px 6px -1px rgba(0,0,0,.08), 0 2px 4px -1px rgba(0,0,0,.04);
+  --shadow-3: 0 10px 20px -4px rgba(0,0,0,.12), 0 4px 8px -2px rgba(0,0,0,.06);
+}
+
+/* ── Page layout ── */
+h1.wf-title { text-align:center; font-size:20px; font-weight:800; color:#292524; margin-bottom:6px; }
+p.wf-sub { text-align:center; font-size:12px; color:#78716c; margin-bottom:8px; }
+h2.sec { text-align:center; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#78716c; margin:52px 0 18px; }
+.row { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
+.frame { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.frame-label { font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#78716c; }
+.note { font-size:11px; color:#a8a29e; text-align:center; line-height:1.5; max-width:340px; margin-top:4px; }
+
+/* ── Phone shell ── */
+.phone { width:375px; border-radius:44px; overflow:hidden; background:var(--bg);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.1), 0 24px 60px rgba(0,0,0,.2); }
+.screen { max-height:812px; overflow-y:auto; background:var(--bg); display:flex; flex-direction:column; }
+.screen::-webkit-scrollbar { display:none; }
+
+/* ── Desktop shell ── */
+.desktop { width:1100px; border-radius:16px; overflow:hidden; background:var(--white);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 24px 60px rgba(0,0,0,.18); }
+.chrome { height:30px; background:var(--bg3); display:flex; align-items:center; gap:5px; padding:0 12px; }
+.dot { width:9px; height:9px; border-radius:50%; background:#d8d2c6; }
+.dot.r{background:#f2a49a;}.dot.y{background:#f4cf8e;}.dot.g{background:#a8d8ae;}
+
+/* ── Mobile topbar — CONSISTENT across all pages ── */
+.m-topbar {
+  height:52px; background:rgba(250,249,247,.97); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--bdr); display:flex; align-items:center;
+  justify-content:space-between; padding:0 14px; flex-shrink:0; position:sticky; top:0; z-index:20;
+}
+.m-topbar-left { display:flex; align-items:center; gap:8px; width:60px; }
+.m-topbar-center { font-size:14px; font-weight:700; color:var(--text); text-align:center; flex:1; }
+.m-topbar-right { display:flex; align-items:center; justify-content:flex-end; width:60px; }
+.m-back { width:30px; height:30px; border-radius:50%; background:var(--bg2); display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--t2); cursor:pointer; border:none; }
+.m-avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#3d2b1f,#5c3d28); }
+.m-logo-mark { width:28px; height:28px; border-radius:8px; background:var(--p); display:flex; align-items:center; justify-content:center; font-size:13px; color:white; }
+
+/* ── Mobile bottom nav — 5 tabs ── */
+.m-bottomnav {
+  display:flex; background:rgba(250,249,247,.97); backdrop-filter:blur(8px);
+  border-top:1px solid var(--bdr); flex-shrink:0; position:sticky; bottom:0;
+}
+.m-tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 0 16px; font-size:9px; font-weight:600; color:var(--t3); cursor:pointer; text-decoration:none; }
+.m-tab.active { color:var(--p); }
+.m-tab-icon { font-size:18px; }
+
+/* ── Desktop topbar ── */
+.d-topbar { height:56px; background:rgba(250,249,247,.97); backdrop-filter:blur(8px); border-bottom:1px solid var(--bdr);
+  display:flex; align-items:center; justify-content:space-between; padding:0 22px; }
+.d-logo { display:flex; align-items:center; gap:8px; }
+.d-logo-mark { width:26px; height:26px; border-radius:8px; background:var(--p); display:flex; align-items:center; justify-content:center; font-size:12px; color:white; }
+.d-logo-text { font-size:14px; font-weight:800; color:var(--text); letter-spacing:-.2px; }
+.d-logo-chip { font-size:10px; font-weight:600; color:var(--t2); background:var(--bg2); padding:3px 9px; border-radius:20px; }
+.d-user { display:flex; align-items:center; gap:8px; }
+.d-user-name { font-size:12px; font-weight:600; color:var(--text); text-align:right; }
+.d-user-sub { font-size:10px; color:var(--t3); text-align:right; }
+.d-avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#3d2b1f,#5c3d28); }
+
+/* ── Desktop sidebar ── */
+.d-body { display:flex; }
+.d-sidebar { width:210px; flex-shrink:0; background:var(--bg2); border-right:1px solid var(--bdr); padding:14px 10px; min-height:640px; }
+.d-nav { display:flex; flex-direction:column; gap:2px; }
+.d-nav-item { display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:11px; font-size:12.5px; font-weight:500; color:var(--t2); text-decoration:none; }
+.d-nav-item.active { background:var(--white); color:var(--text); font-weight:700; box-shadow:var(--shadow-3); }
+.d-nav-icon { width:15px; text-align:center; font-size:12px; }
+.d-nav-group { font-size:9.5px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.06em; padding:12px 11px 4px; }
+
+/* ── Desktop main content ── */
+.d-main { flex:1; padding:26px 30px; min-width:0; max-height:640px; overflow-y:auto; }
+.d-main::-webkit-scrollbar { width:6px; }
+.d-main::-webkit-scrollbar-thumb { background:var(--bdr2); border-radius:3px; }
+
+/* ── Shared atoms ── */
+.pg-title { font-size:20px; font-weight:800; color:var(--text); letter-spacing:-.3px; }
+.pg-sub { font-size:12px; color:var(--t3); margin-top:3px; }
+.card { background:var(--white); border:1px solid var(--bdr); border-radius:18px; box-shadow:var(--shadow-2); overflow:hidden; }
+.card-pad { padding:18px; }
+.card-title { font-size:15px; font-weight:700; color:var(--text); }
+.card-sub { font-size:12px; color:var(--t3); margin-top:2px; }
+.stat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.stat-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.stat-card { background:var(--white); border:1px solid var(--bdr); border-radius:18px; padding:14px; box-shadow:var(--shadow-2); }
+.stat-label { font-size:11px; color:var(--t3); margin-bottom:4px; font-weight:500; }
+.stat-val { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-.3px; line-height:1.1; }
+.stat-sub { font-size:10px; color:var(--t3); margin-top:3px; }
+.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:9999px; font-size:10px; font-weight:700; white-space:nowrap; }
+.badge-green { background:var(--green-bg); color:var(--green-txt); }
+.badge-red { background:var(--red-bg); color:var(--red-txt); }
+.badge-yellow { background:var(--yellow-bg); color:var(--yellow-txt); }
+.badge-blue { background:var(--blue-bg); color:var(--blue-txt); }
+.badge-slate { background:var(--bg3); color:var(--t2); }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:9px 18px; border-radius:50px; font-size:12.5px; font-weight:600; cursor:pointer; border:none; white-space:nowrap; font-family:inherit; }
+.btn-primary { background:linear-gradient(135deg,var(--p),var(--p2)); color:white; box-shadow:0 6px 16px -4px var(--p-glow); }
+.btn-outline { background:var(--white); border:1.5px solid var(--bdr2); color:var(--text); }
+.btn-sm { padding:6px 12px; font-size:11.5px; }
+.btn-green { background:var(--green-bg); color:var(--green-txt); }
+.btn-red { background:var(--red-bg); color:var(--red-txt); }
+.btn-block { width:100%; }
+.field-label { font-size:12px; font-weight:500; color:var(--t2); display:block; margin-bottom:5px; }
+.field-input { width:100%; padding:9px 12px; border:1px solid var(--bdr); border-radius:11px; font-size:13px; color:var(--text); background:var(--bg2); font-family:inherit; }
+.field-input.ta { resize:none; }
+.field-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.toggle { width:40px; height:22px; border-radius:9999px; position:relative; flex-shrink:0; cursor:pointer; border:none; padding:0; }
+.toggle.on { background:var(--green-txt); } .toggle.off { background:var(--bg3); }
+.toggle-dot { position:absolute; top:2px; width:18px; height:18px; border-radius:50%; background:white; box-shadow:var(--shadow-2); }
+.toggle.on .toggle-dot { right:2px; } .toggle.off .toggle-dot { left:2px; }
+.dtable { width:100%; border-collapse:collapse; font-size:12.5px; }
+.dtable thead { background:var(--bg2); }
+.dtable th { text-align:left; padding:9px 16px; font-size:9.5px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--bdr); }
+.dtable td { padding:10px 16px; border-bottom:1px solid var(--bdr); vertical-align:middle; }
+.dtable tr:last-child td { border-bottom:none; }
+.dtable tr:hover { background:var(--bg2); }
+.td-primary { font-weight:600; color:var(--text); }
+.td-muted { color:var(--t3); font-size:11px; margin-top:1px; }
+.td-actions { display:flex; gap:6px; justify-content:flex-end; }
+.irow { display:flex; align-items:center; gap:12px; padding:10px 16px; }
+.irow+.irow { border-top:1px solid var(--bg3); }
+.irow-icon { width:38px; height:38px; border-radius:50%; background:rgba(255,107,61,.1); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:16px; }
+.irow-body strong { display:block; font-size:13px; font-weight:600; color:var(--text); }
+.irow-body span { display:block; font-size:11px; color:var(--t2); margin-top:1px; }
+
+/* ── Mobile content area ── */
+.m-content { flex:1; padding:14px 14px 12px; overflow-y:auto; }
+.m-content::-webkit-scrollbar { display:none; }
+
+/* ── Sticky save bar (mobile) — CONSISTENT everywhere ── */
+.m-save-bar { position:sticky; bottom:0; background:rgba(250,249,247,.96); backdrop-filter:blur(10px); border-top:1px solid var(--bdr); padding:10px 14px calc(68px + 4px); display:flex; gap:8px; }
+
+/* ── Section heading inside pages ── */
+.sec-label { font-size:11px; font-weight:700; color:var(--t2); margin:16px 0 8px; }
+.divider { height:1px; background:var(--bdr); margin:12px 0; }
+
+/* ── Row cards (mobile list items) ── */
+.row-card { background:var(--white); border:1px solid var(--bdr); border-radius:16px; padding:14px; box-shadow:var(--shadow-2); }
+.row-card+.row-card { margin-top:10px; }
+.rc-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.rc-title { font-size:14px; font-weight:700; color:var(--text); }
+.rc-sub { font-size:11.5px; color:var(--t3); margin-top:2px; }
+.rc-meta { font-size:11.5px; color:var(--t2); margin-top:6px; display:flex; align-items:center; gap:6px; }
+.rc-actions { display:flex; gap:7px; margin-top:10px; }
+
+/* ── Star rating ── */
+.stars { color:var(--p); font-size:15px; letter-spacing:1px; }
+
+/* ── Alert ── */
+.alert { border-radius:16px; padding:12px 14px; display:flex; gap:9px; align-items:flex-start; }
+.alert-yellow { background:var(--yellow-bg); border:1px solid var(--yellow-bdr); }
+
+/* ── Progress bar ── */
+.prog-track { flex:1; background:var(--bg3); border-radius:9999px; height:6px; overflow:hidden; }
+.prog-fill { height:100%; background:linear-gradient(90deg,var(--p),#ff8f6b); border-radius:9999px; }
+
+/* ── Gallery ── */
+.gallery { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.gtile { height:80px; border-radius:12px; background:linear-gradient(150deg,#3d2b1f,#5c3d28); }
+.gtile.add { background:none; border:2px dashed var(--bdr2); display:flex; align-items:center; justify-content:center; color:var(--t3); font-size:18px; cursor:pointer; }
+.hero-upload { height:130px; border-radius:16px; background:linear-gradient(150deg,#3d2b1f,#5c3d28); position:relative; overflow:hidden; }
+.hero-caption { position:absolute; bottom:9px; left:11px; color:rgba(255,255,255,.9); font-size:10px; font-weight:600; }
+
+/* ── Quick link ── */
+.quick-link { display:flex; align-items:center; gap:10px; background:var(--white); border:1px solid var(--bdr); border-radius:14px; padding:12px; box-shadow:var(--shadow-2); text-decoration:none; }
+.quick-link+.quick-link { margin-top:8px; }
+.ql-icon { width:32px; height:32px; border-radius:9px; background:var(--p-tint); color:var(--p); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px; }
+.ql-title { font-size:12.5px; font-weight:700; color:var(--text); }
+.ql-sub { font-size:11px; color:var(--t3); margin-top:1px; }
+
+/* ── Live guest row ── */
+.live-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 12px; border:1px solid var(--bdr); border-radius:11px; margin-bottom:7px; }
+</style>
+</head>
+<body>
+
+<h1 class="wf-title">DineWithMe — Restaurant Admin Wireframe v3</h1>
+<p class="wf-sub">5-tab mobile bottom nav · consistent mobile header · desktop sidebar · every screen paired desktop + mobile</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 1: HOME — Dashboard + Analytics + Reviews                  -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<h2 class="sec">Tab 1 · Home — Dashboard (overview of everything)</h2>
+<div class="row">
+
+<!-- Mobile: Dashboard -->
+<div class="frame">
+  <div class="frame-label">Mobile · Home / Dashboard</div>
+  <div class="phone"><div class="screen">
+    <div class="m-topbar">
+      <div class="m-topbar-left"><div class="m-logo-mark">🍽</div></div>
+      <div class="m-topbar-center">Marchetti's</div>
+      <div class="m-topbar-right"><div class="m-avatar"></div></div>
+    </div>
+    <div class="m-content">
+      <div style="margin-bottom:14px">
+        <div style="font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.3px">Dashboard</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:2px">Welcome back, Luca</div>
+      </div>
+      <!-- KPI grid 2x2 -->
+      <div class="stat-grid" style="margin-bottom:14px">
+        <div class="stat-card"><div class="stat-label">Upcoming Dinners</div><div class="stat-val">3</div><div class="stat-sub">Next: Sat 12 Apr</div></div>
+        <div class="stat-card"><div class="stat-label">Seats Confirmed</div><div class="stat-val">18</div></div>
+        <div class="stat-card"><div class="stat-label">Revenue (30d)</div><div class="stat-val" style="font-size:17px">R 8,100</div><div class="stat-sub">↑ 12% vs prior</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Rating</div><div class="stat-val">4.7★</div><div class="stat-sub">24 reviews</div></div>
+      </div>
+
+      <!-- Upcoming mini list -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="sec-label" style="margin:0">Upcoming Dinners</div>
+        <span style="font-size:11.5px;color:var(--p);font-weight:600">View all →</span>
+      </div>
+      <div class="row-card" style="margin-bottom:8px">
+        <div class="rc-top"><div class="rc-title">Deep Talk</div><span class="badge badge-blue">SCHEDULED</span></div>
+        <div class="rc-meta">📅 Sat 12 Apr · 7:00 PM</div>
+        <div class="rc-meta">👥 6 / 8 confirmed</div>
+        <div class="rc-actions">
+          <button class="btn btn-outline btn-sm" style="flex:1">View</button>
+          <button class="btn btn-green btn-sm" style="flex:1">→ LIVE</button>
+        </div>
+      </div>
+
+      <!-- Reviews preview -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;margin-top:16px">
+        <div class="sec-label" style="margin:0">Recent Reviews</div>
+        <span style="font-size:11.5px;color:var(--p);font-weight:600">View all →</span>
+      </div>
+      <div class="row-card" style="margin-bottom:8px">
+        <div class="rc-top">
+          <div><div class="rc-title">Naledi D.</div><div class="stars">★★★★★</div></div>
+          <div style="font-size:11px;color:var(--t3)">2d ago</div>
+        </div>
+        <div style="font-size:12px;color:var(--t2);margin-top:6px">"Amazing conversations. Will definitely come back!"</div>
+      </div>
+
+      <!-- Go To -->
+      <div class="sec-label" style="margin-top:16px">Go To</div>
+      <a class="quick-link"><div class="ql-icon">👥</div><div><div class="ql-title">Guests & Bookings</div><div class="ql-sub">3 guests tonight</div></div></a>
+      <a class="quick-link"><div class="ql-icon">💰</div><div><div class="ql-title">Payouts</div><div class="ql-sub">R 2,700 ready this week</div></div></a>
+    </div>
+    <div class="m-bottomnav">
+      <div class="m-tab active"><div class="m-tab-icon">🏠</div>Home</div>
+      <div class="m-tab"><div class="m-tab-icon">🍽</div>Dish</div>
+      <div class="m-tab"><div class="m-tab-icon">📅</div>Dinners</div>
+      <div class="m-tab"><div class="m-tab-icon">💰</div>Payouts</div>
+      <div class="m-tab"><div class="m-tab-icon">🏪</div>Profile</div>
+    </div>
+  </div></div>
+</div>
+
+<!-- Desktop: Dashboard -->
+<div class="frame">
+  <div class="frame-label">Desktop · Home / Dashboard</div>
+  <div class="desktop">
+    <div class="chrome"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+    <div class="d-topbar">
+      <div class="d-logo"><div class="d-logo-mark">🍽</div><div class="d-logo-text">DineWithMe</div><div class="d-logo-chip">Admin</div></div>
+      <div class="d-user"><div><div class="d-user-name">Luca Marchetti</div><div class="d-user-sub">Marchetti's Trattoria</div></div><div class="d-avatar"></div></div>
+    </div>
+    <div class="d-body">
+      <div class="d-sidebar">
+        <div class="d-nav">
+          <div class="d-nav-item active"><span class="d-nav-icon">🏠</span> Dashboard</div>
+          <div class="d-nav-item"><span class="d-nav-icon">📊</span> Analytics</div>
+          <div class="d-nav-item"><span class="d-nav-icon">⭐</span> Reviews</div>
+          <div class="d-nav-group">Operations</div>
+          <div class="d-nav-item"><span class="d-nav-icon">🍽</span> Dish Library</div>
+          <div class="d-nav-item"><span class="d-nav-icon">📅</span> Dinners</div>
+          <div class="d-nav-item"><span class="d-nav-icon">👥</span> Guests</div>
+          <div class="d-nav-group">Finance</div>
+          <div class="d-nav-item"><span class="d-nav-icon">💰</span> Payouts</div>
+          <div class="d-nav-group">Restaurant</div>
+          <div class="d-nav-item"><span class="d-nav-icon">🏪</span> Profile</div>
+          <div class="d-nav-item"><span class="d-nav-icon">👤</span> Team</div>
+          <div class="d-nav-item"><span class="d-nav-icon">📷</span> Media</div>
+          <div class="d-nav-item"><span class="d-nav-icon">⚙️</span> Settings</div>
+        </div>
+      </div>
+      <div class="d-main">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px">
+          <div><div class="pg-title">Dashboard</div><div class="pg-sub">Welcome back, Luca · Marchetti's Trattoria</div></div>
+          <button class="btn btn-primary">+ Create Dinner</button>
+        </div>
+        <div class="stat-grid-4" style="margin-bottom:18px">
+          <div class="stat-card"><div class="stat-label">Upcoming Dinners</div><div class="stat-val">3</div><div class="stat-sub">Next: Sat 12 Apr · 7 PM</div></div>
+          <div class="stat-card"><div class="stat-label">Seats Confirmed</div><div class="stat-val">18</div><div class="stat-sub">Across 3 dinners</div></div>
+          <div class="stat-card"><div class="stat-label">Revenue (30d)</div><div class="stat-val">R 8,100</div><div class="stat-sub">↑ 12% vs prior period</div></div>
+          <div class="stat-card"><div class="stat-label">Avg Rating</div><div class="stat-val">4.7 ★</div><div class="stat-sub">From 24 feedbacks</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
+          <div class="card card-pad">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="card-title">Upcoming Dinners</div><a style="font-size:12px;color:var(--p);font-weight:600">View all →</a></div>
+            <table class="dtable"><thead><tr><th>Dinner</th><th>Date</th><th>Seats</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+            <tbody>
+              <tr><td class="td-primary">Deep Talk</td><td><span class="td-muted">Sat 12 Apr · 7PM</span></td><td>6/8 <span class="td-muted">confirmed</span></td><td><span class="badge badge-blue">SCHEDULED</span></td><td><div class="td-actions"><button class="btn btn-sm btn-outline">View</button><button class="btn btn-sm btn-green">→ LIVE</button></div></td></tr>
+              <tr><td class="td-primary">Creative Minds</td><td><span class="td-muted">Fri 18 Apr · 7:30PM</span></td><td>4/8 <span class="td-muted">confirmed</span></td><td><span class="badge badge-blue">SCHEDULED</span></td><td><div class="td-actions"><button class="btn btn-sm btn-outline">View</button></div></td></tr>
+            </tbody></table>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card card-pad"><div class="card-title" style="margin-bottom:10px">Go To</div>
+              <a class="quick-link" style="margin-bottom:7px"><div class="ql-icon">👥</div><div><div class="ql-title">Guests & Bookings</div><div class="ql-sub">3 guests tonight</div></div></a>
+              <a class="quick-link"><div class="ql-icon">💰</div><div><div class="ql-title">Payouts</div><div class="ql-sub">R 2,700 ready</div></div></a>
+            </div>
+            <div class="card card-pad"><div class="card-title" style="margin-bottom:8px">Recent Reviews</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div class="stars">★★★★★</div><div style="font-size:11px;color:var(--t3)">avg 4.7</div></div>
+              <div style="font-size:12px;color:var(--t2);line-height:1.5">"Amazing conversations..." — Naledi D.</div>
+              <div style="font-size:11px;color:var(--p);font-weight:600;margin-top:8px">View all reviews →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end row -->

@@ -7,6 +7,7 @@ import { updateBankDetails } from "../actions";
 
 interface BankDetailsFormProps {
   restaurantId: string;
+  isOwner: boolean;
   bankName: string | null;
   maskedAccountNumber: string | null;
   bankAccountHolderName: string | null;
@@ -15,6 +16,7 @@ interface BankDetailsFormProps {
 
 export function BankDetailsForm({
   restaurantId,
+  isOwner,
   bankName,
   maskedAccountNumber,
   bankAccountHolderName,
@@ -97,14 +99,19 @@ export function BankDetailsForm({
               No payout destination on file yet - add your bank details to receive payouts.
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="btn btn-outline btn-sm"
-            style={{ marginTop: 14 }}
-          >
-            {hasBankDetails ? "Update Bank Details" : "Add Bank Details"}
-          </button>
+          {/* Owner-only — where money goes is one of the three things a
+              Manager can't touch, same rule as Team's role-select/Remove
+              and Settings' Danger Zone. */}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="btn btn-outline btn-sm"
+              style={{ marginTop: 14 }}
+            >
+              {hasBankDetails ? "Update Bank Details" : "Add Bank Details"}
+            </button>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit}>

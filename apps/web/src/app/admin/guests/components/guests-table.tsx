@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ArrowUpDown, Filter } from "lucide-react";
+import { Search, ArrowUpDown, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatAmount } from "@dinewithme/config/src/payment";
-import { GuestQuickView } from "@/app/admin/components/guest-quick-view";
 
 interface GuestUser {
   id: string;
@@ -57,14 +56,14 @@ function paymentBadge(guest: Guest): { label: string; className: string } {
 }
 
 const CANCELLED_STATUSES = new Set(["CANCELLED", "EXPIRED", "NO_SHOW"]);
+const PAGE_SIZE = 10;
 
 type TabValue = "upcoming" | "past" | "cancelled";
 
-export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
+export function GuestsTable({ guests }: GuestsTableProps) {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabValue>("upcoming");
   const [dinnerFilter, setDinnerFilter] = useState("");
-  const [quickViewGuest, setQuickViewGuest] = useState<GuestUser | null>(null);
   // Mobile-only "Filter Guests" panel (same filter-sheet pattern as the
   // Dinners screen) - the desktop toolbar keeps its inline Dinner <select>,
   // but on mobile that select is replaced by a filter icon that toggles this
@@ -72,6 +71,7 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
   // "Reset".
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [draftDinnerFilter, setDraftDinnerFilter] = useState("");
+  const [page, setPage] = useState(1);
 
   const dinnerOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -126,6 +126,18 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
       return name.includes(query) || email.includes(query);
     });
   }, [byTab, search, dinnerFilter]);
+
+  // Reset to the first page whenever the filtered set changes underneath us,
+  // so a narrowed search can't strand the view on a now-empty page.
+  useEffect(() => {
+    setPage(1);
+  }, [search, tab, dinnerFilter]);
+
+  const totalCount = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const paged = filtered.slice(pageStart, pageStart + PAGE_SIZE);
 
   if (guests.length === 0) {
     return (
@@ -262,12 +274,12 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
 
       {/* Mobile: stacked row-cards. Desktop: table. Same filtered data. */}
       <div className="only-mobile">
-        {filtered.length === 0 ? (
+        {paged.length === 0 ? (
           <div className="card card-pad" style={{ textAlign: "center", color: "var(--t3)" }}>
             No guests match your search
           </div>
         ) : (
-          filtered.map((guest) => {
+          paged.map((guest) => {
             const person = guest.confirmedByUser ?? guest.heldByUser;
             const name =
               [person?.firstName, person?.lastName].filter(Boolean).join(" ") ||
@@ -285,13 +297,9 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
                   <div>
                     <div className="rc-title">
                       {person ? (
-                        <button
-                          type="button"
-                          onClick={() => setQuickViewGuest(person)}
-                          style={{ color: "inherit", background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}
-                        >
+                        <Link href={`/admin/guests/${person.id}`} style={{ color: "inherit", textDecoration: "none" }}>
                           {name}
-                        </button>
+                        </Link>
                       ) : (
                         name
                       )}
@@ -336,14 +344,14 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {paged.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: "center", color: "var(--t3)" }}>
                     No guests match your search
                   </td>
                 </tr>
               ) : (
-                filtered.map((guest) => {
+                paged.map((guest) => {
                   const person = guest.confirmedByUser ?? guest.heldByUser;
                   const name =
                     [person?.firstName, person?.lastName].filter(Boolean).join(" ") ||
@@ -355,14 +363,9 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
                     <tr key={guest.id}>
                       <td>
                         {person ? (
-                          <button
-                            type="button"
-                            onClick={() => setQuickViewGuest(person)}
-                            className="td-strong"
-                            style={{ background: "none", border: 0, padding: 0, cursor: "pointer", font: "inherit" }}
-                          >
+                          <Link href={`/admin/guests/${person.id}`} className="td-strong" style={{ textDecoration: "none" }}>
                             {name}
-                          </button>
+                          </Link>
                         ) : (
                           <div className="td-strong">{name}</div>
                         )}
@@ -404,13 +407,33 @@ export function GuestsTable({ guests, restaurantId }: GuestsTableProps) {
         </div>
       </div>
 
-      {quickViewGuest && (
-        <GuestQuickView
-          open
-          onClose={() => setQuickViewGuest(null)}
-          restaurantId={restaurantId}
-          guest={quickViewGuest}
-        />
+      {totalCount > 0 && (
+        <div className="pagination">
+          <div className="pagination-info">
+            Showing {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, totalCount)} of {totalCount}
+          </div>
+          <div className="pagination-controls">
+            <button
+              type="button"
+              className={`m-icon-btn${currentPage <= 1 ? " disabled" : ""}`}
+              aria-label="Previous page"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="pagination-page">Page {currentPage} of {pageCount}</span>
+            <button
+              type="button"
+              className={`m-icon-btn${currentPage >= pageCount ? " disabled" : ""}`}
+              aria-label="Next page"
+              disabled={currentPage >= pageCount}
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
