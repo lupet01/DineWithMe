@@ -49,26 +49,42 @@ export function DinnerStatusActions({
 
   const barStyle = layout === "bar" ? { flex: 1 } : undefined;
 
+  const statusButton =
+    status === "SCHEDULED" ? (
+      <button type="button" onClick={() => setOpenModal("markLive")} className="btn btn-green btn-sm" style={barStyle}>
+        → Mark LIVE
+      </button>
+    ) : status === "LIVE" ? (
+      <button type="button" onClick={() => setOpenModal("complete")} className="btn btn-outline btn-sm" style={barStyle}>
+        Complete
+      </button>
+    ) : null;
+
+  const cancelControl = pendingCancellation ? (
+    <span className="badge badge-yellow" style={{ flexShrink: 0 }}>
+      Cancellation pending review
+    </span>
+  ) : (
+    <button type="button" onClick={() => setOpenModal("cancel")} className="btn btn-red btn-sm" style={barStyle}>
+      Cancel Dinner
+    </button>
+  );
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, width: layout === "bar" ? "100%" : undefined }}>
-      {status === "SCHEDULED" && (
-        <button type="button" onClick={() => setOpenModal("markLive")} className="btn btn-green btn-sm" style={barStyle}>
-          → Mark LIVE
-        </button>
-      )}
-      {status === "LIVE" && (
-        <button type="button" onClick={() => setOpenModal("complete")} className="btn btn-outline btn-sm" style={barStyle}>
-          Complete
-        </button>
-      )}
-      {pendingCancellation ? (
-        <span className="badge badge-yellow" style={{ flexShrink: 0 }}>
-          Cancellation pending review
-        </span>
+      {/* Mobile action bar leads with the cancel/request control, then the
+          status button (wireframe: Cancel Dinner then Mark LIVE); desktop
+          inline keeps the status button first, then cancel. */}
+      {layout === "bar" ? (
+        <>
+          {cancelControl}
+          {statusButton}
+        </>
       ) : (
-        <button type="button" onClick={() => setOpenModal("cancel")} className="btn btn-red btn-sm" style={barStyle}>
-          Cancel Dinner
-        </button>
+        <>
+          {statusButton}
+          {cancelControl}
+        </>
       )}
 
       <ConfirmModal

@@ -93,7 +93,7 @@ export function ReviewRow({
       {vibeTags.length > 0 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
           {vibeTags.map((tag) => (
-            <span key={tag} className="badge badge-slate" style={{ fontSize: 9.5 }}>
+            <span key={tag} className="badge badge-slate">
               {VIBE_TAG_LABELS[tag] ?? tag}
             </span>
           ))}

@@ -33,7 +33,10 @@ export default async function MealsPage() {
           <h1 className="pg-title">Meals</h1>
           <p className="pg-sub">Reusable menus, chosen by name at Create Dinner</p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {/* Desktop-only: on mobile, nav is the MobileSubTabs above and New Meal
+            is the sticky m-action-bar in MealsList — so this header actions row
+            would just duplicate both (wireframe mobile has no header actions). */}
+        <div className="only-desktop-flex" style={{ gap: 8, flexWrap: "wrap" }}>
           <Link href="/admin/dish-library" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
             Dish Library →
           </Link>

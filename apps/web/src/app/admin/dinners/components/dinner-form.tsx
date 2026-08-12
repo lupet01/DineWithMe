@@ -227,7 +227,7 @@ export function DinnerForm({
         {/* Theme Selection */}
         <div>
           <label htmlFor="themeId" className="field-label">
-            Table Theme <span className="req">*</span>
+            Theme <span className="req">*</span>
           </label>
           {enabledThemes.length === 0 ? (
             <div className="alert alert-yellow">

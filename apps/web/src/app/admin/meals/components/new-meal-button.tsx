@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createMeal } from "../actions";
 
-export function NewMealButton({ restaurantId }: { restaurantId: string }) {
+export function NewMealButton({ restaurantId, block = false }: { restaurantId: string; block?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -28,7 +28,12 @@ export function NewMealButton({ restaurantId }: { restaurantId: string }) {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="btn btn-primary" style={{ alignSelf: "flex-start" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={block ? "btn btn-primary btn-block" : "btn btn-primary btn-sm"}
+        style={block ? undefined : { alignSelf: "flex-start" }}
+      >
         + New Meal
       </button>
     );

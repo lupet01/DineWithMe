@@ -87,9 +87,9 @@ export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPla
   };
 
   return (
-    <div className="table-wrap">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 0", gap: 10, flexWrap: "wrap" }}>
-        <div className="card-title">{isCompleted ? "Guest Manifest & Results" : "Guest List"}</div>
+    <div className="card card-pad">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
+        <div className="card-title" style={{ marginBottom: 0 }}>{isCompleted ? "Guest Manifest & Results" : "Guest List"}</div>
         {!isCompleted && (
           <div style={{ display: "flex", gap: 8 }}>
             <button
@@ -111,7 +111,7 @@ export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPla
         <div style={{ padding: 40, textAlign: "center", color: "var(--t3)" }}>No confirmed guests yet</div>
       ) : (
         <>
-          <div className="search-bar" style={{ width: 260, margin: "14px 0 0 18px" }}>
+          <div className="search-bar" style={{ width: 260, margin: "0 0 12px" }}>
             <Search className="search-icon" />
             <input
               className="field-input"
@@ -123,7 +123,7 @@ export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPla
           {filteredSeats.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center", color: "var(--t3)" }}>No guests match your search</div>
           ) : (
-            <div className="table-scroll" style={{ marginTop: 12 }}>
+            <div className="table-scroll">
               <table className="dtable">
                 <thead>
                   {isCompleted ? (

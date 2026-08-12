@@ -197,6 +197,15 @@ export function MealsList({
           );
         })}
       </div>
+
+      {/* Mobile-only sticky "New Meal" — matches the wireframe's bottom
+          m-action-bar (§sec-meals mobile). Hidden ≥768px via the container
+          query on .m-action-bar; the desktop New Meal lives in the page
+          header row. Reuses NewMealButton for the create flow, rendered
+          full-width (btn-block) like Meal Editor's mobile Save. */}
+      <div className="m-action-bar">
+        <NewMealButton restaurantId={restaurantId} block />
+      </div>
     </>
   );
 }

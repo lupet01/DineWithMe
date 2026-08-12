@@ -119,7 +119,13 @@ export function GuestRow({
     return (
       <tr style={isNoShow ? { opacity: 0.6 } : undefined}>
         {nameCell}
-        <td style={{ color: "var(--t2)" }}>{seat.dietaryNotes || "—"}</td>
+        <td>
+          {seat.dietaryNotes ? (
+            <span className="badge badge-green">{seat.dietaryNotes}</span>
+          ) : (
+            <span style={{ color: "var(--t3)" }}>—</span>
+          )}
+        </td>
         <td>
           <span className={`badge ${statusBadgeClass(seat.status)}`}>{seat.status}</span>
         </td>
@@ -149,7 +155,7 @@ export function GuestRow({
       <td>
         <div className="td-actions">
           {canCheckIn && (
-            <button onClick={handleCheckIn} disabled={isUpdating} className="btn btn-green">
+            <button onClick={handleCheckIn} disabled={isUpdating} className="btn btn-primary btn-sm">
               Check In
             </button>
           )}

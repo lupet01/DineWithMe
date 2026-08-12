@@ -65,10 +65,13 @@ function getStatusBadgeClass(status: string): string {
  * so it opens the styled ConfirmModal to collect a required reason rather
  * than a native confirm.
  */
+type PendingAction = null | "publish" | "live" | "complete" | "delete";
+
 function useDinnerRowState(dinner: DinnerWithRestaurant) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [seatCounts, setSeatCounts] = useState({ confirmed: 0, available: 0 });
 
   useEffect(() => {
@@ -92,51 +95,49 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
     fetchSeatCounts();
   }, [dinner.id, dinner.status]);
 
+  // Publish / Mark-Live / Complete / Delete each confirm through the styled
+  // ConfirmModal (opened via setPendingAction) rather than a native confirm().
+  // These run as the modal's onConfirm: they throw on failure so the modal can
+  // surface the error inline, and clear pendingAction on success to close it.
   const handleStatusChange = async (newStatus: "LIVE" | "COMPLETED") => {
     if (isUpdating) return;
-    const confirmed = confirm(`Are you sure you want to mark this dinner as ${newStatus}?`);
-    if (!confirmed) return;
-
     setIsUpdating(true);
     const result = await updateDinnerStatus(dinner.id, newStatus);
     setIsUpdating(false);
 
     if (!result.success) {
       toast.error(result.error || "Failed to update dinner status");
-      return;
+      throw new Error(result.error || "Failed to update dinner status");
     }
+    setPendingAction(null);
     toast.success(newStatus === "LIVE" ? "Dinner is now live" : "Dinner marked completed");
   };
 
   const handlePublish = async () => {
     if (isUpdating) return;
-    const confirmed = confirm("Publish this dinner? It becomes visible on Discover and bookable — its content locks after this.");
-    if (!confirmed) return;
-
     setIsUpdating(true);
     const result = await publishDinner(dinner.id);
     setIsUpdating(false);
 
     if (!result.success) {
       toast.error(result.error || "Failed to publish dinner");
-      return;
+      throw new Error(result.error || "Failed to publish dinner");
     }
+    setPendingAction(null);
     toast.success("Dinner published");
   };
 
   const handleDelete = async () => {
     if (isUpdating) return;
-    const confirmed = confirm("Delete this draft dinner? This can't be undone.");
-    if (!confirmed) return;
-
     setIsUpdating(true);
     const result = await deleteDinner(dinner.id);
     setIsUpdating(false);
 
     if (!result.success) {
       toast.error(result.error || "Failed to delete dinner");
-      return;
+      throw new Error(result.error || "Failed to delete dinner");
     }
+    setPendingAction(null);
     toast.success("Draft deleted");
   };
 
@@ -168,6 +169,8 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
     handleStatusChange,
     handlePublish,
     handleDelete,
+    pendingAction,
+    setPendingAction,
     cancelOpen,
     setCancelOpen,
     confirmCancel,
@@ -212,6 +215,72 @@ function CancelDinnerModal({
   );
 }
 
+/**
+ * The Publish / Mark-Live / Complete / Delete-draft confirmation modals,
+ * rendered once per row variant (mirroring CancelDinnerModal). Which one is
+ * visible is driven by the shared `pendingAction` state; each onConfirm runs
+ * the matching executor, which closes the modal on success or lets ConfirmModal
+ * surface a thrown error inline.
+ */
+function DinnerActionModals({
+  pendingAction,
+  onClose,
+  onPublish,
+  onDelete,
+  onStatusChange,
+}: {
+  pendingAction: PendingAction;
+  onClose: () => void;
+  onPublish: () => void | Promise<void>;
+  onDelete: () => void | Promise<void>;
+  onStatusChange: (newStatus: "LIVE" | "COMPLETED") => void | Promise<void>;
+}) {
+  return (
+    <>
+      <ConfirmModal
+        open={pendingAction === "publish"}
+        onClose={onClose}
+        onConfirm={onPublish}
+        tone="green"
+        title="Publish Dinner"
+        description="This dinner becomes visible on Discover and bookable by diners. Its content locks after this."
+        confirmLabel="Publish Dinner"
+        cancelLabel="Keep as Draft"
+      />
+      <ConfirmModal
+        open={pendingAction === "live"}
+        onClose={onClose}
+        onConfirm={() => onStatusChange("LIVE")}
+        tone="green"
+        title="Mark Dinner Live"
+        description="Mark this dinner as live? It shows as currently happening and guests can check in."
+        confirmLabel="Mark Live"
+        cancelLabel="Not Yet"
+      />
+      <ConfirmModal
+        open={pendingAction === "complete"}
+        onClose={onClose}
+        onConfirm={() => onStatusChange("COMPLETED")}
+        tone="green"
+        title="Complete Dinner"
+        description="Mark this dinner as completed? This closes it out and finalizes its revenue."
+        confirmLabel="Mark Completed"
+        cancelLabel="Not Yet"
+      />
+      <ConfirmModal
+        open={pendingAction === "delete"}
+        onClose={onClose}
+        onConfirm={onDelete}
+        tone="red"
+        title="Delete Draft"
+        description="Delete this draft dinner? This can't be undone."
+        confirmLabel="Delete Draft"
+        cancelLabel="Keep Draft"
+      />
+    </>
+  );
+}
+
 export function DinnerRow({ dinner }: DinnerRowProps) {
   const {
     isUpdating,
@@ -221,6 +290,8 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
     handleStatusChange,
     handlePublish,
     handleDelete,
+    pendingAction,
+    setPendingAction,
     cancelOpen,
     setCancelOpen,
     confirmCancel,
@@ -303,7 +374,7 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
         <div className="td-actions">
           {isDraft ? (
             <>
-              <button onClick={handlePublish} disabled={isUpdating} className="btn btn-primary btn-sm">
+              <button onClick={() => setPendingAction("publish")} disabled={isUpdating} className="btn btn-primary btn-sm">
                 Publish
               </button>
               <details className="row-menu">
@@ -314,7 +385,7 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
                   <Link href={`/admin/dinners/${dinner.id}/edit`} className="row-menu-item">
                     Edit
                   </Link>
-                  <button type="button" onClick={handleDelete} disabled={isUpdating} className="row-menu-item danger">
+                  <button type="button" onClick={() => setPendingAction("delete")} disabled={isUpdating} className="row-menu-item danger">
                     Delete
                   </button>
                 </div>
@@ -326,12 +397,12 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
                 View
               </Link>
               {canMarkLive && (
-                <button onClick={() => handleStatusChange("LIVE")} disabled={isUpdating} className="btn btn-green btn-sm">
+                <button onClick={() => setPendingAction("live")} disabled={isUpdating} className="btn btn-green btn-sm">
                   Mark Live
                 </button>
               )}
               {canMarkCompleted && (
-                <button onClick={() => handleStatusChange("COMPLETED")} disabled={isUpdating} className="btn btn-outline btn-sm">
+                <button onClick={() => setPendingAction("complete")} disabled={isUpdating} className="btn btn-outline btn-sm">
                   Complete
                 </button>
               )}
@@ -356,6 +427,13 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
           onClose={() => setCancelOpen(false)}
           onConfirm={confirmCancel}
         />
+        <DinnerActionModals
+          pendingAction={pendingAction}
+          onClose={() => setPendingAction(null)}
+          onPublish={handlePublish}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+        />
       </td>
     </tr>
   );
@@ -374,6 +452,8 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
     handleStatusChange,
     handlePublish,
     handleDelete,
+    pendingAction,
+    setPendingAction,
     cancelOpen,
     setCancelOpen,
     confirmCancel,
@@ -414,10 +494,10 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
             <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-sm btn-outline" style={{ flex: 1, textAlign: "center" }}>
               Edit
             </Link>
-            <button onClick={handlePublish} disabled={isUpdating} className="btn btn-sm btn-primary" style={{ flex: 1 }}>
+            <button onClick={() => setPendingAction("publish")} disabled={isUpdating} className="btn btn-sm btn-primary" style={{ flex: 1 }}>
               Publish
             </button>
-            <button onClick={handleDelete} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
+            <button onClick={() => setPendingAction("delete")} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
               Delete
             </button>
           </>
@@ -427,12 +507,12 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
               View
             </Link>
             {canMarkLive && (
-              <button onClick={() => handleStatusChange("LIVE")} disabled={isUpdating} className="btn btn-sm btn-green" style={{ flex: 1 }}>
+              <button onClick={() => setPendingAction("live")} disabled={isUpdating} className="btn btn-sm btn-green" style={{ flex: 1 }}>
                 Mark Live
               </button>
             )}
             {canMarkCompleted && (
-              <button onClick={() => handleStatusChange("COMPLETED")} disabled={isUpdating} className="btn btn-sm btn-outline" style={{ flex: 1 }}>
+              <button onClick={() => setPendingAction("complete")} disabled={isUpdating} className="btn btn-sm btn-outline" style={{ flex: 1 }}>
                 Complete
               </button>
             )}
@@ -449,6 +529,13 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
         onConfirm={confirmCancel}
+      />
+      <DinnerActionModals
+        pendingAction={pendingAction}
+        onClose={() => setPendingAction(null)}
+        onPublish={handlePublish}
+        onDelete={handleDelete}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );

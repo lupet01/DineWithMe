@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Sparkles, FileText } from "lucide-react";
 import type { Restaurant, ComplianceDocument, RestaurantWithMembers } from "@dinewithme/db";
 import type { Theme } from "@prisma/client";
 import { COMPLIANCE_DOC_TYPE_LABELS } from "@/lib/compliance-document";
@@ -253,7 +254,7 @@ export function RestaurantOverview({
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}
                 >
-                  ✦
+                  <Sparkles size={18} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>{theme.title}</div>
@@ -293,7 +294,9 @@ export function RestaurantOverview({
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <span style={{ color: "var(--t3)", flexShrink: 0 }}>📄</span>
+                  <span style={{ color: "var(--t3)", flexShrink: 0, display: "flex" }}>
+                    <FileText size={15} />
+                  </span>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                       {COMPLIANCE_DOC_TYPE_LABELS[doc.docType] ?? nameNoExt}

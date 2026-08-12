@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { getAuthUser } from "@/lib/auth/server";
 import { restaurantRepository, feedbackRepository } from "@dinewithme/db";
 import { ReviewFilters } from "./components/review-filters";
@@ -59,16 +57,8 @@ export default async function ReviewsPage({
 
   return (
     <div className="reviews">
-      <p className="pg-sub only-desktop" style={{ marginBottom: 12 }}>
-        <Link href="/admin" style={{ color: "var(--p)", fontWeight: 600 }}>
-          ← Dashboard
-        </Link>{" "}
-        / Guest Feedback
-      </p>
       <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <Link href="/admin" className="m-icon-btn" aria-label="Back to Dashboard">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
+        <div style={{ width: 32 }} />
         <h1 className="pg-title" style={{ flex: 1, textAlign: "center" }}>
           Guest Feedback
         </h1>

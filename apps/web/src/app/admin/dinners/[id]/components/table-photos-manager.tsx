@@ -167,12 +167,12 @@ export function TablePhotosManager({ dinnerId, photos, isPlatformAdmin }: TableP
                 {!isPlatformAdmin && (
                   <button
                     onClick={() => setDeleteTargetId(photo.mediaAssetId)}
-                    disabled={actioningId === photo.id}
+                    disabled={actioningId === photo.mediaAssetId}
                     className="m-icon-btn"
                     style={{ position: "absolute", top: 6, right: 6, background: "rgba(255,255,255,.92)", color: "var(--red-txt)" }}
                     aria-label="Delete photo"
                   >
-                    {actioningId === photo.id ? (
+                    {actioningId === photo.mediaAssetId ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <Trash2 className="h-3.5 w-3.5" />

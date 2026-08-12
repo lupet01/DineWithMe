@@ -294,7 +294,7 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
               more completely (it also catches navigating away, which
               in-place reset never did). */}
           <div className="only-desktop-flex" style={{ alignItems: "center", gap: 10 }}>
-            <button type="button" onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm">
+            <button type="button" onClick={handleSave} disabled={saving} className="btn btn-primary">
               {saving ? "Saving…" : "Save"}
             </button>
           </div>

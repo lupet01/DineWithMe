@@ -84,6 +84,7 @@ export default async function GuestProfilePage({ params }: { params: { id: strin
         >
           ← Guests &amp; Bookings
         </Link>
+        <span style={{ fontSize: 12, color: "var(--t3)" }}>/ {name}</span>
       </div>
 
       {/* Desktop: left-aligned header with a wide equal-weight stat row */}
@@ -106,11 +107,11 @@ export default async function GuestProfilePage({ params }: { params: { id: strin
           {isRegular && <span className="badge badge-green">Regular Guest</span>}
         </div>
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--bdr)" }}>
-          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{visits.length}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Visits here</div></div>
-          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{formatAmount(totalSpendCents)}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Total spend</div></div>
-          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--green-txt)" }}>{attendedVisits.length}/{visits.length} attended</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Attendance rate</div></div>
-          <div><div style={{ fontSize: 16, fontWeight: 800, color: noShowVisits.length ? "var(--red-txt)" : "var(--text)" }}>{noShowVisits.length}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>No-shows</div></div>
-          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{avgRatingGiven ? `${avgRatingGiven} ★` : "—"}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Avg rating given</div></div>
+          <div><div style={{ fontSize: 17, fontWeight: 800, color: "var(--text)" }}>{visits.length}</div><div style={{ fontSize: 11, color: "var(--t3)" }}>Visits here</div></div>
+          <div><div style={{ fontSize: 17, fontWeight: 800, color: "var(--text)" }}>{formatAmount(totalSpendCents)}</div><div style={{ fontSize: 11, color: "var(--t3)" }}>Total spend</div></div>
+          <div><div style={{ fontSize: 17, fontWeight: 800, color: "var(--green-txt)" }}>{attendedVisits.length}/{visits.length} attended</div><div style={{ fontSize: 11, color: "var(--t3)" }}>Attendance rate</div></div>
+          <div><div style={{ fontSize: 17, fontWeight: 800, color: noShowVisits.length ? "var(--red-txt)" : "var(--text)" }}>{noShowVisits.length}</div><div style={{ fontSize: 11, color: "var(--t3)" }}>No-shows</div></div>
+          <div><div style={{ fontSize: 17, fontWeight: 800, color: "var(--text)" }}>{avgRatingGiven ? `${avgRatingGiven} ★` : "—"}</div><div style={{ fontSize: 11, color: "var(--t3)" }}>Avg rating given</div></div>
         </div>
       </div>
 

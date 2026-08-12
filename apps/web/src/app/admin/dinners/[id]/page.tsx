@@ -115,7 +115,9 @@ export default async function DinnerDetailPage({
           <span className="breakdown-value">{dinner.theme?.title || "—"}</span>
         </div>
         <div className="breakdown-row">
-          <span className="breakdown-label">Meal</span>
+          <span className="breakdown-label">
+            Meal <span className="badge badge-blue" style={{ fontSize: 8.5, verticalAlign: 1 }}>NEW</span>
+          </span>
           <span className="breakdown-value">
             {dinner.meal ? (
               <Link href="/admin/meals" style={{ color: "var(--p)" }}>
@@ -278,17 +280,33 @@ export default async function DinnerDetailPage({
       </div>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 20, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <h1 className="pg-title only-desktop">{dinner.theme?.title || "Dinner"}</h1>
+          <h1 className="pg-title only-desktop">
+            {isCompleted
+              ? dinner.theme?.title || "Dinner"
+              : `${dinner.theme?.title || "Dinner"} · ${startsAt.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })} · ${startsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`}
+          </h1>
           <p className="pg-sub">
-            {dinner.restaurant.name} ·{" "}
-            {startsAt.toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}{" "}
-            · {startsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ·{" "}
-            {dinner._count.seats} seats
+            {isCompleted ? (
+              <>
+                {dinner.restaurant.name} ·{" "}
+                {startsAt.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}{" "}
+                · {startsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ·{" "}
+                {dinner._count.seats} seats
+              </>
+            ) : (
+              <>
+                {dinner.restaurant.name} · {dinner._count.seats} seats
+              </>
+            )}
           </p>
         </div>
         <span className={`badge ${badgeClass}`}>{dinner.status}</span>
