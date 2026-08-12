@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { paymentIntentRepository, seatRepository, userRepository, db } from "@dinewithme/db";
 import { track } from "@dinewithme/analytics";
 import { notifySeatConfirmed } from "@/lib/notify-seat-confirmed";
+import { refundPaymentIntent } from "../refund/service";
 import crypto from "crypto";
 
 /**
@@ -72,7 +73,38 @@ export async function POST(request: NextRequest) {
     const event = JSON.parse(body);
     const eventType = event.event;
     const data = event.data;
-    const eventId = event.id;
+
+    // Paystack webhooks are { event, data } with NO top-level event id, so
+    // dedup must key on something that is actually present. `data.id` is the
+    // Paystack transaction id (unique per transaction); scoping it by event
+    // type keeps a charge.success and a charge.failed for the same
+    // transaction as distinct events instead of colliding. Falls back to the
+    // reference. (The previous `event.id` was always undefined, which threw on
+    // the required-unique column and silently killed all webhook processing.)
+    const eventId = `${eventType}:${data?.id ?? data?.reference}`;
+
+    // Records this event as processed, for deduplication. Deliberately called
+    // AFTER the work succeeds (not before) so that if processing throws, no
+    // dedup record is written and Paystack's retry re-processes the event. The
+    // actual work is independently idempotent — the already-SUCCEEDED/FAILED
+    // state checks below and the refund service's atomic claim make a
+    // re-processed event safe.
+    const markProcessed = async () => {
+      try {
+        await db.webhookEvent.create({
+          data: {
+            externalId: eventId,
+            type: eventType,
+            payload: event,
+            processedAt: new Date(),
+          },
+        });
+      } catch (err) {
+        // A unique collision just means a concurrent delivery already recorded
+        // it — not worth failing the webhook over.
+        console.error(`Failed to record webhook event ${eventId}:`, err);
+      }
+    };
 
     // Prevent replay attacks - check if we've already processed this event
     const existingWebhook = await db.webhookEvent.findUnique({
@@ -86,16 +118,6 @@ export async function POST(request: NextRequest) {
         message: "Event already processed",
       });
     }
-
-    // Store webhook event for deduplication
-    await db.webhookEvent.create({
-      data: {
-        externalId: eventId,
-        type: eventType,
-        payload: event,
-        processedAt: new Date(),
-      },
-    });
 
     console.log(`Received Paystack webhook: ${eventType}`, {
       reference: data.reference,
@@ -115,9 +137,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Prevent duplicate processing
+    // Prevent duplicate processing (state-based idempotency backstop)
     if (paymentIntent.status === "SUCCEEDED") {
       console.log(`Payment already processed: ${paymentIntent.id}`);
+      await markProcessed();
       return NextResponse.json({
         success: true,
         message: "Payment already processed",
@@ -126,6 +149,7 @@ export async function POST(request: NextRequest) {
 
     if (paymentIntent.status === "FAILED") {
       console.log(`Payment already marked as failed: ${paymentIntent.id}`);
+      await markProcessed();
       return NextResponse.json({
         success: true,
         message: "Payment already marked as failed",
@@ -136,7 +160,25 @@ export async function POST(request: NextRequest) {
     if (eventType === "charge.success" && data.status === "success") {
       console.log(`Processing successful payment: ${paymentIntent.id}`);
 
-      // Update payment intent status
+      // Amount check: never confirm a seat on a success whose amount doesn't
+      // match what we charged (both are in the currency subunit — cents).
+      if (typeof data.amount === "number" && data.amount !== paymentIntent.amount) {
+        console.error(
+          `[Webhook] Amount mismatch on ${data.reference}: paystack=${data.amount} intent=${paymentIntent.amount}`
+        );
+        await markProcessed();
+        return NextResponse.json(
+          { success: false, message: "Amount mismatch" },
+          { status: 200 }
+        );
+      }
+
+      // Mark our record to match external reality: the money HAS been taken at
+      // Paystack, so the PaymentIntent must reflect SUCCEEDED. If we then can't
+      // seat the diner, the remedy is a refund (below), not pretending the
+      // payment didn't happen — so there's deliberately no DB transaction
+      // spanning these two writes: the payment success is an external fact we
+      // cannot roll back.
       await paymentIntentRepository.markPaymentSucceeded(
         paymentIntent.id,
         data.reference
@@ -158,10 +200,40 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (error) {
-        console.error(`Failed to confirm seat: ${error instanceof Error ? error.message : "Unknown error"}`);
-        // Payment succeeded but seat confirmation failed
-        // This is a critical error that needs manual intervention
-        // Log for monitoring but don't fail the webhook
+        // Charged but could not seat — most likely the 10-minute hold expired
+        // before a slow bank payment cleared. This is our failure to deliver,
+        // so auto-refund the diner and raise a loud, structured alert for ops
+        // reconciliation instead of silently logging "needs intervention".
+        const detail = error instanceof Error ? error.message : "Unknown error";
+        // Structured [ALERT] log is the operational signal for ops to page
+        // on; refund analytics (payment_refunded / refund_failed) are emitted
+        // inside refundPaymentIntent below, so no extra track() call here.
+        console.error(
+          `[ALERT] payment_confirmed_but_seat_unconfirmed paymentIntentId=${paymentIntent.id} ` +
+          `seatId=${paymentIntent.seatId} userId=${paymentIntent.userId} reason="${detail}" — auto-refunding`
+        );
+
+        try {
+          const refundResult = await refundPaymentIntent({
+            paymentIntentId: paymentIntent.id,
+            reason: "system_error",
+            requestingUserId: paymentIntent.userId,
+            requestingUserRole: "PLATFORM_ADMIN",
+          });
+          if (!refundResult.ok) {
+            console.error(
+              `[ALERT] auto_refund_failed paymentIntentId=${paymentIntent.id} ` +
+              `error="${refundResult.error}" — MANUAL REFUND REQUIRED`
+            );
+          } else {
+            console.log(`[Webhook] Auto-refunded unseated payment: ${paymentIntent.id}`);
+          }
+        } catch (refundErr) {
+          console.error(
+            `[ALERT] auto_refund_threw paymentIntentId=${paymentIntent.id} ` +
+            `error="${refundErr instanceof Error ? refundErr.message : "Unknown"}" — MANUAL REFUND REQUIRED`
+          );
+        }
       }
 
       // Emit analytics
@@ -177,6 +249,7 @@ export async function POST(request: NextRequest) {
         timestamp: new Date().toISOString(),
       });
 
+      await markProcessed();
       return NextResponse.json({
         success: true,
         message: "Payment processed successfully",
@@ -203,6 +276,7 @@ export async function POST(request: NextRequest) {
         timestamp: new Date().toISOString(),
       });
 
+      await markProcessed();
       return NextResponse.json({
         success: true,
         message: "Payment failure recorded",
@@ -211,18 +285,21 @@ export async function POST(request: NextRequest) {
 
     // Unknown event type
     console.log(`Unhandled webhook event: ${eventType}`);
+    await markProcessed();
     return NextResponse.json({
       success: true,
       message: "Event received",
     });
   } catch (error) {
     console.error("Webhook processing error:", error);
-    
-    // Return 200 to prevent Paystack retries for unrecoverable errors
-    // Log the error for monitoring
+
+    // Return 500 so Paystack RETRIES the delivery. This is safe: the dedup
+    // record is only written after successful processing, and the work is
+    // independently idempotent (state checks + atomic refund claim), so a
+    // retried event won't double-confirm or double-refund.
     return NextResponse.json({
       success: false,
       error: "Internal server error",
-    }, { status: 200 }); // Return 200 to prevent retries
+    }, { status: 500 });
   }
 }

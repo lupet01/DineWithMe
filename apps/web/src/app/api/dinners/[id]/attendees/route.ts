@@ -41,6 +41,27 @@ export async function GET(_request: Request, { params }: RouteContext) {
       );
     }
 
+    // Authorization: only a confirmed participant of this dinner may see
+    // who else is coming. Without this check any authenticated diner could
+    // pass any dinnerId and harvest attendees' PII — a direct breach of the
+    // app's anonymity guarantee (and POPIA). Membership requires an active
+    // seat (CONFIRMED/ATTENDED/COMPLETED) held by the caller on this dinner.
+    const callerSeat = await prisma.seat.findFirst({
+      where: {
+        dinnerId,
+        confirmedByUserId: requestingUser.id,
+        status: { in: ["CONFIRMED", "ATTENDED", "COMPLETED"] },
+      },
+      select: { id: true },
+    });
+
+    if (!callerSeat) {
+      return NextResponse.json(
+        { success: false, error: { message: "Forbidden", code: "FORBIDDEN" } },
+        { status: 403 }
+      );
+    }
+
     // Fetch seats with confirmed/attended/completed status, including the user who confirmed
     const seats = await prisma.seat.findMany({
       where: {
@@ -55,13 +76,14 @@ export async function GET(_request: Request, { params }: RouteContext) {
             id: true,
             firstName: true,
             lastName: true,
-            email: true,
           },
         },
       },
     });
 
-    // Deduplicate and exclude the requesting user
+    // Deduplicate and exclude the requesting user. Only id + first name are
+    // returned — the "who's coming" signal needs no email, and exposing it
+    // would leak PII to fellow diners.
     const seen = new Set<string>();
     const attendees = [];
 
@@ -73,7 +95,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
           id: user.id,
           firstName: user.firstName,
           lastName: user.lastName,
-          email: user.email,
         });
       }
     }

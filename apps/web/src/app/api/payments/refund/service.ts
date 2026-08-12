@@ -4,7 +4,7 @@ import { createPaystackService } from "@dinewithme/payment";
 import { track } from "@dinewithme/analytics";
 import { emailService } from "@dinewithme/email";
 
-export type RefundReason = "user_cancelled" | "dinner_cancelled";
+export type RefundReason = "user_cancelled" | "dinner_cancelled" | "system_error";
 
 export type RefundResult =
   | { ok: true; refundId: string; amount: number; currency: string }
@@ -62,6 +62,11 @@ export async function refundPaymentIntent({
       status: 403,
     };
   }
+  // reason === "system_error": a system-initiated refund when we took the
+  // payment but could not deliver a seat (e.g. the hold expired before a slow
+  // payment cleared). This is our failure, so it deliberately bypasses the
+  // time cutoff and the ownership/role checks above — the diner must be made
+  // whole regardless of how close the dinner is.
 
   const seat = await seatRepository.findById(paymentIntent.seatId);
   if (!seat) {
@@ -100,7 +105,9 @@ export async function refundPaymentIntent({
       customer_note:
         reason === "dinner_cancelled"
           ? "Your dinner has been cancelled. Your payment has been refunded."
-          : "Your booking has been cancelled. Your payment has been refunded.",
+          : reason === "system_error"
+            ? "We couldn't confirm your seat, so your payment has been fully refunded."
+            : "Your booking has been cancelled. Your payment has been refunded.",
     });
   } catch (error) {
     // Release the claim - the provider call failed, so nothing was
@@ -148,7 +155,11 @@ export async function refundPaymentIntent({
       refundAmount: paymentIntent.amount,
       currency: paymentIntent.currency,
       refundReason:
-        reason === "dinner_cancelled" ? "The dinner was cancelled" : "You cancelled your booking",
+        reason === "dinner_cancelled"
+          ? "The dinner was cancelled"
+          : reason === "system_error"
+            ? "We were unable to confirm your seat"
+            : "You cancelled your booking",
       processingDays: 7,
       transactionId: paymentIntent.id,
     });

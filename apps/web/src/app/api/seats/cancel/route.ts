@@ -78,7 +78,53 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-    // Cancel the seat (includes policy validation)
+    // Attempt the refund BEFORE releasing the seat. The old order released
+    // the seat first, so a payment-provider outage left the guest with no
+    // seat AND no refund, with nothing to roll back. Ordering matters here
+    // because the refund cutoff (24h) is stricter than the cancellation
+    // cutoff (6h): any refund the provider actually accepts implies the
+    // cancellation is also within policy, so refunding first can never strand
+    // us in a refunded-but-uncancellable state.
+    let refund: { issued: boolean; amount?: number; currency?: string; reason?: string } = {
+      issued: false,
+    };
+    const paymentIntent = await paymentIntentRepository.findBySeat(validatedData.seatId);
+    if (paymentIntent && paymentIntent.status === "SUCCEEDED") {
+      const refundResult = await refundPaymentIntent({
+        paymentIntentId: paymentIntent.id,
+        reason: "user_cancelled",
+        requestingUserId: user.id,
+        requestingUserRole: user.role,
+      });
+
+      if (refundResult.ok) {
+        refund = { issued: true, amount: refundResult.amount, currency: refundResult.currency };
+      } else if (refundResult.status >= 500) {
+        // Provider/technical failure (not a policy denial) — abort the whole
+        // cancellation so the guest keeps both their seat and their money and
+        // can retry, rather than losing the seat to a refund that never
+        // actually happened.
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              message:
+                "We couldn't process your refund right now. Your booking is unchanged — please try again shortly.",
+              code: "REFUND_UNAVAILABLE",
+            },
+          },
+          { status: 503 }
+        );
+      } else {
+        // A legitimate no-refund outcome: policy denial (e.g. inside the 24h
+        // no-refund window — the seat still cancels, just without a refund) or
+        // already refunded. Fall through to release the seat; the response
+        // reports refund.issued=false with the reason.
+        refund = { issued: false, reason: refundResult.error };
+      }
+    }
+
+    // Release the seat (also enforces the 6h cancellation cutoff).
     try {
       const result = await seatRepository.cancelSeat(validatedData.seatId, user.id);
 
@@ -98,29 +144,6 @@ export async function POST(request: NextRequest) {
         result.seat.dinnerId
       );
 
-      // Cancelling the seat only frees it up - it does not refund the
-      // payment on its own. Attempt a refund for whatever payment was made
-      // for this seat; if the dinner is too close to start for a refund
-      // (a separate, stricter cutoff than the cancellation cutoff itself),
-      // the seat stays cancelled but no refund is issued - the response
-      // reflects the real outcome either way.
-      let refund: { issued: boolean; amount?: number; currency?: string; reason?: string } = {
-        issued: false,
-      };
-      const paymentIntent = await paymentIntentRepository.findBySeat(result.seat.id);
-      if (paymentIntent && paymentIntent.status === "SUCCEEDED") {
-        const refundResult = await refundPaymentIntent({
-          paymentIntentId: paymentIntent.id,
-          reason: "user_cancelled",
-          requestingUserId: user.id,
-          requestingUserRole: user.role,
-        });
-
-        refund = refundResult.ok
-          ? { issued: true, amount: refundResult.amount, currency: refundResult.currency }
-          : { issued: false, reason: refundResult.error };
-      }
-
       return NextResponse.json({
         success: true,
         data: {
@@ -133,6 +156,16 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (error) {
+      // Guard: if we already refunded above but releasing the seat then
+      // failed (a rare race — e.g. the seat is no longer CONFIRMED), the guest
+      // has their money back but the seat is in an unexpected state. Surface a
+      // loud alert for reconciliation rather than losing the signal.
+      if (refund.issued) {
+        console.error(
+          `[ALERT] refund_issued_but_seat_release_failed seatId=${validatedData.seatId} ` +
+          `userId=${user.id} error="${error instanceof Error ? error.message : "Unknown"}"`
+        );
+      }
       // Policy denied or other validation error
       const errorMessage = error instanceof Error ? error.message : "Cancellation failed";
 

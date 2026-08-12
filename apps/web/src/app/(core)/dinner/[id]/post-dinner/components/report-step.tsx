@@ -21,7 +21,6 @@ interface ReportAttendee {
   id: string;
   firstName: string | null;
   lastName: string | null;
-  email: string;
 }
 
 interface ReportStepProps {
@@ -32,7 +31,7 @@ interface ReportStepProps {
 
 function displayName(attendee: ReportAttendee): string {
   const name = [attendee.firstName, attendee.lastName].filter(Boolean).join(" ");
-  return name || attendee.email.split("@")[0] || attendee.email;
+  return name || "Guest";
 }
 
 /**

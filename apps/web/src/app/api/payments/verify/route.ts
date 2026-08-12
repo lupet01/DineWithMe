@@ -86,6 +86,48 @@ export async function POST(request: NextRequest) {
       status = "FAILED";
     }
 
+    // Replay guard: this route is publicly reachable via the payment
+    // redirect, so a REFUNDED (or otherwise terminal) intent must never be
+    // flipped back to SUCCEEDED and re-confirmed by replaying the callback
+    // URL. Only a pending intent (CREATED / REQUIRES_ACTION) may transition
+    // to SUCCEEDED. An already-SUCCEEDED intent is treated idempotently; any
+    // terminal state (FAILED / REFUNDED) is refused.
+    const PENDING_STATES = ["CREATED", "REQUIRES_ACTION"] as const;
+    if (status === "SUCCEEDED" && !PENDING_STATES.includes(paymentIntent.status as (typeof PENDING_STATES)[number])) {
+      if (paymentIntent.status === "SUCCEEDED") {
+        // Idempotent replay of a genuine success — nothing to do.
+        return NextResponse.json({
+          success: true,
+          status: transactionData.status,
+          payment: paymentIntent,
+          message: "Payment already confirmed",
+        });
+      }
+      // REFUNDED / FAILED / any other terminal state — do not resurrect it.
+      return NextResponse.json(
+        { error: `Cannot confirm a payment in ${paymentIntent.status} state` },
+        { status: 409 }
+      );
+    }
+
+    // Amount check: never confirm on a Paystack "success" whose amount
+    // doesn't match what we charged (both are in the currency subunit —
+    // cents). Guards against a tampered/mismatched reference confirming a
+    // seat for the wrong amount.
+    if (
+      status === "SUCCEEDED" &&
+      typeof transactionData.amount === "number" &&
+      transactionData.amount !== paymentIntent.amount
+    ) {
+      console.error(
+        `[Verify] Amount mismatch on ${reference}: paystack=${transactionData.amount} intent=${paymentIntent.amount}`
+      );
+      return NextResponse.json(
+        { error: "Payment amount does not match the amount due" },
+        { status: 409 }
+      );
+    }
+
     // Update payment intent
     const updatedPayment = await paymentIntentRepository.update(paymentIntent.id, {
       status,

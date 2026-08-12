@@ -8,7 +8,6 @@ interface ConnectionsStepProps {
     id: string;
     firstName: string | null;
     lastName: string | null;
-    email: string;
   }>;
   onComplete: (targetUserIds: string[]) => void;
   onSkip: () => void;
@@ -51,7 +50,7 @@ export function PersonSignalsStep({ attendees, onComplete, onSkip, submitting }:
     if (attendee.firstName) {
       return attendee.firstName;
     }
-    return attendee.email.split("@")[0] || attendee.email;
+    return "Guest";
   };
 
   const getInitial = (attendee: (typeof attendees)[0]) => {

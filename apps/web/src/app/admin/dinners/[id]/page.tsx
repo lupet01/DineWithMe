@@ -37,6 +37,19 @@ export default async function DinnerDetailPage({
     notFound();
   }
 
+  // Tenant isolation: this page renders confirmed guests' names, emails,
+  // dietary notes and revenue. Only the dinner's own restaurant team
+  // (OWNER/MANAGER) or Platform Ops may view it — mirrors the sibling
+  // export route's isAuthorizedToManage gate, plus the PLATFORM_ADMIN
+  // access this page already assumes (see canRefund below). Without this,
+  // any restaurant admin could read another restaurant's guest list by URL.
+  const canView =
+    user.role === Role.PLATFORM_ADMIN ||
+    (await dinnerRepository.isAuthorizedToManage(dinner.id, user.id));
+  if (!canView) {
+    notFound();
+  }
+
   const confirmedSeats = dinner.seats.filter((seat) =>
     ["CONFIRMED", "ATTENDED", "COMPLETED"].includes(seat.status)
   );

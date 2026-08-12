@@ -42,7 +42,6 @@ interface DinnerAttendee {
   id: string;
   firstName: string | null;
   lastName: string | null;
-  email: string;
 }
 
 interface DinnerInfo {

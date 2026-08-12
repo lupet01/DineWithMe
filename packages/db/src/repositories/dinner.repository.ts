@@ -390,27 +390,33 @@ export class DinnerRepository extends BaseRepository<Dinner> {
   }
 
   async cancelDinner(id: string): Promise<Dinner> {
-    // Cancel all held and confirmed seats
-    await this.prisma.seat.updateMany({
-      where: {
-        dinnerId: id,
-        status: {
-          in: ["HELD", "CONFIRMED"],
+    // Atomic: cancel the seats and the dinner together. Run as separate
+    // un-wrapped writes, a mid-sequence failure could leave the dinner
+    // SCHEDULED/LIVE with its seats already CANCELLED (or the inverse) — a
+    // half-cancelled dinner that stays bookable/visible to diners.
+    return this.prisma.$transaction(async (tx) => {
+      // Cancel all held and confirmed seats
+      await tx.seat.updateMany({
+        where: {
+          dinnerId: id,
+          status: {
+            in: ["HELD", "CONFIRMED"],
+          },
         },
-      },
-      data: {
-        status: "CANCELLED",
-        updatedAt: new Date(),
-      },
-    });
+        data: {
+          status: "CANCELLED",
+          updatedAt: new Date(),
+        },
+      });
 
-    // Update dinner status
-    return this.prisma.dinner.update({
-      where: { id },
-      data: {
-        status: "CANCELLED",
-        updatedAt: new Date(),
-      },
+      // Update dinner status
+      return tx.dinner.update({
+        where: { id },
+        data: {
+          status: "CANCELLED",
+          updatedAt: new Date(),
+        },
+      });
     });
   }
 
