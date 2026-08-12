@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, ArrowUpCircle, Trash2, X } from "lucide-react";
 
 export type ConfirmModalTone = "red" | "yellow" | "green";
@@ -53,6 +53,78 @@ export function ConfirmModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const cardRef = useRef<HTMLDivElement>(null);
+  const confirmBtnRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const reactId = useId();
+  const titleId = `confirm-modal-title-${reactId}`;
+  const descId = `confirm-modal-desc-${reactId}`;
+
+  // Accessibility: focus management + focus trap + Escape-to-close. Guarded
+  // for SSR (window/document only touched inside the effect) and only active
+  // while the modal is open.
+  useEffect(() => {
+    if (!open) return;
+    if (typeof document === "undefined") return;
+
+    // Remember what had focus so we can restore it on close.
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+
+    const getFocusable = (): HTMLElement[] => {
+      const root = cardRef.current;
+      if (!root) return [];
+      return Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+    };
+
+    // Focus the first interactive element (confirm button preferred).
+    const focusTarget = confirmBtnRef.current ?? getFocusable()[0] ?? cardRef.current;
+    focusTarget?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (!isSubmitting) {
+          e.preventDefault();
+          onClose();
+        }
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const focusable = getFocusable();
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (active === first || !cardRef.current?.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (active === last || !cardRef.current?.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      // Restore focus to the element that had it before the modal opened.
+      previouslyFocusedRef.current?.focus?.();
+    };
+  }, [open, isSubmitting, onClose]);
+
   if (!open) return null;
 
   const isWide = consequences !== undefined || requireReason;
@@ -79,7 +151,14 @@ export function ConfirmModal({
         className="confirm-modal-backdrop"
         onClick={(e) => { if (e.target === e.currentTarget && !isSubmitting) onClose(); }}
       >
-        <div className={`confirm-modal-card${isWide ? " wide" : ""}`}>
+        <div
+          ref={cardRef}
+          className={`confirm-modal-card${isWide ? " wide" : ""}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descId}
+        >
           <button
             type="button"
             className="m-icon-btn confirm-modal-close only-mobile-flex"
@@ -105,8 +184,8 @@ export function ConfirmModal({
           >
             <Icon className="h-5 w-5" />
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>{title}</div>
-          <p style={{ fontSize: 13, color: "var(--t2)", lineHeight: 1.5, marginBottom: isWide ? 14 : 20 }}>
+          <div id={titleId} style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>{title}</div>
+          <p id={descId} style={{ fontSize: 13, color: "var(--t2)", lineHeight: 1.5, marginBottom: isWide ? 14 : 20 }}>
             {description}
           </p>
 
@@ -158,6 +237,7 @@ export function ConfirmModal({
               {cancelLabel}
             </button>
             <button
+              ref={confirmBtnRef}
               type="button"
               className={tone === "green" ? "btn btn-green" : "btn"}
               style={tone === "green" ? { flex: 1, fontWeight: 700 } : { flex: 1, background: "var(--red-txt)", color: "white" }}

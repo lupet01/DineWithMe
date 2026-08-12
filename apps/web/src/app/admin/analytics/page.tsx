@@ -5,6 +5,7 @@ import { restaurantRepository, dinnerRepository, paymentIntentRepository, feedba
 import { formatAmount } from "@dinewithme/config/src/payment";
 import { RevenueRangePicker } from "../components/revenue-range-picker";
 import { rangeToSince } from "../lib/date-range";
+import { RevenueChart } from "@/components/ui/revenue-chart";
 
 const BOOKED_STATUSES = new Set(["CONFIRMED", "ATTENDED", "COMPLETED"]);
 
@@ -76,19 +77,6 @@ export default async function RestaurantAnalyticsPage({
     { label: "Night", value: bookingsByTimeOfDay.night },
   ].map((row) => ({ ...row, color: TIME_OF_DAY_COLORS[row.label] ?? "#9CA3AF" }));
 
-  // Chart points normalized to the card's SVG viewBox (1080x160, matching
-  // Dashboard's own revenue chart) - a flat/all-zero series still draws a
-  // flat baseline rather than dividing by zero.
-  const maxBucketAmount = Math.max(1, ...revenueBuckets.map((b) => b.amount));
-  const chartPoints = revenueBuckets.map((b, i) => {
-    const x = revenueBuckets.length > 1 ? (i / (revenueBuckets.length - 1)) * 1080 : 0;
-    const y = 144 - (b.amount / maxBucketAmount) * 128;
-    return `${Math.round(x)},${Math.round(y)}`;
-  });
-  const chartPolyline = chartPoints.join(" ");
-  const chartPolygon = `0,160 ${chartPoints.join(" ")} 1080,160`;
-  const lastPoint = chartPoints[chartPoints.length - 1]?.split(",").map(Number);
-
   const themeCounts = dinners.reduce<Record<string, number>>((acc, dinner) => {
     const title = dinner.theme?.title ?? "No theme";
     acc[title] = (acc[title] ?? 0) + 1;
@@ -133,45 +121,11 @@ export default async function RestaurantAnalyticsPage({
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-          <div className="card-title">Revenue</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
-          <div style={{ fontSize: 30, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.5px" }}>
-            {formatAmount(revenue)}
-          </div>
-          {revenueDeltaPct !== null && (
-            <div style={{ fontSize: 13, color: revenueDeltaPct >= 0 ? "var(--green-txt)" : "var(--red-txt)", fontWeight: 700 }}>
-              {revenueDeltaPct >= 0 ? "↑" : "↓"} {Math.abs(revenueDeltaPct)}% vs prior period
-            </div>
-          )}
-        </div>
-        <svg viewBox="0 0 1080 160" preserveAspectRatio="none" style={{ width: "100%", height: 160, display: "block" }}>
-          <defs>
-            <linearGradient id="analyticsRevChartGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" style={{ stopColor: "var(--p)", stopOpacity: 0.2 }} />
-              <stop offset="100%" style={{ stopColor: "var(--p)", stopOpacity: 0 }} />
-            </linearGradient>
-          </defs>
-          <line x1="0" y1="40" x2="1080" y2="40" style={{ stroke: "var(--bdr)" }} />
-          <line x1="0" y1="80" x2="1080" y2="80" style={{ stroke: "var(--bdr)" }} />
-          <line x1="0" y1="120" x2="1080" y2="120" style={{ stroke: "var(--bdr)" }} />
-          <polygon points={chartPolygon} fill="url(#analyticsRevChartGrad)" />
-          <polyline
-            points={chartPolyline}
-            style={{ fill: "none", stroke: "var(--p)", strokeWidth: 3, strokeLinecap: "round", strokeLinejoin: "round" }}
-          />
-          {lastPoint && <circle cx={lastPoint[0]} cy={lastPoint[1]} r="5" style={{ fill: "var(--p)" }} />}
-        </svg>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "var(--t3)", marginTop: 4 }}>
-          {revenueBuckets.map((b, i) => (
-            <span key={i}>
-              {i === revenueBuckets.length - 1
-                ? "Today"
-                : b.bucketStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            </span>
-          ))}
-        </div>
+        <RevenueChart
+          totalLabel={formatAmount(revenue)}
+          deltaPct={revenueDeltaPct}
+          buckets={revenueBuckets}
+        />
       </div>
 
       <div className="stat-grid-3" style={{ marginBottom: 20 }}>
