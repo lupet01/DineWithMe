@@ -512,7 +512,7 @@
  * name/-dish-chip-caption/-picker-row (list + editor share this one
  * .meals namespace).
  * ============================================================ */
-.dine-admin .meals .meal-editor-course-label { font-size: 12px; color: var(--t3); font-weight: 500; margin-bottom: 10px; }
+.dine-admin .meals .meal-editor-course-label { font-size: 11px; color: var(--t3); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
 .dine-admin .meals .meal-editor-dish-chip { display: flex; align-items: center; gap: 10px; border: 1px solid var(--bdr); border-radius: 14px; padding: 8px 10px 8px 8px; background: var(--white); }
 .dine-admin .meals .meal-editor-dish-chip-body { min-width: 0; }
 .dine-admin .meals .meal-editor-dish-chip-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
@@ -535,13 +535,20 @@
    768px, so the grid never briefly shows 4 columns with 2 empty cells. */
 .dine-admin .meals .meal-editor-stat-desktop-only { display: none; }
 @container (min-width: 640px) { .dine-admin .meals .meal-editor-stat-desktop-only { display: block; } }
+/* Add-option tile (wireframe .meal-add-option, ~2921/3015): a dashed
+   plus-tile that replaces the plain outline button — compact ("Add") beside
+   existing chips, full-width-ish ("Add from Dish Library") for an empty course. */
+.dine-admin .meals .meal-add-option { display: flex; align-items: center; gap: 6px; height: 64px; padding: 0 16px; border-radius: 14px; border: 1.5px dashed var(--bdr2); background: none; color: var(--t3); font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.dine-admin .meals .meal-add-option:hover { border-color: var(--p); color: var(--p); }
+.dine-admin .meals .meal-add-option:disabled { opacity: .5; cursor: default; }
+.dine-admin .meals .meal-add-option.meal-add-option-empty { width: 100%; justify-content: center; }
 
 /* ============================================================
  * DISH LIBRARY — reverted to wireframe-native 2026-08-06. Shared
  * classes need no override; only the page-specific .dish-library-*
  * and .dish-form-photo-* classes are styled here.
  * ============================================================ */
-.dine-admin .dish-library .dish-library-group-label { font-size: 12px; color: var(--t3); font-weight: 500; margin-bottom: 10px; }
+.dine-admin .dish-library .dish-library-group-label { font-size: 11px; color: var(--t3); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
 .dine-admin .dish-library .dish-library-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--bdr); border-radius: 14px; margin-bottom: 8px; }
 .dine-admin .dish-library .dish-library-row:last-child { margin-bottom: 0; }
 /* Wireframe: 56x56 row thumbnail on desktop, 48x48 on mobile (375px frame).

@@ -61,7 +61,6 @@ export default async function GuestProfilePage({ params }: { params: { id: strin
     (sum, v) => sum + v.paymentIntents.reduce((s, p) => s + p.amount, 0),
     0
   );
-  const attendanceRate = visits.length > 0 ? Math.round((attendedVisits.length / visits.length) * 100) : 0;
   const ratingsGiven = visits
     .map((v) => v.dinnerFeedback[0]?.rating)
     .filter((r): r is number => typeof r === "number");
@@ -87,7 +86,8 @@ export default async function GuestProfilePage({ params }: { params: { id: strin
         </Link>
       </div>
 
-      <div className="card card-pad" style={{ marginBottom: 20 }}>
+      {/* Desktop: left-aligned header with a wide equal-weight stat row */}
+      <div className="card card-pad only-desktop" style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div
@@ -105,12 +105,32 @@ export default async function GuestProfilePage({ params }: { params: { id: strin
           </div>
           {isRegular && <span className="badge badge-green">Regular Guest</span>}
         </div>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--bdr)" }}>
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--bdr)" }}>
           <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{visits.length}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Visits here</div></div>
           <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{formatAmount(totalSpendCents)}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Total spend</div></div>
-          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--green-txt)" }}>{attendanceRate}%</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Attendance rate</div></div>
+          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--green-txt)" }}>{attendedVisits.length}/{visits.length} attended</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Attendance rate</div></div>
           <div><div style={{ fontSize: 16, fontWeight: 800, color: noShowVisits.length ? "var(--red-txt)" : "var(--text)" }}>{noShowVisits.length}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>No-shows</div></div>
-          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--yellow-txt)" }}>{avgRatingGiven ? `${avgRatingGiven} ★` : "—"}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Avg rating given</div></div>
+          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{avgRatingGiven ? `${avgRatingGiven} ★` : "—"}</div><div style={{ fontSize: 10.5, color: "var(--t3)" }}>Avg rating given</div></div>
+        </div>
+      </div>
+
+      {/* Mobile: centered card — avatar, name, email, badge, then 3-up stats */}
+      <div className="card card-pad only-mobile" style={{ marginBottom: 14, textAlign: "center" }}>
+        <div
+          style={{
+            width: 56, height: 56, borderRadius: "50%", background: "var(--p-tint)", color: "var(--p)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 20, margin: "0 auto 10px",
+          }}
+        >
+          {initials}
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{name}</div>
+        <div style={{ fontSize: 11.5, color: "var(--t3)", marginTop: 2, marginBottom: 10 }}>{guest.email}</div>
+        {isRegular && <span className="badge badge-green">Regular Guest</span>}
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--bdr)" }}>
+          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{visits.length}</div><div style={{ fontSize: 10, color: "var(--t3)" }}>Visits</div></div>
+          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>{formatAmount(totalSpendCents)}</div><div style={{ fontSize: 10, color: "var(--t3)" }}>Spend</div></div>
+          <div><div style={{ fontSize: 16, fontWeight: 800, color: "var(--green-txt)" }}>{attendedVisits.length}/{visits.length}</div><div style={{ fontSize: 10, color: "var(--t3)" }}>Attended{noShowVisits.length ? ` (${noShowVisits.length} no-show)` : ""}</div></div>
         </div>
       </div>
 

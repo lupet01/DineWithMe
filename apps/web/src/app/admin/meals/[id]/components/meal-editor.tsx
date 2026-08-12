@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, Plus, X } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
 import type { MealWithCourses } from "@dinewithme/db";
 import { FilterSheet } from "@/components/ui/filter-sheet";
@@ -364,9 +364,11 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
                       setPickerCourseId(course.id);
                       setSearch("");
                     }}
-                    className="btn btn-sm btn-outline"
+                    className={`meal-add-option ${course.options.length === 0 ? "meal-add-option-empty" : ""}`}
+                    title={`${course.options.length} of 3 used`}
                   >
-                    + Add Option ({course.options.length} of 3 used)
+                    <Plus style={{ width: 15, height: 15 }} />
+                    <span>{course.options.length === 0 ? "Add from Dish Library" : "Add"}</span>
                   </button>
                 )}
               </div>

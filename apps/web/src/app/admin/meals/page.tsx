@@ -41,7 +41,7 @@ export default async function MealsPage() {
         </div>
       </div>
 
-      <MealsList meals={meals} />
+      <MealsList meals={meals} restaurantId={restaurant.id} />
     </div>
   );
 }

@@ -212,16 +212,8 @@ export function DishFormSheet({
           e.preventDefault();
           onSubmit(values);
         }}
-        style={{ display: "flex", flexDirection: "column", gap: 12 }}
+        style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        <PhotoPicker
-          restaurantId={restaurantId}
-          photoPool={photoPool}
-          selectedId={values.mediaAssetId}
-          onSelect={(mediaAssetId) => setValues((v) => ({ ...v, mediaAssetId }))}
-          disabled={isSaving}
-        />
-
         <div>
           <label className="field-label">
             Dish Name <span className="req">*</span>
@@ -237,35 +229,29 @@ export function DishFormSheet({
           />
         </div>
 
-        <div>
-          <label className="field-label">Description</label>
-          <input
-            value={values.description}
-            onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
-            placeholder="Porcini, taleggio, crispy sage"
-            disabled={isSaving}
-            className="field-input"
-          />
-        </div>
-
         <div className="field-grid-2">
           <div>
-            <label className="field-label">Course</label>
-            <select
-              value={values.course}
-              onChange={(e) => setValues((v) => ({ ...v, course: e.target.value as MenuCourse }))}
-              disabled={isSaving}
-              className="field-input"
-            >
+            <label className="field-label">Course Type</label>
+            {/* Pill tabs replace the old <select>, matching the wireframe's
+                sec-dish-editor Course Type control. */}
+            <div className="tabs">
               {COURSES.map((c) => (
-                <option key={c.key} value={c.key}>
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setValues((v) => ({ ...v, course: c.key }))}
+                  disabled={isSaving}
+                  className={`tab ${values.course === c.key ? "active" : ""}`}
+                >
                   {c.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div>
-            <label className="field-label">Reference Price</label>
+            <label className="field-label">
+              Reference Price <span className="req">*</span>
+            </label>
             <input
               required
               type="number"
@@ -281,13 +267,31 @@ export function DishFormSheet({
         </div>
 
         <div>
-          <label className="field-label">Ingredients</label>
-          <input
+          <label className="field-label">Description</label>
+          <textarea
+            rows={3}
+            value={values.description}
+            onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
+            placeholder="Describe the dish, preparation, what makes it yours…"
+            disabled={isSaving}
+            className="field-input ta"
+          />
+        </div>
+
+        <div>
+          <label className="field-label">
+            Ingredients{" "}
+            <span style={{ color: "var(--t3)", fontWeight: 400 }}>
+              (optional — what a guest sees on the Menu screen)
+            </span>
+          </label>
+          <textarea
+            rows={2}
             value={values.ingredients}
             onChange={(e) => setValues((v) => ({ ...v, ingredients: e.target.value }))}
-            placeholder="Optional — comma-separated"
+            placeholder="Optional — comma-separated, e.g. porcini, taleggio, crispy sage"
             disabled={isSaving}
-            className="field-input"
+            className="field-input ta"
           />
         </div>
 
@@ -300,11 +304,24 @@ export function DishFormSheet({
                 type="button"
                 onClick={() => toggleTag(tag)}
                 disabled={isSaving}
-                className={`badge ${values.dietaryTags.includes(tag) ? "badge-green" : "badge-slate"}`}
+                className={`badge ${values.dietaryTags.includes(tag) ? "badge-tint" : "badge-slate"}`}
               >
                 {DIETARY_TAG_LABELS[tag]}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <PhotoPicker
+            restaurantId={restaurantId}
+            photoPool={photoPool}
+            selectedId={values.mediaAssetId}
+            onSelect={(mediaAssetId) => setValues((v) => ({ ...v, mediaAssetId }))}
+            disabled={isSaving}
+          />
+          <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 6 }}>
+            Photos are shared with Media Library — managed there, referenced here.
           </div>
         </div>
 
@@ -320,9 +337,14 @@ export function DishFormSheet({
 
         {error && <p style={{ fontSize: 12, color: "var(--red-txt)" }}>{error}</p>}
 
-        <button type="submit" disabled={isSaving} className="btn btn-primary btn-block">
-          {isSaving ? "Saving…" : title === "Edit Dish" ? "Save Dish" : "Add Dish"}
-        </button>
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button type="button" onClick={onClose} disabled={isSaving} className="btn btn-outline" style={{ flex: 1 }}>
+            Cancel
+          </button>
+          <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ flex: 1 }}>
+            {isSaving ? "Saving…" : "Save Dish"}
+          </button>
+        </div>
       </form>
     </FilterSheet>
   );

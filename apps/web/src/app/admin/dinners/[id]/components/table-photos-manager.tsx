@@ -28,14 +28,14 @@ interface TablePhotosManagerProps {
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   NONE: "badge-slate",
-  PENDING: "badge-blue",
+  PENDING: "badge-yellow",
   APPROVED: "badge-green",
   REJECTED: "badge-red",
 };
 
 const STATUS_LABEL: Record<string, string> = {
   NONE: "Table Photo",
-  PENDING: "Pending Review",
+  PENDING: "Promotion Pending Review",
   APPROVED: "Listed",
   REJECTED: "Not Approved",
 };

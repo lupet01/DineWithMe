@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
-import type { MenuItem } from "@prisma/client";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
+import type { MenuItem, MenuCourse } from "@prisma/client";
 import {
   createMenuItem,
   updateMenuItem,
@@ -35,7 +35,9 @@ function formatPrice(cents: number): string {
 export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCounts }: DishLibraryManagerProps) {
   const { toast } = useToast();
   const [items, setItems] = useState<MenuItem[]>(menuItems);
-  const [sheet, setSheet] = useState<{ mode: "add" } | { mode: "edit"; item: MenuItem } | null>(null);
+  const [sheet, setSheet] = useState<
+    { mode: "add"; course?: MenuCourse } | { mode: "edit"; item: MenuItem } | null
+  >(null);
   const [pendingDelete, setPendingDelete] = useState<MenuItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -251,6 +253,41 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
         </div>
       )}
 
+      {items.length === 0 ? (
+        <div className="card card-pad" style={{ textAlign: "center", padding: "40px 32px" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🍽️</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
+            Add your first dish
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--t2)",
+              lineHeight: 1.6,
+              marginBottom: 20,
+              maxWidth: 320,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}
+          >
+            Photograph and describe each dish once — starters, mains, desserts — then reuse it across as many Meals
+            as you like. Meals assemble from here, not the other way around.
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFormError(null);
+              setSheet({ mode: "add" });
+            }}
+            className="btn btn-primary"
+          >
+            + Add Your First Dish
+          </button>
+          <div style={{ fontSize: 11.5, color: "var(--t3)", marginTop: 16 }}>
+            A Meal needs at least one dish per course before it can be built.
+          </div>
+        </div>
+      ) : (
       <div className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {COURSES.map(({ key: course, label }) => {
           const courseItems = items
@@ -260,11 +297,11 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
           return (
             <div key={course}>
               <div className="dish-library-group-label">{label}s</div>
-              {courseItems.length === 0 ? (
-                <p style={{ fontSize: 12, color: "var(--t3)" }}>No {label.toLowerCase()}s yet.</p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {courseItems.map((item) => {
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {courseItems.length === 0 ? (
+                  <p style={{ fontSize: 12, color: "var(--t3)" }}>No {label.toLowerCase()}s yet.</p>
+                ) : (
+                  courseItems.map((item) => {
                     const photoAsset = photo(item);
                     const usageCount = usageCounts[item.id] ?? 0;
                     return (
@@ -342,19 +379,31 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
                         </div>
                       </div>
                     );
-                  })}
-                </div>
-              )}
+                  })
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormError(null);
+                    setSheet({ mode: "add", course });
+                  }}
+                  className="btn btn-sm btn-outline"
+                  style={{ alignSelf: "flex-start" }}
+                >
+                  <Plus className="h-3 w-3" /> Add {label}
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
+      )}
 
       <DishFormSheet
-        key={sheet?.mode === "edit" ? sheet.item.id : "add"}
+        key={sheet?.mode === "edit" ? sheet.item.id : `add-${sheet?.mode === "add" ? sheet.course ?? "any" : "any"}`}
         open={sheet !== null}
         onClose={() => setSheet(null)}
-        title={sheet?.mode === "edit" ? "Edit Dish" : "Add Dish"}
+        title={sheet?.mode === "edit" ? "Edit Dish" : "Add New Dish"}
         restaurantId={restaurantId}
         photoPool={photoPool}
         initialValues={
@@ -369,7 +418,10 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
                 mediaAssetId: sheet.item.mediaAssetId,
                 dietaryTags: sheet.item.dietaryTags,
               }
-            : emptyDishFormValues
+            : {
+                ...emptyDishFormValues,
+                course: (sheet?.mode === "add" && sheet.course) || emptyDishFormValues.course,
+              }
         }
         onSubmit={(values) => (sheet?.mode === "edit" ? handleUpdate(sheet.item, values) : handleCreate(values))}
         isSaving={isSaving}

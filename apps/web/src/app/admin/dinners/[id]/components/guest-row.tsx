@@ -27,12 +27,12 @@ function paymentBadge(seat: Seat): { label: string; badgeClass: string } {
     return { label: "—", badgeClass: "badge-slate" };
   }
   if (intent.status === "SUCCEEDED") {
-    return { label: `Paid · ${formatAmount(intent.amount)}`, badgeClass: "badge-green" };
+    return { label: `PAID · ${formatAmount(intent.amount)}`, badgeClass: "badge-green" };
   }
   if (intent.status === "REFUNDED") {
-    return { label: "Refunded", badgeClass: "badge-slate" };
+    return { label: "REFUNDED", badgeClass: "badge-slate" };
   }
-  return { label: "Awaiting payment", badgeClass: "badge-yellow" };
+  return { label: "AWAITING PAYMENT", badgeClass: "badge-yellow" };
 }
 
 interface GuestRowProps {
@@ -137,14 +137,14 @@ export function GuestRow({
   return (
     <tr>
       {nameCell}
-      <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--t2)" }}>
-        {seat.dietaryNotes || "—"}
-      </td>
       <td>
         <span className={`badge ${statusBadgeClass(seat.status)}`}>{seat.status}</span>
       </td>
       <td>
         <span className={`badge ${payment.badgeClass}`}>{payment.label}</span>
+      </td>
+      <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--t2)" }}>
+        {seat.dietaryNotes || "—"}
       </td>
       <td>
         <div className="td-actions">

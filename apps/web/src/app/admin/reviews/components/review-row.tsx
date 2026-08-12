@@ -130,19 +130,27 @@ export function ReviewRow({
           </div>
         </div>
       ) : restaurantNote ? (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
+        <div
           style={{
             background: "var(--bg2)", border: "1px solid var(--bdr)", borderRadius: 12, padding: "12px 14px",
-            marginTop: 12, textAlign: "left", cursor: "pointer", width: "100%",
+            marginTop: 12,
           }}
         >
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
-            Your Private Note (not shared with guest)
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--t3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Your Private Note (not shared with guest)
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="m-text-btn"
+              style={{ fontSize: 11.5, padding: 2 }}
+            >
+              Edit
+            </button>
           </div>
           <div style={{ fontSize: 12.5, color: "var(--t2)", lineHeight: 1.4 }}>{restaurantNote}</div>
-        </button>
+        </div>
       ) : (
         <button
           type="button"

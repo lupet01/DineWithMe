@@ -136,9 +136,9 @@ export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPla
                   ) : (
                     <tr>
                       <th>Guest</th>
-                      <th>Dietary Notes</th>
-                      <th>Status</th>
+                      <th>Seat Status</th>
                       <th>Payment</th>
+                      <th>Dietary Notes</th>
                       <th className="r">Actions</th>
                     </tr>
                   )}

@@ -26,10 +26,12 @@ function formatFileSize(bytes: number) {
  * plain bordered rows (filename + status badge + delete) instead of the
  * elevated file-icon-corner tiles, and an inline "Add a Document" form
  * (Document Type select + "Choose File" button, staged-file preview row,
- * helper text + Upload button) instead of a drag-and-drop dropzone. The
- * wireframe doesn't show a rejection-reason callout, a "view"/"replace"
- * icon-button pair, placeholder rows for not-yet-uploaded doc types, or a
- * dedicated empty state - those are dropped; viewing a document is now the
+ * helper text + Upload button) instead of a drag-and-drop dropzone. A
+ * rejected doc shows an "✗ Rejected" badge plus an inline rejection-reason
+ * line beneath its filename, matching the wireframe. The wireframe doesn't
+ * show a "view"/"replace" icon-button pair, placeholder rows for not-yet-
+ * uploaded doc types, or a dedicated empty state - those are dropped;
+ * viewing a document is now the
  * filename itself (a plain link to doc.url), and replacing one is just
  * uploading a new file of that type via the same Add a Document form.
  * Upload/verify/delete data wiring is unchanged.
@@ -125,7 +127,7 @@ export function ComplianceDocumentsManager({ restaurantId, documents }: Complian
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
           {documents.map((doc) => {
             const badgeClass = doc.verifiedAt ? "badge-green" : doc.rejectedAt ? "badge-red" : "badge-yellow";
-            const badgeText = doc.verifiedAt ? "✓ Verified" : doc.rejectedAt ? "Needs a new file" : "⏳ Pending review";
+            const badgeText = doc.verifiedAt ? "✓ Verified" : doc.rejectedAt ? "✗ Rejected" : "⏳ Pending review";
 
             return (
               <div
@@ -139,17 +141,24 @@ export function ComplianceDocumentsManager({ restaurantId, documents }: Complian
                   <span style={{ color: "var(--t3)", flexShrink: 0 }}>
                     <svg width={16} height={16}><use href="#ic-doc" /></svg>
                   </span>
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: 13, fontWeight: 600, color: "var(--text)", textDecoration: "none",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}
-                  >
-                    {doc.fileName}
-                  </a>
+                  <div style={{ minWidth: 0 }}>
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", textDecoration: "none",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}
+                    >
+                      {doc.fileName}
+                    </a>
+                    {doc.rejectedAt && doc.rejectionReason && (
+                      <div style={{ fontSize: 10.5, color: "var(--red-txt2)", marginTop: 1 }}>
+                        Rejected: &ldquo;{doc.rejectionReason}&rdquo; — re-upload below
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                   <span className={`badge ${badgeClass}`} style={{ fontSize: 10 }}>{badgeText}</span>
