@@ -55,13 +55,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Compute HMAC signature
+    // Compute HMAC signature and compare in constant time. A plain !==
+    // compare on a signature leaks, via timing, how many leading bytes
+    // matched — enough to forge a signature byte-by-byte given enough tries.
     const hash = crypto
       .createHmac('sha512', paystackSecretKey)
       .update(body)
       .digest('hex');
 
-    if (hash !== signature) {
+    const hashBuffer = Buffer.from(hash);
+    const signatureBuffer = Buffer.from(signature);
+    if (
+      hashBuffer.length !== signatureBuffer.length ||
+      !crypto.timingSafeEqual(hashBuffer, signatureBuffer)
+    ) {
       console.error("Invalid webhook signature");
       return NextResponse.json(
         { error: "Invalid signature" },
@@ -147,7 +154,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (paymentIntent.status === "FAILED") {
+    // A currently-FAILED intent is normally terminal — but Paystack can
+    // deliver events out of order (a charge.failed before the authoritative
+    // charge.success for the same reference). Honour a genuine later success
+    // by NOT short-circuiting on FAILED in that case; the success branch below
+    // then transitions FAILED -> SUCCEEDED and confirms the seat. Any other
+    // event on a FAILED intent still short-circuits.
+    const isAuthoritativeSuccess = eventType === "charge.success" && data.status === "success";
+    if (paymentIntent.status === "FAILED" && !isAuthoritativeSuccess) {
       console.log(`Payment already marked as failed: ${paymentIntent.id}`);
       await markProcessed();
       return NextResponse.json({

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { MenuCourse, DietaryTag } from "@prisma/client";
 import { FilterSheet } from "@/components/ui/filter-sheet";
+import { useToast } from "@/components/ui/toast";
 import { requestDishPhotoUploadUrl, saveDishPhoto } from "../actions";
 
 export const COURSES: { key: MenuCourse; label: string }[] = [
@@ -63,6 +64,7 @@ function PhotoPicker({
   const [uploading, setUploading] = useState(false);
   const [pool, setPool] = useState(photoPool);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   const selected = pool.find((p) => p.id === selectedId);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,8 +93,12 @@ function PhotoPicker({
       setPool((prev) => [newAsset, ...prev]);
       onSelect(newAsset.id, newAsset.url);
       setOpen(false);
-    } catch {
-      // Silently no-op on failure - the picker just stays open for retry
+    } catch (error) {
+      // Surface the failure instead of silently no-oping — the user would
+      // otherwise see nothing after a failed upload. The picker stays open for
+      // retry.
+      console.error("[DishPhoto] Upload failed:", error);
+      toast.error(error instanceof Error ? error.message : "Couldn't upload photo. Please try again.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

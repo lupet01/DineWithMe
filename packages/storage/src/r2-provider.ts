@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { StorageConfig, StorageProvider, UploadSignature } from "./types";
 
@@ -45,8 +45,11 @@ export class R2StorageProvider implements StorageProvider {
       return this.getPublicUrl(key);
     }
 
-    // Otherwise, generate signed URL
-    const command = new PutObjectCommand({
+    // Otherwise, generate a signed GET URL. (Was PutObjectCommand — that
+    // presigns an upload, which would neither download the object nor be safe
+    // to hand out as a read link. Masked today only because publicUrl
+    // short-circuits above, but wrong the moment a bucket has no public URL.)
+    const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
     });
