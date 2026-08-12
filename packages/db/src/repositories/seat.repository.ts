@@ -13,6 +13,18 @@ export class SeatRepository extends BaseRepository<Seat> {
     return this.prisma.seat.findMany();
   }
 
+  /**
+   * Mark that the 24h dinner reminder for this seat has been emailed, so the
+   * send-reminders cron won't re-send it on a later run within the same
+   * window. Called only after a successful send.
+   */
+  async markReminderSent(seatId: string): Promise<void> {
+    await this.prisma.seat.update({
+      where: { id: seatId },
+      data: { reminderSentAt: new Date() },
+    });
+  }
+
   async findByDinner(dinnerId: string): Promise<Seat[]> {
     return this.prisma.seat.findMany({
       where: { dinnerId },

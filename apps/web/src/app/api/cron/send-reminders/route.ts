@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
     let emailsSent = 0;
     let emailsFailed = 0;
 
+    let emailsSkipped = 0;
+
     for (const dinner of upcomingDinners) {
       // Get all confirmed seats for this dinner
       const seats = await seatRepository.findByDinner(dinner.id);
@@ -58,7 +60,14 @@ export async function GET(request: NextRequest) {
 
       for (const seat of confirmedSeats) {
         if (!seat.confirmedByUserId) continue;
-        
+
+        // Idempotency: skip seats already reminded, so a re-run within the
+        // same window doesn't double-email the guest.
+        if (seat.reminderSentAt) {
+          emailsSkipped++;
+          continue;
+        }
+
         // Get user details
         const user = await userRepository.findById(seat.confirmedByUserId);
         if (!user) continue;
@@ -88,6 +97,9 @@ export async function GET(request: NextRequest) {
 
         if (result.success) {
           emailsSent++;
+          // Mark only on success — a failed send stays unmarked so the next
+          // run retries it.
+          await seatRepository.markReminderSent(seat.id);
         } else {
           emailsFailed++;
           console.error(`Failed to send reminder to ${user.email}:`, result.error);
@@ -111,6 +123,7 @@ export async function GET(request: NextRequest) {
         dinnersProcessed: upcomingDinners.length,
         emailsSent,
         emailsFailed,
+        emailsSkipped,
       },
     });
   } catch (error) {

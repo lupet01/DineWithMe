@@ -556,6 +556,10 @@ model Seat {
   checkedInAt       DateTime?
   checkedOutAt      DateTime?
   dietaryNotes      String?
+  // Set when the 24h dinner reminder for this seat has been emailed, so the
+  // send-reminders cron is idempotent (a re-run within the same window skips
+  // already-reminded seats instead of double-emailing the guest).
+  reminderSentAt    DateTime?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -567,6 +571,10 @@ model Seat {
   @@index([dinnerId, status])
   @@index([heldByUserId])
   @@index([confirmedByUserId])
+  // Serves the expire-holds cron (status='HELD' AND holdExpiresAt <= now).
+  @@index([status, holdExpiresAt])
+  // Serves the mark-no-shows cron (status='CONFIRMED' AND checkedInAt IS NULL).
+  @@index([status, checkedInAt])
   @@map("seats")
 }
 
