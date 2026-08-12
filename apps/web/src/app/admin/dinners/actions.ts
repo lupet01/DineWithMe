@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { dinnerRepository, seatRepository, userRepository, auditLogger, AuditAction, AuditEntity } from "@dinewithme/db";
+import { dinnerRepository, userRepository, dinnerCancellationRequestRepository, auditLogger, AuditAction, AuditEntity } from "@dinewithme/db";
 import { revalidatePath } from "next/cache";
 import { track } from "@dinewithme/analytics";
 import { AnalyticsEvents } from "@dinewithme/analytics";
@@ -67,8 +67,11 @@ export async function updateDinnerStatus(
       theme: dinner.theme,
     });
 
-    // Revalidate the dinners page
+    // Revalidate the dinners page — and the diner-facing surfaces, so marking
+    // a dinner LIVE/COMPLETED propagates to Discover and the dinner detail page.
     revalidatePath("/admin/dinners");
+    revalidatePath("/discover");
+    revalidatePath(`/dinner/${dinnerId}`);
 
     return { success: true };
   } catch (error) {
@@ -198,13 +201,18 @@ export async function deleteDinner(dinnerId: string): Promise<ActionResult> {
 }
 
 /**
- * Cancel a dinner and release all seats. `reason` is restaurant-admin-facing
- * context for the cancellation (required by the UI) — stored in the audit
- * log only for now; there's no guest-facing notification or automatic
- * refund flow wired up yet, so the confirmation copy that triggers this
- * deliberately doesn't promise either.
+ * Request cancellation of a dinner. A restaurant admin can't cancel directly —
+ * cancelling releases paid seats and must refund guests, both higher-blast-
+ * radius than a normal edit, so it files a review request for Platform Ops
+ * instead (mirrors restaurant closure requests). Approval in /admin/ops/dinners
+ * is what actually releases seats + refunds every paying guest, under platform
+ * authority (the only role the refund service permits for dinner_cancelled).
+ * `reason` is required.
  */
-export async function cancelDinner(dinnerId: string, reason?: string): Promise<ActionResult> {
+export async function requestDinnerCancellation(
+  dinnerId: string,
+  reason?: string
+): Promise<ActionResult> {
   try {
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
@@ -239,44 +247,43 @@ export async function cancelDinner(dinnerId: string, reason?: string): Promise<A
       return { success: false, error: "Dinner is already cancelled" };
     }
 
-    const [heldCount, confirmedCount] = await Promise.all([
-      seatRepository.countByDinnerAndStatus(dinnerId, "HELD"),
-      seatRepository.countByDinnerAndStatus(dinnerId, "CONFIRMED"),
-    ]);
-    const releasedSeats = heldCount + confirmedCount;
+    if (!reason || !reason.trim()) {
+      return { success: false, error: "A reason for cancellation is required" };
+    }
 
-    // Cancel dinner (sets status to CANCELLED, releases held/confirmed seats)
-    await dinnerRepository.cancelDinner(dinnerId);
+    // At most one pending cancellation request per dinner.
+    const existing = await dinnerCancellationRequestRepository.findPendingByDinner(dinnerId);
+    if (existing) {
+      return {
+        success: false,
+        error: "A cancellation request is already pending review for this dinner",
+      };
+    }
 
-    // Track analytics
-    track(AnalyticsEvents.DINNER_CANCELLED, {
+    await dinnerCancellationRequestRepository.create({
+      dinner: { connect: { id: dinnerId } },
+      requestedBy: { connect: { id: dbUser.id } },
+      reason: reason.trim(),
+    });
+
+    await auditLogger.log(
+      dbUser.id,
+      AuditAction.DINNER_UPDATED,
+      AuditEntity.DINNER,
       dinnerId,
-      restaurantId: dinner.restaurantId,
-      restaurantName: dinner.restaurant.name,
-      userId: dbUser.id,
-      scheduledAt: dinner.startsAt.toISOString(),
-      releasedSeats,
-      timestamp: new Date().toISOString(),
-    });
+      { restaurantId: dinner.restaurantId, cancellationRequested: true, reason: reason.trim() }
+    );
 
-    // Log audit trail
-    await auditLogger.dinnerCancelled(dbUser.id, dinnerId, {
-      restaurantId: dinner.restaurantId,
-      theme: dinner.theme,
-      scheduledAt: dinner.startsAt.toISOString(),
-      releasedSeats,
-      reason,
-    });
-
-    // Revalidate the dinners page
     revalidatePath("/admin/dinners");
+    revalidatePath(`/admin/dinners/${dinnerId}`);
+    revalidatePath("/admin/ops/dinners");
 
     return { success: true };
   } catch (error) {
-    console.error("Error cancelling dinner:", error);
+    console.error("Error requesting dinner cancellation:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to cancel dinner",
+      error: error instanceof Error ? error.message : "Failed to request cancellation",
     };
   }
 }

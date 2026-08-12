@@ -122,6 +122,8 @@ model User {
   teamInvitesSent       TeamInvite[]
   closureRequestsMade     RestaurantClosureRequest[] @relation("ClosureRequestedBy")
   closureRequestsReviewed RestaurantClosureRequest[] @relation("ClosureReviewedBy")
+  dinnerCancellationsRequested DinnerCancellationRequest[] @relation("DinnerCancelRequestedBy")
+  dinnerCancellationsReviewed  DinnerCancellationRequest[] @relation("DinnerCancelReviewedBy")
 
   @@map("users")
 }
@@ -256,6 +258,38 @@ model RestaurantClosureRequest {
   @@index([restaurantId])
   @@index([status])
   @@map("restaurant_closure_requests")
+}
+
+enum DinnerCancellationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// A restaurant admin cannot cancel a dinner directly - cancelling releases
+/// paid seats and must refund guests, both higher-blast-radius than a normal
+/// edit. So it files a review request instead; Platform Ops approves (which
+/// releases seats + refunds every paid guest under platform authority, the
+/// only role the refund service permits for dinner_cancelled) or rejects
+/// (dinner untouched). Mirrors RestaurantClosureRequest's admin-mediated
+/// posture.
+model DinnerCancellationRequest {
+  id                String                          @id @default(cuid())
+  dinnerId          String
+  requestedByUserId String
+  reason            String                          @db.Text
+  status            DinnerCancellationRequestStatus @default(PENDING)
+  reviewedByUserId  String?
+  reviewedAt        DateTime?
+  createdAt         DateTime                        @default(now())
+
+  dinner      Dinner @relation(fields: [dinnerId], references: [id], onDelete: Cascade)
+  requestedBy User   @relation("DinnerCancelRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  reviewedBy  User?  @relation("DinnerCancelReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([dinnerId])
+  @@index([status])
+  @@map("dinner_cancellation_requests")
 }
 
 model RestaurantMember {
@@ -478,6 +512,7 @@ model Dinner {
   safetyReports   SafetyReport[]
   dinnerMedia     DinnerMedia[]
   payout          Payout?
+  cancellationRequests DinnerCancellationRequest[]
 
   @@index([restaurantId])
   @@index([restaurantId, status])

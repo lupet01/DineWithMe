@@ -1,10 +1,11 @@
 import type { DinnerStatus } from "@prisma/client";
-import { dinnerRepository } from "@dinewithme/db";
+import { dinnerRepository, dinnerCancellationRequestRepository } from "@dinewithme/db";
 import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { UrlTabs } from "@/components/ui/url-tabs";
 import { TableSearch } from "@/components/ui/table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { OpsDinnersTable } from "./components/ops-dinners-table";
+import { CancellationRequestsPanel } from "./components/cancellation-requests-panel";
 
 const PAGE_SIZE = 20;
 
@@ -34,7 +35,7 @@ export default async function OpsDinnersPage({
   const search = searchParams.q ?? "";
   const status = searchParams.status ? STATUS_VALUES[searchParams.status] : undefined;
 
-  const [{ dinners, total }, counts] = await Promise.all([
+  const [{ dinners, total }, counts, cancellationRequests] = await Promise.all([
     dinnerRepository.findManyWithThemePaginated({
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -42,6 +43,7 @@ export default async function OpsDinnersPage({
       status,
     }),
     dinnerRepository.countByStatus(),
+    dinnerCancellationRequestRepository.findPending(),
   ]);
 
   return (
@@ -57,6 +59,8 @@ export default async function OpsDinnersPage({
         <StatCard label="Completed" value={counts.COMPLETED} />
         <StatCard label="Cancelled" value={<span className="text-red-600">{counts.CANCELLED}</span>} />
       </StatGrid>
+
+      <CancellationRequestsPanel requests={cancellationRequests} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <UrlTabs param="status" items={STATUS_TABS} />

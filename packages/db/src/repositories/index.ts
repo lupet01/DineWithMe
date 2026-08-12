@@ -23,6 +23,7 @@ import { PayoutRepository } from "./payout.repository";
 import { TeamInviteRepository } from "./team-invite.repository";
 import { ThemeIcebreakerRepository } from "./theme-icebreaker.repository";
 import { RestaurantClosureRequestRepository } from "./restaurant-closure-request.repository";
+import { DinnerCancellationRequestRepository } from "./dinner-cancellation-request.repository";
 
 export const userRepository = new UserRepository(prisma);
 export const restaurantRepository = new RestaurantRepository(prisma);
@@ -48,6 +49,7 @@ export const payoutRepository = new PayoutRepository(prisma);
 export const teamInviteRepository = new TeamInviteRepository(prisma);
 export const themeIcebreakerRepository = new ThemeIcebreakerRepository(prisma);
 export const restaurantClosureRequestRepository = new RestaurantClosureRequestRepository(prisma);
+export const dinnerCancellationRequestRepository = new DinnerCancellationRequestRepository(prisma);
 
 export { BaseRepository } from "./base";
 export { UserRepository } from "./user.repository";
@@ -81,6 +83,8 @@ export { TeamInviteRepository } from "./team-invite.repository";
 export { ThemeIcebreakerRepository } from "./theme-icebreaker.repository";
 export { RestaurantClosureRequestRepository } from "./restaurant-closure-request.repository";
 export type { RestaurantClosureRequestWithRestaurant } from "./restaurant-closure-request.repository";
+export { DinnerCancellationRequestRepository } from "./dinner-cancellation-request.repository";
+export type { DinnerCancellationRequestWithDinner } from "./dinner-cancellation-request.repository";
 export type { RestaurantWithMembers, RestaurantCreateData, RestaurantWithMedia } from "./restaurant.repository";
 export type { DinnerWithRestaurant } from "./dinner.repository";
 export type { AuditLogWithActor } from "./audit-log.repository";

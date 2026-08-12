@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MoreVertical } from "lucide-react";
 import type { DinnerWithRestaurant } from "@dinewithme/db";
-import { updateDinnerStatus, cancelDinner, publishDinner, deleteDinner } from "../actions";
+import { updateDinnerStatus, requestDinnerCancellation, publishDinner, deleteDinner } from "../actions";
+import { ConfirmModal } from "../../components/confirm-modal";
+import { useToast } from "@/components/ui/toast";
 
 interface DinnerRowProps {
   dinner: DinnerWithRestaurant;
@@ -59,10 +61,14 @@ function getStatusBadgeClass(status: string): string {
  * row-card (§16.3 wireframe's "Mobile adaptation" note - same data, same
  * actions, just two different renderings) so seat-count fetching and the
  * Publish / Mark Live / Complete / Cancel / Delete handlers aren't
- * duplicated.
+ * duplicated. Cancel is a review request (Platform Ops approves + refunds),
+ * so it opens the styled ConfirmModal to collect a required reason rather
+ * than a native confirm.
  */
 function useDinnerRowState(dinner: DinnerWithRestaurant) {
+  const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [seatCounts, setSeatCounts] = useState({ confirmed: 0, available: 0 });
 
   useEffect(() => {
@@ -96,8 +102,10 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
     setIsUpdating(false);
 
     if (!result.success) {
-      alert(result.error || "Failed to update dinner status");
+      toast.error(result.error || "Failed to update dinner status");
+      return;
     }
+    toast.success(newStatus === "LIVE" ? "Dinner is now live" : "Dinner marked completed");
   };
 
   const handlePublish = async () => {
@@ -110,8 +118,10 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
     setIsUpdating(false);
 
     if (!result.success) {
-      alert(result.error || "Failed to publish dinner");
+      toast.error(result.error || "Failed to publish dinner");
+      return;
     }
+    toast.success("Dinner published");
   };
 
   const handleDelete = async () => {
@@ -124,22 +134,24 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
     setIsUpdating(false);
 
     if (!result.success) {
-      alert(result.error || "Failed to delete dinner");
+      toast.error(result.error || "Failed to delete dinner");
+      return;
     }
+    toast.success("Draft deleted");
   };
 
-  const handleCancel = async () => {
+  const confirmCancel = async (reason?: string) => {
     if (isUpdating) return;
-    const confirmed = confirm("Are you sure you want to cancel this dinner? All seats will be released.");
-    if (!confirmed) return;
-
     setIsUpdating(true);
-    const result = await cancelDinner(dinner.id);
+    const result = await requestDinnerCancellation(dinner.id, reason);
     setIsUpdating(false);
 
     if (!result.success) {
-      alert(result.error || "Failed to cancel dinner");
+      toast.error(result.error || "Failed to request cancellation");
+      throw new Error(result.error || "Failed to request cancellation");
     }
+    setCancelOpen(false);
+    toast.success("Cancellation requested — pending review");
   };
 
   const revenueCents =
@@ -156,12 +168,48 @@ function useDinnerRowState(dinner: DinnerWithRestaurant) {
     handleStatusChange,
     handlePublish,
     handleDelete,
-    handleCancel,
+    cancelOpen,
+    setCancelOpen,
+    confirmCancel,
     isDraft: dinner.status === "DRAFT",
     canMarkLive: dinner.status === "SCHEDULED",
     canMarkCompleted: dinner.status === "LIVE",
     canCancel: dinner.status === "SCHEDULED" || dinner.status === "LIVE",
   };
+}
+
+/** The shared Request-Cancellation modal, rendered by both row variants. */
+function CancelDinnerModal({
+  dinnerLabel,
+  open,
+  onClose,
+  onConfirm,
+}: {
+  dinnerLabel: string;
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (reason?: string) => void | Promise<void>;
+}) {
+  return (
+    <ConfirmModal
+      open={open}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      tone="red"
+      title="Request to cancel this dinner?"
+      description={`You're requesting to cancel ${dinnerLabel}. This goes to Platform Ops for review rather than cancelling instantly.`}
+      consequences={[
+        "The dinner is NOT cancelled yet — it stays bookable until Platform Ops approves",
+        "On approval, every held/confirmed seat is released and each paying guest is automatically refunded and emailed",
+        "You'll be notified once it's reviewed — usually within a day or two",
+      ]}
+      requireReason
+      reasonLabel="Reason for cancellation"
+      reasonPlaceholder="e.g. Unforeseen kitchen maintenance — we'll reschedule soon…"
+      confirmLabel="Request Cancellation"
+      cancelLabel="Keep Dinner"
+    />
+  );
 }
 
 export function DinnerRow({ dinner }: DinnerRowProps) {
@@ -173,12 +221,16 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
     handleStatusChange,
     handlePublish,
     handleDelete,
-    handleCancel,
+    cancelOpen,
+    setCancelOpen,
+    confirmCancel,
     isDraft,
     canMarkLive,
     canMarkCompleted,
     canCancel,
   } = useDinnerRowState(dinner);
+
+  const dinnerLabel = dinner.theme?.title || "this dinner";
 
   return (
     <tr>
@@ -289,7 +341,7 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
                     <MoreVertical className="h-3.5 w-3.5" />
                   </summary>
                   <div className="row-menu-panel">
-                    <button type="button" onClick={handleCancel} disabled={isUpdating} className="row-menu-item danger">
+                    <button type="button" onClick={() => setCancelOpen(true)} disabled={isUpdating} className="row-menu-item danger">
                       Cancel Dinner
                     </button>
                   </div>
@@ -298,6 +350,12 @@ export function DinnerRow({ dinner }: DinnerRowProps) {
             </>
           )}
         </div>
+        <CancelDinnerModal
+          dinnerLabel={dinnerLabel}
+          open={cancelOpen}
+          onClose={() => setCancelOpen(false)}
+          onConfirm={confirmCancel}
+        />
       </td>
     </tr>
   );
@@ -316,12 +374,16 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
     handleStatusChange,
     handlePublish,
     handleDelete,
-    handleCancel,
+    cancelOpen,
+    setCancelOpen,
+    confirmCancel,
     isDraft,
     canMarkLive,
     canMarkCompleted,
     canCancel,
   } = useDinnerRowState(dinner);
+
+  const dinnerLabel = dinner.theme?.title || "this dinner";
 
   const seatSummary =
     seatCounts.available === 0 && seatCounts.confirmed > 0
@@ -375,13 +437,19 @@ export function DinnerRowCard({ dinner }: DinnerRowProps) {
               </button>
             )}
             {canCancel && (
-              <button onClick={handleCancel} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
+              <button onClick={() => setCancelOpen(true)} disabled={isUpdating} className="btn btn-sm btn-red" style={{ flex: 1 }}>
                 Cancel
               </button>
             )}
           </>
         )}
       </div>
+      <CancelDinnerModal
+        dinnerLabel={dinnerLabel}
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={confirmCancel}
+      />
     </div>
   );
 }

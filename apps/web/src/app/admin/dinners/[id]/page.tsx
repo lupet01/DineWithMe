@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { dinnerRepository, dinnerMediaRepository, restaurantGalleryItemRepository, payoutRepository, feedbackRepository } from "@dinewithme/db";
+import { dinnerRepository, dinnerMediaRepository, restaurantGalleryItemRepository, payoutRepository, feedbackRepository, dinnerCancellationRequestRepository } from "@dinewithme/db";
 import { Role } from "@dinewithme/shared";
 import { formatAmount } from "@dinewithme/config/src/payment";
 import { getAuthUser } from "@/lib/auth/server";
@@ -59,6 +59,11 @@ export default async function DinnerDetailPage({
     isCompleted ? payoutRepository.findByDinnerId(dinner.id) : Promise.resolve(null),
     isCompleted ? feedbackRepository.findByDinner(dinner.id) : Promise.resolve([]),
   ]);
+
+  // A pending cancellation request swaps the "Cancel Dinner" button for a
+  // "pending review" chip (the request is with Platform Ops).
+  const pendingCancellation =
+    canEdit ? await dinnerCancellationRequestRepository.findPendingByDinner(dinner.id) : null;
 
   // Table-level ("how was the dinner overall") feedback only, not diner-to-
   // diner ratings — targetUserId is null for that row shape.
@@ -289,7 +294,7 @@ export default async function DinnerDetailPage({
           </div>
         ) : (
           <div className="only-desktop-flex">
-            <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} dinnerLabel={dinnerLabel} layout="inline" />
+            <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} dinnerLabel={dinnerLabel} pendingCancellation={pendingCancellation !== null} layout="inline" />
           </div>
         )}
       </div>
@@ -298,7 +303,7 @@ export default async function DinnerDetailPage({
 
       {canEdit && (
         <div className="m-action-bar">
-          <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} dinnerLabel={dinnerLabel} layout="bar" />
+          <DinnerStatusActions dinnerId={dinner.id} status={dinner.status} dinnerLabel={dinnerLabel} pendingCancellation={pendingCancellation !== null} layout="bar" />
         </div>
       )}
       {isCompleted && (
