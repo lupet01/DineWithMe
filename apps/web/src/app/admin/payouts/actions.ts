@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { restaurantRepository, encrypt } from "@dinewithme/db";
+import { restaurantRepository, encrypt, auditLogger } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
 
 export interface ActionResult<T = void> {
@@ -80,6 +80,15 @@ export async function updateBankDetails(
       bankAccountNumber: encrypt(input.bankAccountNumber.trim()),
       bankAccountHolderName: input.bankAccountHolderName.trim(),
       bankDetailsVerifiedAt: null,
+    });
+
+    // Audit trail for a sensitive financial change. Log only non-secret
+    // fields — never the account number (masked last-4 is enough to identify).
+    await auditLogger.bankDetailsUpdated(authResult.user.id, restaurantId, {
+      bankName: input.bankName.trim(),
+      bankAccountType: input.bankAccountType.trim(),
+      accountLast4: input.bankAccountNumber.trim().slice(-4),
+      verificationCleared: true,
     });
 
     revalidatePath("/admin/payouts");

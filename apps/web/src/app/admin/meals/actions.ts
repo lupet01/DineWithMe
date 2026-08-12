@@ -159,6 +159,14 @@ export async function removeCourseOption(mealId: string, optionId: string): Prom
   }
 
   try {
+    // Re-scope the child to the authorized parent: the option must belong to
+    // a course of THIS meal. Without this, meal ownership alone would let an
+    // owner delete an option on another restaurant's meal by id.
+    const ownerMealId = await mealRepository.findMealIdForOption(optionId);
+    if (ownerMealId !== mealId) {
+      return { success: false, error: "Dish option not found" };
+    }
+
     await mealRepository.removeCourseOption(optionId);
     revalidatePath(`/admin/meals/${mealId}`);
     return { success: true };

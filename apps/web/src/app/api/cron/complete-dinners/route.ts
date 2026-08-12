@@ -43,9 +43,21 @@ export async function GET(request: NextRequest) {
       select: { id: true, mealId: true, themeId: true },
     });
 
-    if (dinnersToComplete.length > 0) {
-      await prisma.dinner.updateMany({
-        where: { id: { in: dinnersToComplete.map((d) => d.id) } },
+    // Create the payout for each dinner BEFORE flipping it to COMPLETED. If
+    // the job dies mid-run, a dinner left un-flipped is simply reprocessed on
+    // the next run (createPayoutForDinner is idempotent — unique on dinnerId).
+    // The old order (updateMany COMPLETED first, then the payout loop) meant a
+    // crash in between left the dinner COMPLETED with no payout, and later
+    // runs — which only look at SCHEDULED/LIVE — would never create it.
+    let payoutsCreated = 0;
+    for (const dinner of dinnersToComplete) {
+      const before = await prisma.payout.count({ where: { dinnerId: dinner.id } });
+      await createPayoutForDinner(prisma, dinner.id);
+      const after = await prisma.payout.count({ where: { dinnerId: dinner.id } });
+      if (after > before) payoutsCreated++;
+
+      await prisma.dinner.update({
+        where: { id: dinner.id },
         data: { status: "COMPLETED" },
       });
     }
@@ -62,14 +74,6 @@ export async function GET(request: NextRequest) {
 
     for (const themeId of affectedThemeIds) {
       await recomputeThemePerformance(prisma, themeId);
-    }
-
-    let payoutsCreated = 0;
-    for (const dinner of dinnersToComplete) {
-      const before = await prisma.payout.count({ where: { dinnerId: dinner.id } });
-      await createPayoutForDinner(prisma, dinner.id);
-      const after = await prisma.payout.count({ where: { dinnerId: dinner.id } });
-      if (after > before) payoutsCreated++;
     }
 
     return NextResponse.json({

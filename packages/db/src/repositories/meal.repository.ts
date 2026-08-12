@@ -146,4 +146,19 @@ export class MealRepository extends BaseRepository<Meal> {
       where: { id: optionId },
     });
   }
+
+  /**
+   * The meal id that a course option ultimately belongs to (via its course),
+   * or null if the option doesn't exist. Lets callers verify an option
+   * belongs to the meal they've authorized before mutating it — without this,
+   * an owner of meal A could delete an option on another restaurant's meal by
+   * passing that option's id.
+   */
+  async findMealIdForOption(optionId: string): Promise<string | null> {
+    const option = await this.prisma.mealCourseOption.findUnique({
+      where: { id: optionId },
+      select: { mealCourse: { select: { mealId: true } } },
+    });
+    return option?.mealCourse.mealId ?? null;
+  }
 }

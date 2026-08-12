@@ -662,3 +662,86 @@ export function refundConfirmationTemplate(data: RefundConfirmationEmailData): s
 </html>
   `.trim();
 }
+
+export interface PayoutPaidEmailData {
+  ownerEmail: string;
+  ownerName: string;
+  restaurantName: string;
+  dinnerTitle: string;
+  payoutAmount: number;
+  currency: string;
+  payoutId: string;
+}
+
+export function payoutPaidTemplate(data: PayoutPaidEmailData): string {
+  const formattedAmount = new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: data.currency,
+  }).format(data.payoutAmount / 100);
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payout Sent</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: #f9fafb; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; border: 1px solid #e5e7eb; border-bottom: none;">
+    <h1 style="color: #374151; margin: 0; font-size: 28px;">Payout Sent</h1>
+  </div>
+
+  <div style="background: white; padding: 40px 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+    <p style="font-size: 16px; margin-bottom: 20px;">Hi ${data.ownerName},</p>
+
+    <p style="font-size: 16px; margin-bottom: 30px;">
+      Good news &mdash; we've sent a payout to ${data.restaurantName}'s bank account.
+    </p>
+
+    <div style="background: #f0fdf4; padding: 24px; border-radius: 8px; margin: 30px 0; border-left: 4px solid #10b981;">
+      <h2 style="margin-top: 0; font-size: 20px; color: #065f46;">Payout Details</h2>
+
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #d1fae5; color: #047857;">Dinner</td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #d1fae5; text-align: right; font-weight: 500;">${data.dinnerTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #d1fae5; color: #047857;">Restaurant</td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #d1fae5; text-align: right; font-weight: 500;">${data.restaurantName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #d1fae5; color: #047857;">Net Payout</td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #d1fae5; text-align: right; font-weight: 600; font-size: 18px; color: #10b981;">${formattedAmount}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px 0; color: #047857;">Payout ID</td>
+          <td style="padding: 12px 0; text-align: right; font-family: monospace; font-size: 12px;">${data.payoutId}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background: #fef3c7; padding: 16px; border-radius: 6px; border-left: 4px solid #f59e0b; margin-top: 30px;">
+      <p style="margin: 0; font-size: 14px; color: #92400e;">
+        <strong>Processing Time:</strong> The funds should reflect in your account within a few business days, depending on your bank.
+      </p>
+    </div>
+
+    <p style="font-size: 16px; margin-top: 30px;">
+      Thank you for hosting with DineWithMe.
+    </p>
+
+    <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+      If anything looks wrong with this payout, please contact our support team.
+    </p>
+
+    <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">
+      Best regards,<br>
+      <strong>The DineWithMe Team</strong>
+    </p>
+  </div>
+</body>
+</html>
+  `.trim();
+}

@@ -68,6 +68,14 @@ export async function createMenuItem(
       return { success: false, error: validationError };
     }
 
+    // Re-scope the child media asset to the authorized restaurant.
+    if (input.mediaAssetId) {
+      const asset = await mediaAssetRepository.findById(input.mediaAssetId);
+      if (!asset || asset.restaurantId !== restaurantId) {
+        return { success: false, error: "Selected photo doesn't belong to this restaurant" };
+      }
+    }
+
     const existingItems = await menuItemRepository.findByRestaurant(restaurantId);
     const positionsInCourse = existingItems
       .filter((item) => item.course === input.course)
@@ -117,6 +125,14 @@ export async function updateMenuItem(menuItemId: string, input: MenuItemInput): 
     const validationError = validateMenuItemInput(input);
     if (validationError) {
       return { success: false, error: validationError };
+    }
+
+    // Re-scope the child media asset to the authorized restaurant.
+    if (input.mediaAssetId) {
+      const asset = await mediaAssetRepository.findById(input.mediaAssetId);
+      if (!asset || asset.restaurantId !== existingItem.restaurantId) {
+        return { success: false, error: "Selected photo doesn't belong to this restaurant" };
+      }
     }
 
     await menuItemRepository.update(menuItemId, {

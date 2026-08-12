@@ -16,9 +16,19 @@ import { track, AnalyticsEvents } from "@dinewithme/analytics";
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
+    // Verify cron secret. Guard against an unset secret first — otherwise a
+    // request sending the literal header "Bearer undefined" would authenticate
+    // when CRON_SECRET is missing, letting anyone trigger a full reminder run.
+    const expectedToken = process.env.CRON_SECRET;
+    if (!expectedToken) {
+      return NextResponse.json(
+        { success: false, error: "Cron secret not configured" },
+        { status: 500 }
+      );
+    }
+
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (authHeader !== `Bearer ${expectedToken}`) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }

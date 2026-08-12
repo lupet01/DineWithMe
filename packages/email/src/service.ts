@@ -9,6 +9,7 @@ import {
   feedbackRequestTemplate,
   refundConfirmationTemplate,
   teamInviteTemplate,
+  payoutPaidTemplate,
 } from "./templates";
 import type {
   RestaurantApprovedEmailData,
@@ -20,6 +21,7 @@ import type {
   FeedbackRequestEmailData,
   RefundConfirmationEmailData,
   TeamInviteEmailData,
+  PayoutPaidEmailData,
 } from "./templates";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -287,6 +289,35 @@ class EmailService {
       return { success: true };
     } catch (error) {
       console.error("Error sending refund confirmation email:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async sendPayoutPaid(data: PayoutPaidEmailData): Promise<{ success: boolean; error?: string }> {
+    if (!this.isConfigured()) {
+      console.warn("Email service not configured. Skipping payout paid email.");
+      return { success: false, error: "Email service not configured" };
+    }
+
+    try {
+      const { error } = await resend!.emails.send({
+        from: FROM_EMAIL,
+        to: data.ownerEmail,
+        subject: `Payout sent - ${data.restaurantName}`,
+        html: payoutPaidTemplate(data),
+      });
+
+      if (error) {
+        console.error("Error sending payout paid email:", error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error sending payout paid email:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

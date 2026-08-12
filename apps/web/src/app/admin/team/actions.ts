@@ -2,7 +2,7 @@
 
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
-import { restaurantRepository, teamInviteRepository, userRepository } from "@dinewithme/db";
+import { restaurantRepository, teamInviteRepository, userRepository, auditLogger } from "@dinewithme/db";
 import { emailService } from "@dinewithme/email";
 import { requireAuthUser } from "@/lib/auth/server";
 
@@ -125,6 +125,10 @@ export async function changeRole(
 
   try {
     await restaurantRepository.updateMemberRole(restaurantId, memberUserId, newRole);
+    await auditLogger.userRoleChanged(authResult.user.id, memberUserId, {
+      restaurantId,
+      newRole,
+    });
     revalidatePath("/admin/team");
     return { success: true };
   } catch (error) {
@@ -143,6 +147,7 @@ export async function removeMember(restaurantId: string, memberUserId: string): 
 
   try {
     await restaurantRepository.removeMember(restaurantId, memberUserId);
+    await auditLogger.memberRemoved(authResult.user.id, memberUserId, restaurantId);
     revalidatePath("/admin/team");
     return { success: true };
   } catch (error) {

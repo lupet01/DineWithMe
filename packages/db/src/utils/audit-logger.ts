@@ -48,8 +48,14 @@ export const AuditAction = {
   THEME_ENABLED: "theme_enabled",
   THEME_DISABLED: "theme_disabled",
 
-  // User actions
+  // User / team actions
   USER_ROLE_CHANGED: "user_role_changed",
+  MEMBER_REMOVED: "member_removed",
+
+  // Payout / financial actions
+  BANK_DETAILS_UPDATED: "bank_details_updated",
+  BANK_DETAILS_VERIFIED: "bank_details_verified",
+  PAYOUT_SETTLED: "payout_settled",
 } as const;
 
 /**
@@ -61,6 +67,7 @@ export const AuditEntity = {
   DINNER: "dinner",
   SEAT: "seat",
   USER: "user",
+  PAYOUT: "payout",
 } as const;
 
 export type AuditActionType = typeof AuditAction[keyof typeof AuditAction];
@@ -394,7 +401,8 @@ export const auditLogger = {
   },
 
   /**
-   * Log a user's role being changed by a platform admin
+   * Log a user's role being changed (by a platform admin or a restaurant
+   * owner managing their team).
    */
   async userRoleChanged(
     actorUserId: string,
@@ -406,6 +414,77 @@ export const auditLogger = {
       AuditAction.USER_ROLE_CHANGED,
       AuditEntity.USER,
       targetUserId,
+      metadata
+    );
+  },
+
+  /**
+   * Log a team member being removed from a restaurant. Entity is the removed
+   * user; the restaurant id travels in metadata.
+   */
+  async memberRemoved(
+    actorUserId: string,
+    memberUserId: string,
+    restaurantId: string,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    return this.log(
+      actorUserId,
+      AuditAction.MEMBER_REMOVED,
+      AuditEntity.USER,
+      memberUserId,
+      { ...metadata, restaurantId }
+    );
+  },
+
+  /**
+   * Log a restaurant's payout destination (bank details) being changed by an
+   * owner. Never log the account number itself.
+   */
+  async bankDetailsUpdated(
+    actorUserId: string,
+    restaurantId: string,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    return this.log(
+      actorUserId,
+      AuditAction.BANK_DETAILS_UPDATED,
+      AuditEntity.RESTAURANT,
+      restaurantId,
+      metadata
+    );
+  },
+
+  /**
+   * Log Platform Ops verifying a restaurant's payout destination.
+   */
+  async bankDetailsVerified(
+    actorUserId: string,
+    restaurantId: string,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    return this.log(
+      actorUserId,
+      AuditAction.BANK_DETAILS_VERIFIED,
+      AuditEntity.RESTAURANT,
+      restaurantId,
+      metadata
+    );
+  },
+
+  /**
+   * Log a payout being settled (READY -> PAID) by Platform Ops.
+   */
+  async payoutSettled(
+    actorUserId: string,
+    payoutId: string,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    return this.log(
+      actorUserId,
+      AuditAction.PAYOUT_SETTLED,
+      AuditEntity.PAYOUT,
+      payoutId,
       metadata
     );
   },

@@ -5,6 +5,7 @@ import {
   restaurantGalleryItemRepository,
   dinnerRepository,
   dinnerMediaRepository,
+  mediaAssetRepository,
 } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
@@ -66,7 +67,7 @@ async function requireDinnerOwner(dinnerId: string) {
   }
   const authResult = await requireOwner(dinner.restaurantId);
   if ("error" in authResult) {
-    return authResult;
+    return { error: authResult.error };
   }
   return { user: authResult.user, restaurantId: dinner.restaurantId };
 }
@@ -89,6 +90,18 @@ export async function saveDinnerListingPhotos(
   }
 
   try {
+    // Re-scope the child media assets to the authorized restaurant: every id
+    // being connected must be one of this restaurant's own assets. Without
+    // this, dinner ownership alone would let an owner attach another
+    // restaurant's media asset by id.
+    if (mediaAssetIds.length > 0) {
+      const ownedAssets = await mediaAssetRepository.findByRestaurant(authResult.restaurantId);
+      const ownedIds = new Set(ownedAssets.map((a) => a.id));
+      if (mediaAssetIds.some((id) => !ownedIds.has(id))) {
+        return { success: false, error: "One or more photos don't belong to this restaurant" };
+      }
+    }
+
     const existing = await dinnerMediaRepository.findByDinner(dinnerId, "DINNER_LISTING");
 
     await Promise.all(existing.map((item) => dinnerMediaRepository.delete(item.id)));

@@ -59,16 +59,22 @@ export async function GET(request: NextRequest) {
     // Mark no-shows (30 minutes after dinner start)
     const noShowSeats = await seatRepository.markNoShows(30);
 
-    // Create trust events and emit analytics for each no-show
-    const trustEvents = await Promise.all(
-      noShowSeats.map(async (seat) => {
-        // Create negative trust event
-        const trustEvent = await trustEventRepository.createNoShowEvent(
+    // Create trust events and emit analytics for each no-show. The seats are
+    // already flipped to NO_SHOW above and won't be re-selected on a later
+    // run, so one failing trust-event write must not abort the rest — isolate
+    // each per-seat (a rejected Promise.all would lose every other seat's
+    // trust event). Failures are counted and logged for follow-up.
+    let trustEventsCreated = 0;
+    let trustEventsFailed = 0;
+    for (const seat of noShowSeats) {
+      try {
+        await trustEventRepository.createNoShowEvent(
           seat.userId,
           seat.seatId,
           seat.dinnerId,
           -10 // Negative weight
         );
+        trustEventsCreated++;
 
         // Emit analytics event
         await track(AnalyticsEvents.SEAT_NO_SHOW_MARKED, {
@@ -79,10 +85,15 @@ export async function GET(request: NextRequest) {
           minutesAfterStart: 30,
           timestamp: new Date().toISOString(),
         });
-
-        return trustEvent;
-      })
-    );
+      } catch (seatError) {
+        trustEventsFailed++;
+        console.error(
+          `[mark-no-shows] Failed to record no-show trust event for seat ${seat.seatId} ` +
+          `(user ${seat.userId}):`,
+          seatError
+        );
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -94,7 +105,8 @@ export async function GET(request: NextRequest) {
           dinnerId: s.dinnerId,
           dinnerTheme: s.dinnerTheme,
         })),
-        trustEventsCreated: trustEvents.length,
+        trustEventsCreated,
+        trustEventsFailed,
       },
     });
   } catch (error) {

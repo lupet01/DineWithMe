@@ -1,7 +1,8 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { userRepository, restaurantRepository, payoutRepository } from "@dinewithme/db";
+import { userRepository, restaurantRepository, payoutRepository, auditLogger } from "@dinewithme/db";
+import { emailService } from "@dinewithme/email";
 import { Role } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
 
@@ -40,7 +41,37 @@ export async function processSelectedPayouts(payoutIds: string[]): Promise<Actio
   }
 
   try {
+    // Capture the settleable set (with owner emails + amounts) BEFORE marking
+    // paid, so we can notify + audit exactly what settles.
+    const settleable = await payoutRepository.findSettleableWithOwner(payoutIds);
     const processedCount = await payoutRepository.markPaid(payoutIds);
+
+    // Audit each settlement (immutable financial trail) and notify the
+    // restaurant owners that they've been paid. Both are best-effort — a
+    // failed email or audit write must not undo a completed settlement.
+    for (const payout of settleable) {
+      await auditLogger.payoutSettled(authResult.user.id, payout.id, {
+        restaurantId: payout.restaurantId,
+        netAmountCents: payout.netAmountCents,
+      });
+
+      for (const ownerEmail of payout.ownerEmails) {
+        try {
+          await emailService.sendPayoutPaid({
+            ownerEmail,
+            ownerName: payout.restaurantName,
+            restaurantName: payout.restaurantName,
+            dinnerTitle: payout.dinnerTitle ?? "your dinner",
+            payoutAmount: payout.netAmountCents,
+            currency: "ZAR",
+            payoutId: payout.id,
+          });
+        } catch (emailError) {
+          console.error(`Failed to send payout email for ${payout.id}:`, emailError);
+        }
+      }
+    }
+
     revalidatePath("/admin/ops/payouts");
     return { success: true, data: { processedCount } };
   } catch (error) {
@@ -64,6 +95,7 @@ export async function verifyBankDetails(restaurantId: string): Promise<ActionRes
 
   try {
     await restaurantRepository.update(restaurantId, { bankDetailsVerifiedAt: new Date() });
+    await auditLogger.bankDetailsVerified(authResult.user.id, restaurantId);
     revalidatePath("/admin/ops/payouts");
     return { success: true };
   } catch (error) {

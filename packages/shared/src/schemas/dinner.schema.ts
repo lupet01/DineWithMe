@@ -18,7 +18,10 @@ export const createDinnerSchema = z.object({
   endsAt: z.coerce.date(),
   theme: z.string().min(1, "Theme is required").optional(),
   description: z.string().optional(),
-  seatCount: z.number().int().min(1, "Must have at least 1 seat").max(100, "Maximum 100 seats"),
+  // Matches the live create/update rule enforced in the dinner actions
+  // (2-20). Previously 1-100 here, which silently disagreed with the
+  // shipping validation — a trap for anyone who adopted this schema.
+  seatCount: z.number().int().min(2, "Must have at least 2 seats").max(20, "Maximum 20 seats"),
 }).refine((data) => data.endsAt > data.startsAt, {
   message: "End time must be after start time",
   path: ["endsAt"],
@@ -30,7 +33,7 @@ export const updateDinnerSchema = z.object({
   endsAt: z.coerce.date().optional(),
   theme: z.string().min(1, "Theme is required").optional(),
   description: z.string().optional(),
-  seatCount: z.number().int().min(1).max(100).optional(),
+  seatCount: z.number().int().min(2).max(20).optional(),
   status: dinnerStatusSchema.optional(),
 }).refine((data) => {
   if (data.startsAt && data.endsAt) {

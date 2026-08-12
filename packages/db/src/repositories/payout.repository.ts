@@ -162,6 +162,53 @@ export class PayoutRepository extends BaseRepository<Payout> {
     });
     return result.count;
   }
+
+  /**
+   * The still-settleable (READY) payouts among the given ids, with the info
+   * needed to notify + audit a settlement: net amount, restaurant name and
+   * its owners' emails, and the dinner title. Callers fetch this BEFORE
+   * markPaid so the returned set is exactly what a subsequent markPaid will
+   * settle (barring a concurrent settlement), then use it to send payout
+   * emails and write audit entries.
+   */
+  async findSettleableWithOwner(payoutIds: string[]): Promise<
+    Array<{
+      id: string;
+      netAmountCents: number;
+      restaurantId: string;
+      restaurantName: string;
+      ownerEmails: string[];
+      dinnerTitle: string | null;
+    }>
+  > {
+    const rows = await this.prisma.payout.findMany({
+      where: { id: { in: payoutIds }, status: "READY" },
+      select: {
+        id: true,
+        netAmountCents: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            members: {
+              where: { role: "OWNER" },
+              select: { user: { select: { email: true } } },
+            },
+          },
+        },
+        dinner: { select: { theme: { select: { title: true } } } },
+      },
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      netAmountCents: r.netAmountCents,
+      restaurantId: r.restaurant.id,
+      restaurantName: r.restaurant.name,
+      ownerEmails: r.restaurant.members.map((m) => m.user.email),
+      dinnerTitle: r.dinner?.theme?.title ?? null,
+    }));
+  }
 }
 
 type DinnerWithBookedSeats = {
