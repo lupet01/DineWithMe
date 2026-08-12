@@ -18,6 +18,8 @@
     "test:concurrent-bookings": "vitest run tests/concurrent-bookings.test.ts",
     "test:state-machine": "vitest run tests/state-machine.test.ts",
     "test:refund-race": "vitest run tests/refund-race.test.ts",
+    "test:dinner-cancellation": "vitest run tests/dinner-cancellation.test.ts",
+    "test:payout-settlement": "vitest run tests/payout-settlement.test.ts",
     "test:user-sync": "echo 'User sync test - manual verification required'",
     "check:security": "echo 'Security check - verify headers and rate limiting'",
     "verify:database": "tsx scripts/verify-database.ts"
