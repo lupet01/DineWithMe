@@ -196,7 +196,15 @@ export function DinnerForm({
 
   return (
     <div
-      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, alignItems: "start" }}
+      style={{
+        display: "grid",
+        // Live preview is a Create-only surface (wireframe §sec-create-dinner:
+        // "the live preview panel does NOT carry over" to Edit, which is a
+        // single-column form). Edit renders one column, no preview.
+        gridTemplateColumns: mode === "create" ? "repeat(auto-fit, minmax(340px, 1fr))" : "minmax(0, 760px)",
+        gap: 20,
+        alignItems: "start",
+      }}
     >
       {/* auto-fit collapses this to a single column on narrower viewports
           (no media query needed) - form first, preview second, matching
@@ -554,8 +562,10 @@ export function DinnerForm({
         </div>
       </form>
 
-      {/* Live Preview - exactly what a guest sees (§16.3 wireframe) */}
-      <div style={{ position: "sticky", top: 0 }}>
+      {/* Live Preview — exactly what a guest sees (§16.3 wireframe). Create-only:
+          Edit is a single-column form per §sec-create-dinner's Edit frame-note. */}
+      {mode === "create" && (
+        <div style={{ position: "sticky", top: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--t3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
           Live Preview
         </div>
@@ -631,7 +641,8 @@ export function DinnerForm({
           Updates live as Theme / Meal / Date / Time / Seats / Price / Photos are filled in — exactly what a guest sees
           on Discover and the Dinner Detail page.
         </p>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

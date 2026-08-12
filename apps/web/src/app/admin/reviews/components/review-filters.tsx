@@ -8,6 +8,16 @@ interface ReviewFiltersProps {
   dinners: { id: string; title: string }[];
 }
 
+// Rating is a pill segment, not a <select> (wireframe §sec-reviews-inbox
+// frame-note explicitly converted it this pass); the dinner filter stays a
+// select.
+const RATING_TABS = [
+  { value: "all", label: "All Ratings" },
+  { value: "5", label: "5★" },
+  { value: "4", label: "4★" },
+  { value: "3-", label: "≤3★" },
+];
+
 export function ReviewFilters({ currentRating, currentDinner, dinners }: ReviewFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -23,19 +33,22 @@ export function ReviewFilters({ currentRating, currentDinner, dinners }: ReviewF
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const activeRating = currentRating || "all";
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <select
-        value={currentRating}
-        onChange={(e) => setParam("rating", e.target.value)}
-        className="field-input"
-        style={{ width: "auto", fontSize: 12 }}
-      >
-        <option value="all">All Ratings</option>
-        <option value="5">5 Stars</option>
-        <option value="4">4 Stars</option>
-        <option value="3-">3 Stars &amp; below</option>
-      </select>
+      <div className="tabs">
+        {RATING_TABS.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            className={`tab ${activeRating === t.value ? "active" : ""}`}
+            onClick={() => setParam("rating", t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
       <select
         value={currentDinner}
         onChange={(e) => setParam("dinner", e.target.value)}

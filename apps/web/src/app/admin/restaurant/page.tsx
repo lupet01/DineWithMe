@@ -119,10 +119,39 @@ export default async function RestaurantProfilePage() {
     month: "short",
     year: "numeric",
   });
+  // Single quiet subtitle line combining cuisine + partner date, e.g.
+  // "Italian, Fusion · Partner since Mar 2026" (§sec-restaurant-profile, this
+  // pass) - replaces the cuisine pill badges, which read as filter chips.
+  const identitySubtitle = cuisineTags.length
+    ? `${cuisineTags.join(", ")} · Partner since ${partnerSince}`
+    : `Partner since ${partnerSince}`;
+  // Shared stat-chip styling for the 3-up clickable stat row (desktop /
+  // mobile). Desktop chips hover-tint via the .rp-stat rule below (an RSC
+  // can't use the wireframe's inline onmouseover handlers).
+  const dtStatStyle = {
+    textDecoration: "none",
+    color: "inherit",
+    padding: "4px 8px",
+    margin: "-4px -8px",
+    borderRadius: 10,
+    transition: "background var(--dur-base) var(--ease)",
+  } as const;
+  const mStatStyle = {
+    textDecoration: "none",
+    color: "inherit",
+    flex: 1,
+    textAlign: "center",
+    padding: "4px 2px",
+    borderRadius: 10,
+  } as const;
 
   return (
     <div className="rp">
       <IconSprite />
+      {/* Hover-tint for the identity header's stat chips - matches the
+          wireframe's onmouseover background swap, which a server component
+          can't attach as a JS handler, using the existing --bg2 token. */}
+      <style>{`.dine-admin .rp-stat:hover{background:var(--bg2)}`}</style>
       <MobileSubTabs tabs={profileTabs} marginBottom={14} />
 
       {/*
@@ -163,54 +192,46 @@ export default async function RestaurantProfilePage() {
               Manage in Media Library →
             </Link>
           </div>
-          <div style={{ padding: "0 20px 18px", position: "relative" }}>
+          <div style={{ padding: "0 20px 20px", position: "relative" }}>
             <div
               style={{
                 width: 68, height: 68, borderRadius: 16,
                 background: "linear-gradient(135deg,#8b6b4a,#5c3d28)", border: "4px solid var(--white)",
-                marginTop: -34, marginBottom: 12, boxShadow: "0 4px 10px rgba(0,0,0,.15)",
+                marginTop: -34, marginBottom: 14, boxShadow: "0 4px 10px rgba(0,0,0,.15)",
               }}
             />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 14 }}>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <h1 className="pg-title" style={{ margin: 0 }}>{restaurant.name}</h1>
                   <span className={`badge ${statusBadgeClass[restaurant.status] ?? "badge-slate"}`}>
                     {restaurant.status}
                   </span>
                 </div>
-                {cuisineTags.length > 0 && (
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {cuisineTags.map((tag) => (
-                      <span key={tag} className="badge badge-slate">{tag}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", borderTop: "1px solid var(--bdr)", paddingTop: 14 }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{dinners.length}</div>
-                <div style={{ fontSize: 11, color: "var(--t3)" }}>Dinners Hosted</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>
-                  {avgRating ? avgRating.average.toFixed(1) : "—"} ★
-                </div>
-                <div style={{ fontSize: 11, color: "var(--t3)" }}>Avg Rating</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{teamCount}</div>
-                <div style={{ fontSize: 11, color: "var(--t3)" }}>
-                  <Link href="/admin/team" style={{ color: "inherit", textDecoration: "none" }}>
-                    Team Members →
+                <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 16 }}>{identitySubtitle}</div>
+                <div style={{ display: "flex", gap: 28, borderTop: "1px solid var(--bdr)", paddingTop: 16 }}>
+                  <Link href="/admin/dinners" className="rp-stat" style={dtStatStyle}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{dinners.length}</div>
+                    <div style={{ fontSize: 11, color: "var(--t3)" }}>Dinners →</div>
+                  </Link>
+                  <Link href="/admin/reviews" className="rp-stat" style={dtStatStyle}>
+                    {/* Neutral var(--text), not yellow: in this equal-weight peer
+                        stat row the wireframe deliberately does NOT color the
+                        rating (unlike standalone rating callouts elsewhere). */}
+                    <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>
+                      {avgRating ? avgRating.average.toFixed(1) : "—"} ★
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--t3)" }}>Rating →</div>
+                  </Link>
+                  <Link href="/admin/team" className="rp-stat" style={dtStatStyle}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{teamCount}</div>
+                    <div style={{ fontSize: 11, color: "var(--t3)" }}>Team →</div>
                   </Link>
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{partnerSince}</div>
-                <div style={{ fontSize: 11, color: "var(--t3)" }}>Partner Since</div>
-              </div>
+              <Link href="/admin/restaurant/edit" className="btn btn-primary" style={{ flexShrink: 0, textDecoration: "none" }}>
+                ✎ Edit Profile
+              </Link>
             </div>
           </div>
         </div>
@@ -225,34 +246,28 @@ export default async function RestaurantProfilePage() {
                 marginTop: -28, marginBottom: 10, boxShadow: "0 3px 8px rgba(0,0,0,.15)",
               }}
             />
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
               <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text)" }}>{restaurant.name}</div>
               <span className={`badge ${statusBadgeClass[restaurant.status] ?? "badge-slate"}`}>
                 {restaurant.status}
               </span>
             </div>
-            {cuisineTags.length > 0 && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-                {cuisineTags.map((tag) => (
-                  <span key={tag} className="badge badge-slate">{tag}</span>
-                ))}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 16, borderTop: "1px solid var(--bdr)", paddingTop: 10 }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{dinners.length}</div>
-                <div style={{ fontSize: 10, color: "var(--t3)" }}>Dinners</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>
+            <div style={{ fontSize: 11, color: "var(--t3)", marginBottom: 16 }}>{identitySubtitle}</div>
+            <div style={{ display: "flex", gap: 2, borderTop: "1px solid var(--bdr)", paddingTop: 12 }}>
+              <Link href="/admin/dinners" className="rp-stat" style={mStatStyle}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{dinners.length}</div>
+                <div style={{ fontSize: 10, color: "var(--t3)" }}>Dinners →</div>
+              </Link>
+              <Link href="/admin/reviews" className="rp-stat" style={mStatStyle}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
                   {avgRating ? avgRating.average.toFixed(1) : "—"}★
                 </div>
-                <div style={{ fontSize: 10, color: "var(--t3)" }}>Rating</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{teamCount}</div>
-                <div style={{ fontSize: 10, color: "var(--t3)" }}>Team</div>
-              </div>
+                <div style={{ fontSize: 10, color: "var(--t3)" }}>Rating →</div>
+              </Link>
+              <Link href="/admin/team" className="rp-stat" style={mStatStyle}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{teamCount}</div>
+                <div style={{ fontSize: 10, color: "var(--t3)" }}>Team →</div>
+              </Link>
             </div>
           </div>
         </div>

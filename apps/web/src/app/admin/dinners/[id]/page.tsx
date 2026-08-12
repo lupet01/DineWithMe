@@ -90,17 +90,24 @@ export default async function DinnerDetailPage({
     : null;
 
   const badgeClass =
-    dinner.status === "CANCELLED" ? "badge-red" : dinner.status === "LIVE" ? "badge-green" : "badge-blue";
+    dinner.status === "CANCELLED"
+      ? "badge-red"
+      : dinner.status === "LIVE"
+        ? "badge-green"
+        : dinner.status === "COMPLETED"
+          ? "badge-slate"
+          : dinner.status === "DRAFT"
+            ? "badge-draft"
+            : "badge-blue"; // SCHEDULED
 
   const detailsPanel = (
     <div className="card card-pad">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div className="card-title" style={{ marginBottom: 0 }}>Dinner Details</div>
-        {canEdit && (
-          <Link href={`/admin/dinners/${dinner.id}/edit`} className="btn btn-outline btn-sm">
-            Edit Dinner
-          </Link>
-        )}
+        {/* No Edit button here: a dinner's content is editable only while it's a
+            DRAFT (the edit route redirects any non-DRAFT back here), and a DRAFT
+            never renders this detail page — so an Edit link on Details is always
+            a dead round-trip. Editing lives on the Dinners list's DRAFT rows. */}
       </div>
       <div>
         <div className="breakdown-row">

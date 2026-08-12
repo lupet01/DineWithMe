@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, X } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
 import type { MealWithCourses } from "@dinewithme/db";
 import { FilterSheet } from "@/components/ui/filter-sheet";
@@ -21,10 +21,6 @@ const COURSE_LABELS: Record<string, string> = {
 
 function formatPrice(cents: number): string {
   return (cents / 100).toFixed(2);
-}
-
-function formatPercent(value: number | null | undefined): string {
-  return value == null ? "—" : `${Math.round(value * 100)}%`;
 }
 
 interface PhotoPoolEntry {
@@ -226,8 +222,6 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
         .filter((dish) => dish.name.toLowerCase().includes(search.trim().toLowerCase()))
     : [];
 
-  const fillRate = meal.performance?.avgFillRate ?? null;
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {error && (
@@ -237,16 +231,26 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
       )}
 
       <div>
-        <div className="only-desktop" style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
-          ←{" "}
+        <div className="only-desktop-flex" style={{ alignItems: "center", gap: 8, marginBottom: 14 }}>
           <Link
             href="/admin/meals"
             onClick={handleBackNav("/admin/meals")}
-            style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 12,
+              fontWeight: 700,
+              color: "var(--p)",
+              textDecoration: "none",
+              padding: "5px 12px 5px 8px",
+              border: "1px solid var(--bdr)",
+              borderRadius: 20,
+            }}
           >
-            Meals
-          </Link>{" "}
-          / {meal.name}
+            <ArrowLeft style={{ width: 12, height: 12 }} /> Meals
+          </Link>
+          <span style={{ fontSize: 12, color: "var(--t3)" }}>/ {meal.name}</span>
         </div>
         <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 14 }}>
           <Link
@@ -295,52 +299,6 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
             </button>
           </div>
         </div>
-      </div>
-
-      <div>
-        <div className="section-block-title" style={{ marginBottom: 10, opacity: 0.6 }}>
-          Performance (read-only)
-        </div>
-        {meal.performance ? (
-          <div className="stat-grid-4">
-            {/* Dinners Served + Avg Feedback are desktop-only per the wireframe's
-                mobile frame: mobile shows just a 2-stat grid (Fill Rate, Would
-                Return). Hiding these two here leaves exactly those 2 stats in
-                stat-grid-4's mobile 2-col layout, which is visually identical
-                to a dedicated stat-grid-2. */}
-            <div className="stat-card meal-editor-stat-desktop-only">
-              <div className="stat-label">Dinners Served</div>
-              <div className="stat-value" style={{ fontSize: 18 }}>
-                {meal.performance.totalDinners}
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Fill Rate</div>
-              <div
-                className="stat-value"
-                style={{ fontSize: 18, color: fillRate != null && fillRate >= 0.7 ? "var(--green-txt)" : undefined }}
-              >
-                {formatPercent(fillRate)}
-              </div>
-            </div>
-            <div className="stat-card meal-editor-stat-desktop-only">
-              <div className="stat-label">Avg Feedback</div>
-              <div className="stat-value" style={{ fontSize: 18 }}>
-                {meal.performance.avgFeedbackScore != null ? `${meal.performance.avgFeedbackScore.toFixed(1)} ★` : "—"}
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Would Return</div>
-              <div className="stat-value" style={{ fontSize: 18 }}>
-                {formatPercent(meal.performance.avgWouldReturnRate)}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p style={{ fontSize: 12, color: "var(--t3)" }}>
-            No completed dinners for this Meal yet - stats appear once one wraps up.
-          </p>
-        )}
       </div>
 
       <div>

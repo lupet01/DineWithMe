@@ -48,7 +48,7 @@ interface GuestRowProps {
 
 function statusBadgeClass(status: string): string {
   if (status === "ATTENDED" || status === "COMPLETED") return "badge-green";
-  if (status === "CONFIRMED") return "badge-blue";
+  if (status === "CONFIRMED") return "badge-green";
   if (status === "NO_SHOW") return "badge-red";
   return "badge-slate";
 }

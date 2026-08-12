@@ -4,7 +4,7 @@ import type { MealWithCoursesAndPerformance, MealCourseWithOptions } from "@dine
 const COURSE_ORDER = ["STARTER", "MAIN", "DESSERT"] as const;
 
 function formatPrice(cents: number): string {
-  return `R${(cents / 100).toFixed(2)}`;
+  return `R ${Math.round(cents / 100)}`;
 }
 
 function formatPercent(value: number | null | undefined): string {

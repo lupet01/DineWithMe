@@ -77,18 +77,9 @@ export function RestaurantOverview({
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }} className="only-desktop-flex">
-        <Link href="/admin/restaurant/edit" className="btn btn-primary" style={{ textDecoration: "none" }}>
-          ✎ Edit Profile
-        </Link>
-      </div>
-      <Link
-        href="/admin/restaurant/edit"
-        className="btn btn-primary btn-block only-mobile-flex"
-        style={{ textDecoration: "none", marginBottom: 14, justifyContent: "center" }}
-      >
-        ✎ Edit Profile
-      </Link>
+      {/* Edit Profile now lives in the identity header row (desktop, see
+          page.tsx) and in the mobile sticky action bar at the foot of this
+          scroll (§sec-restaurant-profile) - no standalone Edit row here. */}
 
       {/* Business Details + Contact + Hours, merged into one quiet-divider
           card (iOS-Settings-style grouped read), matching the wireframe. */}
@@ -319,6 +310,20 @@ export function RestaurantOverview({
             );
           })}
         </div>
+      </div>
+
+      {/* Mobile-only sticky Edit Profile bar, matching the wireframe's
+          .m-action-bar at the foot of the Overview scroll (the desktop Edit
+          control lives in the identity header instead). Reuses the existing
+          shared .m-action-bar class (auto-hidden ≥768px). */}
+      <div className="m-action-bar">
+        <Link
+          href="/admin/restaurant/edit"
+          className="btn btn-primary btn-block"
+          style={{ textDecoration: "none", justifyContent: "center" }}
+        >
+          ✎ Edit Profile
+        </Link>
       </div>
     </>
   );

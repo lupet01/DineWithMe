@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import type { MenuItem } from "@prisma/client";
 import {
   createMenuItem,
@@ -29,7 +29,7 @@ interface DishLibraryManagerProps {
 }
 
 function formatPrice(cents: number): string {
-  return `R${(cents / 100).toFixed(2)}`;
+  return `R ${Math.round(cents / 100)}`;
 }
 
 export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCounts }: DishLibraryManagerProps) {
@@ -191,12 +191,25 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
           title + "+" icon button treatment as Meals' own header, no
           back-chevron (that used to point back to Meals, which now reads
           as a lateral switch, not "back"). */}
-      <div className="only-desktop" style={{ fontSize: 12, color: "var(--t3)", marginBottom: 14 }}>
-        ←{" "}
-        <Link href="/admin/meals" style={{ color: "var(--p)", fontWeight: 600, textDecoration: "none" }}>
-          Meals
-        </Link>{" "}
-        / Dish Library
+      <div className="only-desktop-flex" style={{ alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <Link
+          href="/admin/meals"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            fontSize: 12,
+            fontWeight: 700,
+            color: "var(--p)",
+            textDecoration: "none",
+            padding: "5px 12px 5px 8px",
+            border: "1px solid var(--bdr)",
+            borderRadius: 20,
+          }}
+        >
+          <ArrowLeft style={{ width: 12, height: 12 }} /> Meals
+        </Link>
+        <span style={{ fontSize: 12, color: "var(--t3)" }}>/ Dish Library</span>
       </div>
       <div className="only-mobile-flex" style={{ alignItems: "center", gap: 10, marginBottom: 16 }}>
         <h1 className="pg-title" style={{ flex: 1 }}>

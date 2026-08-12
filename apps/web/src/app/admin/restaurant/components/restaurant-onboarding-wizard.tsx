@@ -577,16 +577,7 @@ export function RestaurantOnboardingWizard() {
       {step === 4 && (
         <>
           <div className="card card-pad onboarding-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div className="card-title">Review Your Details</div>
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                style={{ fontSize: 12, color: "var(--p)", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}
-              >
-                ← Edit any field
-              </button>
-            </div>
+            <div className="card-title" style={{ marginBottom: 12 }}>Review Your Details</div>
             <div style={{ borderTop: "1px solid var(--bdr)", paddingTop: 4 }}>
               {[
                 ["Restaurant Name", formData.name],
@@ -616,6 +607,16 @@ export function RestaurantOnboardingWizard() {
                   </div>
                 ))}
             </div>
+            {/* Trailing pencil, placed BELOW the rows (not a leading arrow in the
+                header) so it can't be mistaken for the Back control — wireframe
+                §sec-restaurant-onboarding Step 4. */}
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              style={{ marginTop: 12, fontSize: 12, color: "var(--p)", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              Edit a field above ✎
+            </button>
           </div>
 
           <div
