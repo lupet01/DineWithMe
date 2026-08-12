@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmModal } from "../../../components/confirm-modal";
 import { GuestRow } from "./guest-row";
 import { checkInAllSeats } from "../actions";
 
@@ -40,8 +42,10 @@ interface GuestListPanelProps {
  */
 export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPlatformAdmin, isCompleted = false, ratingsByGuestId = {} }: GuestListPanelProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [isCheckingInAll, setIsCheckingInAll] = useState(false);
+  const [checkInAllOpen, setCheckInAllOpen] = useState(false);
 
   const sortedSeats = useMemo(() => {
     return [...seats].sort((a, b) => {
@@ -67,16 +71,18 @@ export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPla
 
   const handleCheckInAll = async () => {
     if (isCheckingInAll) return;
-    if (!confirm("Check in every confirmed guest for this dinner?")) return;
 
     setIsCheckingInAll(true);
     const result = await checkInAllSeats(dinnerId);
     setIsCheckingInAll(false);
 
     if (!result.success) {
-      alert(result.error || "Failed to check in guests");
+      toast.error(result.error || "Failed to check in guests");
       return;
     }
+    const count = result.data?.checkedIn ?? 0;
+    toast.success(`Checked in ${count} ${count === 1 ? "guest" : "guests"}`);
+    setCheckInAllOpen(false);
     router.refresh();
   };
 
@@ -88,7 +94,7 @@ export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPla
           <div style={{ display: "flex", gap: 8 }}>
             <button
               type="button"
-              onClick={handleCheckInAll}
+              onClick={() => setCheckInAllOpen(true)}
               disabled={isCheckingInAll || !anyPendingCheckIn}
               className="btn btn-sm btn-outline"
             >
@@ -156,6 +162,16 @@ export function GuestListPanel({ dinnerId, restaurantId, seats, canRefund, isPla
           )}
         </>
       )}
+
+      <ConfirmModal
+        open={checkInAllOpen}
+        onClose={() => setCheckInAllOpen(false)}
+        onConfirm={handleCheckInAll}
+        tone="green"
+        title="Check in every confirmed guest?"
+        description="This marks all confirmed guests for this dinner as checked in."
+        confirmLabel="Check In All"
+      />
     </div>
   );
 }

@@ -31,9 +31,11 @@ export function PhotoOptionsSheet({
   onDelete,
   isBusy,
 }: PhotoOptionsSheetProps) {
+  // Confirmation is handled by the parent grid's ConfirmModal (the wireframe
+  // sec-action-modals component) — opening a modal on top of this sheet would
+  // nest two overlays, so the sheet just delegates the request.
   const handleDelete = () => {
     if (!item) return;
-    if (!window.confirm("Delete this photo? This cannot be undone.")) return;
     onDelete(item.id);
   };
 

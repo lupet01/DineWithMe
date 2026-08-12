@@ -11,6 +11,7 @@ import { updateMeal, deleteMeal, addCourseOption, removeCourseOption } from "../
 import { ConfirmModal } from "../../../components/confirm-modal";
 import { DishFormSheet, emptyDishFormValues, type DishFormValues } from "../../../dish-library/components/dish-form-sheet";
 import { createMenuItem, type MenuItemInput } from "../../../dish-library/actions";
+import { useToast } from "@/components/ui/toast";
 
 const COURSE_LABELS: Record<string, string> = {
   STARTER: "Starter",
@@ -56,6 +57,7 @@ function DishThumb({
 
 export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [name, setName] = useState(meal.name);
   const [price, setPrice] = useState(formatPrice(meal.suggestedPricePerSeatCents));
   const [isActive, setIsActive] = useState(meal.isActive);
@@ -115,9 +117,12 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
     setSaving(false);
 
     if (!result.success) {
-      setError(result.error || "Failed to save meal");
+      const message = result.error || "Failed to save meal";
+      setError(message);
+      toast.error(message);
       return;
     }
+    toast.success("Saved");
     router.refresh();
   };
 
@@ -127,10 +132,13 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
     setDeleting(false);
 
     if (!result.success) {
-      setError(result.error || "Failed to delete meal");
+      const message = result.error || "Failed to delete meal";
+      setError(message);
+      toast.error(message);
       setDeleteConfirmOpen(false);
       return;
     }
+    toast.success("Meal deleted");
     router.push("/admin/meals");
   };
 
@@ -140,10 +148,13 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
     setBusyOptionId(null);
 
     if (!result.success) {
-      setError(result.error || "Failed to add dish option");
+      const message = result.error || "Failed to add dish option";
+      setError(message);
+      toast.error(message);
       return;
     }
     closePicker();
+    toast.success("Dish added");
     router.refresh();
   };
 
@@ -172,7 +183,9 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
     setIsSavingDish(false);
 
     if (!result.success || !result.data) {
-      setAddDishError(result.error || "Failed to create dish");
+      const message = result.error || "Failed to create dish";
+      setAddDishError(message);
+      toast.error(message);
       return;
     }
 
@@ -188,9 +201,12 @@ export function MealEditor({ meal, dishLibrary, photoPool }: MealEditorProps) {
     setBusyOptionId(null);
 
     if (!result.success) {
-      setError(result.error || "Failed to remove dish option");
+      const message = result.error || "Failed to remove dish option";
+      setError(message);
+      toast.error(message);
       return;
     }
+    toast.success("Dish removed");
     router.refresh();
   };
 

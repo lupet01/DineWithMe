@@ -19,6 +19,7 @@ import {
   type DishFormValues,
 } from "./dish-form-sheet";
 import { ConfirmModal } from "../../components/confirm-modal";
+import { useToast } from "@/components/ui/toast";
 
 interface DishLibraryManagerProps {
   restaurantId: string;
@@ -32,6 +33,7 @@ function formatPrice(cents: number): string {
 }
 
 export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCounts }: DishLibraryManagerProps) {
+  const { toast } = useToast();
   const [items, setItems] = useState<MenuItem[]>(menuItems);
   const [sheet, setSheet] = useState<{ mode: "add" } | { mode: "edit"; item: MenuItem } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<MenuItem | null>(null);
@@ -75,10 +77,13 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
     setIsSaving(false);
 
     if (!result.success || !result.data) {
-      setFormError(result.error || "Failed to create dish");
+      const message = result.error || "Failed to create dish";
+      setFormError(message);
+      toast.error(message);
       return;
     }
 
+    toast.success("Dish added");
     setItems((prev) => [
       ...prev,
       {
@@ -113,10 +118,13 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
     setIsSaving(false);
 
     if (!result.success) {
-      setFormError(result.error || "Failed to update dish");
+      const message = result.error || "Failed to update dish";
+      setFormError(message);
+      toast.error(message);
       return;
     }
 
+    toast.success("Dish updated");
     setItems((prev) =>
       prev.map((i) =>
         i.id === item.id
@@ -144,11 +152,14 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
     setTogglingId(null);
 
     if (!result.success) {
-      setListError(result.error || "Failed to update availability");
+      const message = result.error || "Failed to update availability";
+      setListError(message);
+      toast.error(message);
       return;
     }
 
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isAvailable: !i.isAvailable } : i)));
+    toast.success(item.isAvailable ? "Dish marked unavailable" : "Dish marked available");
   };
 
   const handleDelete = async (item: MenuItem) => {
@@ -158,12 +169,15 @@ export function DishLibraryManager({ restaurantId, menuItems, photoPool, usageCo
     setDeletingId(null);
 
     if (!result.success) {
-      setListError(result.error || "Failed to delete dish");
+      const message = result.error || "Failed to delete dish";
+      setListError(message);
+      toast.error(message);
       return;
     }
 
     setItems((prev) => prev.filter((i) => i.id !== item.id));
     setPendingDelete(null);
+    toast.success("Dish removed");
   };
 
   const photo = (item: MenuItem) => (item.mediaAssetId ? photoPool.find((p) => p.id === item.mediaAssetId) : undefined);

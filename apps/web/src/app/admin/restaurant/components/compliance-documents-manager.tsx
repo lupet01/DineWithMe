@@ -9,6 +9,8 @@ import {
   requestComplianceUploadUrl,
   saveComplianceDocument,
 } from "../compliance-actions";
+import { ConfirmModal } from "../../components/confirm-modal";
+import { useToast } from "@/components/ui/toast";
 
 interface ComplianceDocumentsManagerProps {
   restaurantId: string;
@@ -34,11 +36,13 @@ function formatFileSize(bytes: number) {
  */
 export function ComplianceDocumentsManager({ restaurantId, documents }: ComplianceDocumentsManagerProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [docType, setDocType] = useState<ComplianceDocType>("BUSINESS_REGISTRATION");
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; fileName: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,18 +88,20 @@ export function ComplianceDocumentsManager({ restaurantId, documents }: Complian
 
       setStagedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      toast.success("Document uploaded");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDelete = async (documentId: string, fileName: string) => {
-    if (deletingId) return;
-    const confirmed = confirm(`Delete "${fileName}"? This cannot be undone.`);
-    if (!confirmed) return;
+  const confirmDelete = async () => {
+    if (!pendingDelete || deletingId) return;
+    const documentId = pendingDelete.id;
 
     setDeletingId(documentId);
     setError(null);
@@ -103,9 +109,13 @@ export function ComplianceDocumentsManager({ restaurantId, documents }: Complian
     setDeletingId(null);
 
     if (!result.success) {
-      setError(result.error || "Failed to delete document");
+      const message = result.error || "Failed to delete document";
+      setError(message);
+      toast.error(message);
       return;
     }
+    setPendingDelete(null);
+    toast.success("Document deleted");
     router.refresh();
   };
 
@@ -149,7 +159,7 @@ export function ComplianceDocumentsManager({ restaurantId, documents }: Complian
                     style={{ width: 26, height: 26, color: "var(--red-txt)" }}
                     aria-label={`Delete ${doc.fileName}`}
                     disabled={deletingId === doc.id}
-                    onClick={() => handleDelete(doc.id, doc.fileName)}
+                    onClick={() => setPendingDelete({ id: doc.id, fileName: doc.fileName })}
                   >
                     <svg width={14} height={14}><use href="#ic-trash" /></svg>
                   </button>
@@ -242,6 +252,20 @@ export function ComplianceDocumentsManager({ restaurantId, documents }: Complian
 
         {error && <p className="field-error" style={{ marginTop: 10 }}>{error}</p>}
       </div>
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={confirmDelete}
+        tone="red"
+        title="Delete Document"
+        description={
+          pendingDelete
+            ? `Delete "${pendingDelete.fileName}"? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

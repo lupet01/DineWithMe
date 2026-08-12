@@ -10,6 +10,8 @@ import { MediaTabs } from "./media-tabs";
 import { FeaturedPhoto } from "./featured-photo";
 import { PhotoTile } from "./photo-tile";
 import { PhotoOptionsSheet } from "./photo-options-sheet";
+import { ConfirmModal } from "../../components/confirm-modal";
+import { useToast } from "@/components/ui/toast";
 
 type MediaTab = "ALL" | "PROFILE" | "DISH" | "DINNER";
 
@@ -26,12 +28,14 @@ const SOURCE_BY_TAB: Record<Exclude<MediaTab, "ALL">, MediaLibraryItem["source"]
 
 export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<MediaTab>("ALL");
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [optionsItem, setOptionsItem] = useState<MediaLibraryItem | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const counts = useMemo(
@@ -104,9 +108,12 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
         throw new Error(saveResult.error || "Failed to save photo");
       }
 
+      toast.success("Photo uploaded");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -119,23 +126,39 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
     const result = await setFeaturedPhoto(restaurantId, mediaAssetId);
     setBusyId(null);
     if (!result.success) {
-      setError(result.error || "Failed to set featured photo");
+      const message = result.error || "Failed to set featured photo";
+      setError(message);
+      toast.error(message);
       return;
     }
     setOptionsItem(null);
+    toast.success("Featured photo updated");
     router.refresh();
   };
 
-  const handleDelete = async (mediaAssetId: string) => {
+  // The options sheet delegates its "Delete Photo" tap here; we close the
+  // sheet and open the styled ConfirmModal instead of a native confirm (no
+  // nested-modal-over-sheet).
+  const handleRequestDelete = (mediaAssetId: string) => {
+    setOptionsItem(null);
+    setPendingDeleteId(mediaAssetId);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const mediaAssetId = pendingDeleteId;
     setBusyId(mediaAssetId);
     setError(null);
     const result = await deleteMediaAsset(mediaAssetId, restaurantId);
     setBusyId(null);
     if (!result.success) {
-      setError(result.error || "Failed to delete photo");
+      const message = result.error || "Failed to delete photo";
+      setError(message);
+      toast.error(message);
       return;
     }
-    setOptionsItem(null);
+    setPendingDeleteId(null);
+    toast.success("Photo deleted");
     router.refresh();
   };
 
@@ -253,8 +276,18 @@ export function MediaLibraryGrid({ restaurantId, items }: MediaLibraryGridProps)
         open={optionsItem !== null}
         onClose={() => setOptionsItem(null)}
         onSetFeatured={handleSetFeatured}
-        onDelete={handleDelete}
+        onDelete={handleRequestDelete}
         isBusy={optionsItem !== null && busyId === optionsItem.id}
+      />
+
+      <ConfirmModal
+        open={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={confirmDelete}
+        tone="red"
+        title="Delete Photo"
+        description="Delete this photo? This cannot be undone. Any Meal or Dinner using it will fall back to a placeholder."
+        confirmLabel="Delete"
       />
     </>
   );

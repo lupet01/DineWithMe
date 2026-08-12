@@ -8,6 +8,8 @@ import { inviteMember, revokeInvite, removeMember, changeRole } from "../actions
 import { TeamRoster } from "./team-roster";
 import { PendingInvites } from "./pending-invites";
 import { InviteMemberSheet } from "./invite-member-sheet";
+import { ConfirmModal } from "../../components/confirm-modal";
+import { useToast } from "@/components/ui/toast";
 
 interface Member {
   userId: string;
@@ -42,10 +44,12 @@ export function TeamManager({
   currentUserId,
 }: TeamManagerProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [inviting, setInviting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null);
 
   const handleInvite = async (email: string, role: "OWNER" | "MANAGER") => {
     setError(null);
@@ -54,11 +58,14 @@ export function TeamManager({
     setSaving(false);
 
     if (!result.success) {
-      setError(result.error || "Failed to send invite");
+      const message = result.error || "Failed to send invite";
+      setError(message);
+      toast.error(message);
       return;
     }
 
     setInviting(false);
+    toast.success("Invite sent");
     router.refresh();
   };
 
@@ -67,21 +74,35 @@ export function TeamManager({
     const result = await revokeInvite(restaurantId, inviteId);
     setBusyId(null);
     if (!result.success) {
-      setError(result.error || "Failed to revoke invite");
+      const message = result.error || "Failed to revoke invite";
+      setError(message);
+      toast.error(message);
       return;
     }
+    toast.success("Invite revoked");
     router.refresh();
   };
 
-  const handleRemove = async (userId: string, name: string) => {
-    if (!confirm(`Remove ${name} from the team?`)) return;
+  // Opens the styled confirm modal (wireframe sec-action-modals) instead of a
+  // native confirm(); the actual removal runs from confirmRemove below.
+  const handleRemove = (userId: string, name: string) => {
+    setRemoveTarget({ userId, name });
+  };
+
+  const confirmRemove = async () => {
+    if (!removeTarget) return;
+    const { userId } = removeTarget;
     setBusyId(userId);
     const result = await removeMember(restaurantId, userId);
     setBusyId(null);
     if (!result.success) {
-      setError(result.error || "Failed to remove team member");
+      const message = result.error || "Failed to remove team member";
+      setError(message);
+      toast.error(message);
       return;
     }
+    setRemoveTarget(null);
+    toast.success("Team member removed");
     router.refresh();
   };
 
@@ -91,9 +112,12 @@ export function TeamManager({
     const result = await changeRole(restaurantId, userId, newRole);
     setBusyId(null);
     if (!result.success) {
-      setError(result.error || "Failed to change role");
+      const message = result.error || "Failed to change role";
+      setError(message);
+      toast.error(message);
       return;
     }
+    toast.success("Role updated");
     router.refresh();
   };
 
@@ -172,6 +196,20 @@ export function TeamManager({
         onSubmit={handleInvite}
         isSaving={saving}
         error={error}
+      />
+
+      <ConfirmModal
+        open={removeTarget !== null}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={confirmRemove}
+        tone="red"
+        title="Remove Member"
+        description={
+          removeTarget
+            ? `Remove ${removeTarget.name} from the team? They'll immediately lose access to manage ${restaurantName}.`
+            : ""
+        }
+        confirmLabel="Remove Member"
       />
     </>
   );

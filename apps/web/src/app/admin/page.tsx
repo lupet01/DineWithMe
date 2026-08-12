@@ -16,6 +16,7 @@ import { formatAmount } from "@dinewithme/config/src/payment";
 import { Role } from "@dinewithme/shared";
 import { LiveMomentBanner } from "./components/live-moment-banner";
 import { RevenueRangePicker } from "./components/revenue-range-picker";
+import { RevenueChart } from "@/components/ui/revenue-chart";
 import { rangeToSince } from "./lib/date-range";
 import { updateDinnerStatus } from "./dinners/actions";
 import { checkInGuest } from "./dinners/[id]/actions";
@@ -54,6 +55,7 @@ export default async function AdminDashboardPage({
     liveDinner,
     complianceDocuments,
     payouts,
+    revenueBuckets,
   ] =
     restaurant && !isPending
       ? await Promise.all([
@@ -69,8 +71,9 @@ export default async function AdminDashboardPage({
           dinnerRepository.findLiveByRestaurant(restaurant.id),
           complianceDocumentRepository.findByRestaurant(restaurant.id),
           payoutRepository.findByRestaurant(restaurant.id),
+          paymentIntentRepository.sumSucceededAmountByBucketForRestaurantSince(restaurant.id, since),
         ])
-      : [{ activeSeats: 0, totalGuests: 0 }, 0, 0, null, [], null, [], []];
+      : [{ activeSeats: 0, totalGuests: 0 }, 0, 0, null, [], null, [], [], []];
 
   // Platform-wide audit log is only safe to show a platform admin - a
   // restaurant admin should never see other restaurants' activity, and
@@ -189,16 +192,42 @@ export default async function AdminDashboardPage({
         </div>
       )}
 
-      {/* Revenue range picker */}
+      {/* Revenue chart — leads the page and is the only route into the full
+          Analytics report (sec-dashboard: "a full-width revenue chart leads
+          the page ... followed by KPIs"). RevenueChart renders the "Revenue"
+          title, big total, delta, gridlined line chart, and x-axis date row;
+          the in-card range picker + "View full analytics →" link sit in the
+          header row above it, matching the wireframe. */}
       {!isPending && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-          <RevenueRangePicker current={range} />
+        <div className="card card-pad" style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 6,
+            }}
+          >
+            <RevenueRangePicker current={range} />
+            <Link
+              href="/admin/analytics"
+              style={{ fontSize: 12.5, color: "var(--p)", fontWeight: 600 }}
+            >
+              View full analytics →
+            </Link>
+          </div>
+          <RevenueChart
+            totalLabel={formatAmount(revenue)}
+            deltaPct={revenueDeltaPct}
+            buckets={revenueBuckets}
+          />
         </div>
       )}
 
       {/* Stats Grid — desktop: full labels + captions on every card */}
       <div className="only-desktop" style={{ marginBottom: 20 }}>
-      <div className="stat-grid-4" style={{ opacity: isPending ? 0.5 : 1 }}>
+      <div className="stat-grid-3" style={{ opacity: isPending ? 0.5 : 1 }}>
         <div className="stat-card">
           <div className="stat-label">Upcoming Dinners</div>
           <div className="stat-value">{isPending ? "—" : upcomingDinners.length}</div>
@@ -228,15 +257,6 @@ export default async function AdminDashboardPage({
           )}
         </div>
         <div className="stat-card">
-          <div className="stat-label">Revenue</div>
-          <div className="stat-value">{isPending ? "—" : formatAmount(revenue)}</div>
-          {!isPending && revenueDeltaPct !== null && (
-            <div className="stat-sub">
-              {revenueDeltaPct >= 0 ? "↑" : "↓"} {Math.abs(revenueDeltaPct)}% vs prior period
-            </div>
-          )}
-        </div>
-        <div className="stat-card">
           <div className="stat-label">Avg Dinner Rating</div>
           <div className="stat-value">
             {isPending ? "—" : avgRating ? `${avgRating.average.toFixed(1)} ★` : "—"}
@@ -254,7 +274,7 @@ export default async function AdminDashboardPage({
 
       {/* Stats Grid — mobile: shorter labels, only the first card keeps a caption (matches wireframe's mobile frame exactly) */}
       <div className="only-mobile" style={{ marginBottom: 14 }}>
-      <div className="stat-grid-4" style={{ opacity: isPending ? 0.5 : 1 }}>
+      <div className="stat-grid-3" style={{ opacity: isPending ? 0.5 : 1 }}>
         <div className="stat-card">
           <div className="stat-label">Upcoming</div>
           <div className="stat-value">{isPending ? "—" : upcomingDinners.length}</div>
@@ -273,12 +293,6 @@ export default async function AdminDashboardPage({
         <div className="stat-card">
           <div className="stat-label">Seats Confirmed</div>
           <div className="stat-value">{isPending ? "—" : stats.activeSeats}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Revenue</div>
-          <div className="stat-value" style={{ fontSize: 18 }}>
-            {isPending ? "—" : formatAmount(revenue)}
-          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Avg Rating</div>

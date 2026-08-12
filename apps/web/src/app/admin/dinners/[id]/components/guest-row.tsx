@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatAmount } from "@dinewithme/config/src/payment";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmModal } from "../../../components/confirm-modal";
 import { checkInGuest, refundSeat } from "../actions";
 
 interface Seat {
@@ -60,6 +62,8 @@ export function GuestRow({
   rating,
 }: GuestRowProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const { toast } = useToast();
 
   const guest = seat.confirmedByUser;
   const name = guest
@@ -72,22 +76,21 @@ export function GuestRow({
     const result = await checkInGuest(dinnerId, seat.id);
     setIsUpdating(false);
     if (!result.success) {
-      alert(result.error || "Failed to check in guest");
+      toast.error(result.error || "Failed to check in guest");
+    } else {
+      toast.success("Guest checked in");
     }
   };
 
   const handleRefund = async () => {
     if (isUpdating) return;
-    const confirmed = confirm(`Refund ${name}'s booking? This cannot be undone.`);
-    if (!confirmed) return;
-
     setIsUpdating(true);
     const result = await refundSeat(dinnerId, seat.id);
     setIsUpdating(false);
     if (!result.success) {
-      alert(result.error || "Failed to refund seat");
+      toast.error(result.error || "Failed to refund seat");
     } else {
-      alert("Refund issued.");
+      toast.success("Booking refunded");
     }
   };
 
@@ -151,7 +154,7 @@ export function GuestRow({
             </button>
           )}
           {canRefund && (
-            <button onClick={handleRefund} disabled={isUpdating} className="btn btn-sm btn-red">
+            <button onClick={() => setRefundOpen(true)} disabled={isUpdating} className="btn btn-sm btn-red">
               Refund
             </button>
           )}
@@ -159,6 +162,19 @@ export function GuestRow({
             <span style={{ fontSize: 12, color: "var(--t3)" }}>No actions</span>
           )}
         </div>
+        <ConfirmModal
+          open={refundOpen}
+          onClose={() => setRefundOpen(false)}
+          onConfirm={async () => {
+            await handleRefund();
+            setRefundOpen(false);
+          }}
+          tone="red"
+          title={`Refund ${name}'s booking?`}
+          description="The guest is refunded for this seat and their booking is released."
+          consequences={["This can't be undone"]}
+          confirmLabel="Refund Booking"
+        />
       </td>
     </tr>
   );

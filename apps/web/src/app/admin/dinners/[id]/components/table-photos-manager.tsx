@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Trash2, Upload, X } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmModal } from "../../../components/confirm-modal";
 import {
   requestTablePhotoUploadUrl,
   saveTablePhoto,
@@ -40,10 +42,12 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function TablePhotosManager({ dinnerId, photos, isPlatformAdmin }: TablePhotosManagerProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,9 +76,12 @@ export function TablePhotosManager({ dinnerId, photos, isPlatformAdmin }: TableP
         throw new Error(saveResult.error || "Failed to save photo");
       }
 
+      toast.success("Photo uploaded");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -85,16 +92,19 @@ export function TablePhotosManager({ dinnerId, photos, isPlatformAdmin }: TableP
 
   const handleDelete = async (mediaAssetId: string) => {
     if (actioningId) return;
-    if (!confirm("Delete this photo? This cannot be undone.")) return;
 
     setActioningId(mediaAssetId);
     setError(null);
     const result = await deleteTablePhoto(dinnerId, mediaAssetId);
     setActioningId(null);
     if (!result.success) {
-      setError(result.error || "Failed to delete photo");
+      const message = result.error || "Failed to delete photo";
+      setError(message);
+      toast.error(message);
       return;
     }
+    setDeleteTargetId(null);
+    toast.success("Photo deleted");
     router.refresh();
   };
 
@@ -156,7 +166,7 @@ export function TablePhotosManager({ dinnerId, photos, isPlatformAdmin }: TableP
                 />
                 {!isPlatformAdmin && (
                   <button
-                    onClick={() => handleDelete(photo.mediaAssetId)}
+                    onClick={() => setDeleteTargetId(photo.mediaAssetId)}
                     disabled={actioningId === photo.id}
                     className="m-icon-btn"
                     style={{ position: "absolute", top: 6, right: 6, background: "rgba(255,255,255,.92)", color: "var(--red-txt)" }}
@@ -247,6 +257,19 @@ export function TablePhotosManager({ dinnerId, photos, isPlatformAdmin }: TableP
       )}
 
       {error && <p className="field-error" style={{ marginTop: 8 }}>{error}</p>}
+
+      <ConfirmModal
+        open={deleteTargetId !== null}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={() => {
+          if (deleteTargetId) return handleDelete(deleteTargetId);
+        }}
+        tone="red"
+        title="Delete this photo?"
+        description="This photo is removed from the dinner."
+        consequences={["This can't be undone"]}
+        confirmLabel="Delete Photo"
+      />
     </div>
   );
 }

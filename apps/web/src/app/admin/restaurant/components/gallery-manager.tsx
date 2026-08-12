@@ -6,6 +6,8 @@ import { ImageUpload } from "./image-upload";
 import { X, Loader2 } from "lucide-react";
 import { deleteMedia } from "../media-actions";
 import { useRouter } from "next/navigation";
+import { ConfirmModal } from "../../components/confirm-modal";
+import { useToast } from "@/components/ui/toast";
 
 interface GalleryManagerProps {
   restaurantId: string;
@@ -14,33 +16,36 @@ interface GalleryManagerProps {
 
 export function GalleryManager({ restaurantId, media }: GalleryManagerProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const galleryImages = media.filter((m) => m.type === "GALLERY");
   const canAddMore = galleryImages.length < 10;
 
-  const handleDelete = async (mediaId: string) => {
-    if (!confirm("Are you sure you want to delete this image?")) {
-      return;
-    }
-
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const mediaId = pendingDeleteId;
     setDeleting(mediaId);
     try {
       const result = await deleteMedia(mediaId);
       if (result.success) {
+        setPendingDeleteId(null);
+        toast.success("Photo deleted");
         router.refresh();
       } else {
-        alert(`Failed to delete image: ${result.error}`);
+        toast.error(result.error || "Failed to delete image");
       }
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Failed to delete image");
+      toast.error("Failed to delete image");
     } finally {
       setDeleting(null);
     }
   };
 
   const handleUploadComplete = () => {
+    toast.success("Photo uploaded");
     router.refresh();
   };
 
@@ -70,7 +75,7 @@ export function GalleryManager({ restaurantId, media }: GalleryManagerProps) {
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
                 <button
                   type="button"
-                  onClick={() => handleDelete(image.id)}
+                  onClick={() => setPendingDeleteId(image.id)}
                   disabled={deleting === image.id}
                   className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
                 >
@@ -104,6 +109,16 @@ export function GalleryManager({ restaurantId, media }: GalleryManagerProps) {
           </p>
         </div>
       )}
+
+      <ConfirmModal
+        open={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={confirmDelete}
+        tone="red"
+        title="Delete Image"
+        description="Are you sure you want to delete this image? This cannot be undone."
+        confirmLabel="Delete"
+      />
     </div>
   );
 }
