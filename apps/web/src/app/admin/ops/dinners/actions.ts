@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult, Role } from "@dinewithme/shared";
 import {
   userRepository,
   dinnerRepository,
@@ -11,15 +12,8 @@ import {
   AuditAction,
   AuditEntity,
 } from "@dinewithme/db";
-import { Role } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
 import { refundPaymentIntent } from "@/app/api/payments/refund/service";
-
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -133,10 +127,7 @@ export async function approveDinnerCancellation(
     return { success: true, data: { refunded, failed } };
   } catch (error) {
     console.error("Error approving dinner cancellation:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to approve cancellation",
-    };
+    return actionFailure(error, "Failed to approve cancellation");
   }
 }
 
@@ -175,9 +166,6 @@ export async function rejectDinnerCancellation(requestId: string): Promise<Actio
     return { success: true };
   } catch (error) {
     console.error("Error rejecting dinner cancellation:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to reject cancellation",
-    };
+    return actionFailure(error, "Failed to reject cancellation");
   }
 }

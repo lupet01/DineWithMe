@@ -6,15 +6,10 @@ import {
   dinnerMediaRepository,
   mediaAssetRepository,
 } from "@dinewithme/db";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { getStorage } from "@dinewithme/storage";
 import { requireAuthUser } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 const ALLOWED_IMAGE_CONTENT_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
@@ -71,10 +66,7 @@ export async function getTablePhotos(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to load table photos",
-    };
+    return actionFailure(error, "Failed to load table photos");
   }
 }
 
@@ -109,10 +101,7 @@ export async function requestTablePhotoUploadUrl(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to prepare upload",
-    };
+    return actionFailure(error, "Failed to prepare upload");
   }
 }
 
@@ -143,10 +132,7 @@ export async function saveTablePhoto(
 
     return { success: true, data: { dinnerMediaId: dinnerMedia.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save photo",
-    };
+    return actionFailure(error, "Failed to save photo");
   }
 }
 
@@ -171,10 +157,7 @@ export async function deleteTablePhoto(dinnerId: string, mediaAssetId: string): 
     revalidatePath(`/admin/dinners/${dinnerId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete photo",
-    };
+    return actionFailure(error, "Failed to delete photo");
   }
 }
 
@@ -204,9 +187,6 @@ export async function requestListingPromotion(dinnerId: string, dinnerMediaId: s
     revalidatePath(`/admin/dinners/${dinnerId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to request promotion",
-    };
+    return actionFailure(error, "Failed to request promotion");
   }
 }

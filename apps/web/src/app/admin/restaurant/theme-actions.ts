@@ -6,9 +6,7 @@ import { requireAuthUser } from "@/lib/auth/server";
 import { restaurantRepository } from "@dinewithme/db";
 import { track } from "@dinewithme/analytics";
 
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 
 /**
  * Toggle theme enablement for a restaurant
@@ -138,9 +136,6 @@ export async function toggleThemeForRestaurant(
     };
   } catch (error) {
     console.error("[Theme] Error toggling theme:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to toggle theme",
-    };
+    return actionFailure(error, "Failed to toggle theme");
   }
 }

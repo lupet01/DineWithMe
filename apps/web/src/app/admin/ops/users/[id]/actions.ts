@@ -2,14 +2,10 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { userRepository, trustProfileRepository, auditLogger } from "@dinewithme/db";
-import { Role } from "@dinewithme/shared";
+import { Role, actionFailure, type ActionResult } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -39,10 +35,7 @@ export async function setUserFlagged(userId: string, flagged: boolean): Promise<
     revalidatePath("/admin/ops/users");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update user",
-    };
+    return actionFailure(error, "Failed to update user");
   }
 }
 
@@ -91,9 +84,6 @@ export async function updateUserRole(targetUserId: string, newRole: Role): Promi
     revalidatePath("/admin/ops/users");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update user role",
-    };
+    return actionFailure(error, "Failed to update user role");
   }
 }

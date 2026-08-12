@@ -1,14 +1,8 @@
 "use server";
 
 import { teamInviteRepository, restaurantRepository, userRepository } from "@dinewithme/db";
-import { Role } from "@dinewithme/shared";
+import { type ActionResult, Role } from "@dinewithme/shared";
 import { requireAuthUser } from "@/lib/auth/server";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 /**
  * Accepts a TeamInvite for the currently signed-in user. Works for both

@@ -117,12 +117,12 @@ export function EditRestaurantForm({ restaurant }: EditRestaurantFormProps) {
       ]);
 
       if (!restaurantResult.success) {
-        setError(restaurantResult.error);
+        setError(restaurantResult.error ?? "Something went wrong");
         if (restaurantResult.fieldErrors) setFieldErrors(restaurantResult.fieldErrors);
         return;
       }
       if (!hoursResult.success) {
-        setError(hoursResult.error);
+        setError(hoursResult.error ?? "Something went wrong");
         return;
       }
       router.push("/admin/restaurant");

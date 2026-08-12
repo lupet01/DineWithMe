@@ -1,14 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { restaurantRepository, encrypt, auditLogger } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requireOwner(restaurantId: string) {
   const user = await requireAuthUser();
@@ -94,9 +89,6 @@ export async function updateBankDetails(
     revalidatePath("/admin/payouts");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update bank details",
-    };
+    return actionFailure(error, "Failed to update bank details");
   }
 }

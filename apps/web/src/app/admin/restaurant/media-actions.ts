@@ -6,9 +6,7 @@ import { getStorage } from "@dinewithme/storage";
 import { requireAuthUser } from "@/lib/auth/server";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
 
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 
 /**
  * Save media record after successful upload
@@ -82,10 +80,7 @@ export async function saveMediaRecord(
     };
   } catch (error) {
     console.error("[Media] Error saving media record:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save media record",
-    };
+    return actionFailure(error, "Failed to save media record");
   }
 }
 
@@ -164,9 +159,6 @@ export async function deleteMedia(
     };
   } catch (error) {
     console.error("[Media] Error deleting media:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete media",
-    };
+    return actionFailure(error, "Failed to delete media");
   }
 }

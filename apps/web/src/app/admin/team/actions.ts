@@ -1,16 +1,11 @@
 "use server";
 
 import { randomBytes } from "crypto";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
 import { restaurantRepository, teamInviteRepository, userRepository, auditLogger } from "@dinewithme/db";
 import { emailService } from "@dinewithme/email";
 import { requireAuthUser } from "@/lib/auth/server";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 const INVITE_EXPIRY_DAYS = 7;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -83,10 +78,7 @@ export async function inviteMember(
     revalidatePath("/admin/team");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to send invite",
-    };
+    return actionFailure(error, "Failed to send invite");
   }
 }
 
@@ -106,10 +98,7 @@ export async function revokeInvite(restaurantId: string, inviteId: string): Prom
     revalidatePath("/admin/team");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to revoke invite",
-    };
+    return actionFailure(error, "Failed to revoke invite");
   }
 }
 
@@ -132,10 +121,7 @@ export async function changeRole(
     revalidatePath("/admin/team");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to change role",
-    };
+    return actionFailure(error, "Failed to change role");
   }
 }
 
@@ -151,9 +137,6 @@ export async function removeMember(restaurantId: string, memberUserId: string): 
     revalidatePath("/admin/team");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to remove team member",
-    };
+    return actionFailure(error, "Failed to remove team member");
   }
 }

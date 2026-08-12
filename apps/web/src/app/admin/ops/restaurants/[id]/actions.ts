@@ -1,12 +1,12 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult, Role } from "@dinewithme/shared";
 import {
   userRepository,
   restaurantRepository,
   complianceDocumentRepository,
 } from "@dinewithme/db";
-import { Role } from "@dinewithme/shared";
 import { getStorage } from "@dinewithme/storage";
 import { revalidatePath } from "next/cache";
 import type { ComplianceDocType } from "@prisma/client";
@@ -15,11 +15,6 @@ import {
   ALLOWED_COMPLIANCE_CONTENT_TYPES,
 } from "@/lib/compliance-document";
 
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -77,10 +72,7 @@ export async function requestComplianceUploadUrl(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to prepare upload",
-    };
+    return actionFailure(error, "Failed to prepare upload");
   }
 }
 
@@ -122,10 +114,7 @@ export async function saveComplianceDocument(
 
     return { success: true, data: { id: document.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save document",
-    };
+    return actionFailure(error, "Failed to save document");
   }
 }
 
@@ -155,10 +144,7 @@ export async function deleteComplianceDocument(
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete document",
-    };
+    return actionFailure(error, "Failed to delete document");
   }
 }
 
@@ -191,10 +177,7 @@ export async function verifyComplianceDocument(
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to verify document",
-    };
+    return actionFailure(error, "Failed to verify document");
   }
 }
 
@@ -235,9 +218,6 @@ export async function rejectComplianceDocument(
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to reject document",
-    };
+    return actionFailure(error, "Failed to reject document");
   }
 }

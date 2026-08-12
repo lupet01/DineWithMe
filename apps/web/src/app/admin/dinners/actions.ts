@@ -1,16 +1,12 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { dinnerRepository, userRepository, dinnerCancellationRequestRepository, auditLogger, AuditAction, AuditEntity } from "@dinewithme/db";
 import { revalidatePath } from "next/cache";
 import { track } from "@dinewithme/analytics";
 import { AnalyticsEvents } from "@dinewithme/analytics";
 
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 /**
  * Update dinner status (SCHEDULED -> LIVE -> COMPLETED)
@@ -76,10 +72,7 @@ export async function updateDinnerStatus(
     return { success: true };
   } catch (error) {
     console.error("Error updating dinner status:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update dinner status",
-    };
+    return actionFailure(error, "Failed to update dinner status");
   }
 }
 
@@ -140,10 +133,7 @@ export async function publishDinner(dinnerId: string): Promise<ActionResult> {
     return { success: true };
   } catch (error) {
     console.error("Error publishing dinner:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to publish dinner",
-    };
+    return actionFailure(error, "Failed to publish dinner");
   }
 }
 
@@ -193,10 +183,7 @@ export async function deleteDinner(dinnerId: string): Promise<ActionResult> {
     return { success: true };
   } catch (error) {
     console.error("Error deleting dinner:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete dinner",
-    };
+    return actionFailure(error, "Failed to delete dinner");
   }
 }
 
@@ -281,9 +268,6 @@ export async function requestDinnerCancellation(
     return { success: true };
   } catch (error) {
     console.error("Error requesting dinner cancellation:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to request cancellation",
-    };
+    return actionFailure(error, "Failed to request cancellation");
   }
 }

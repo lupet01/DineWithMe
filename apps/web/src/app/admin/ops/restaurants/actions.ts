@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult, Role } from "@dinewithme/shared";
 import {
   restaurantRepository,
   restaurantClosureRequestRepository,
@@ -10,14 +11,8 @@ import {
 import { revalidatePath } from "next/cache";
 import { track } from "@dinewithme/analytics";
 import { AnalyticsEvents } from "@dinewithme/analytics";
-import { Role } from "@dinewithme/shared";
 import { emailService } from "@dinewithme/email";
 
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -106,10 +101,7 @@ export async function approveRestaurant(restaurantId: string): Promise<ActionRes
     return { success: true };
   } catch (error) {
     console.error("Error approving restaurant:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to approve restaurant",
-    };
+    return actionFailure(error, "Failed to approve restaurant");
   }
 }
 
@@ -169,10 +161,7 @@ export async function pauseRestaurant(
     return { success: true };
   } catch (error) {
     console.error("Error pausing restaurant:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to pause restaurant",
-    };
+    return actionFailure(error, "Failed to pause restaurant");
   }
 }
 
@@ -212,10 +201,7 @@ export async function reactivateRestaurant(restaurantId: string): Promise<Action
     return { success: true };
   } catch (error) {
     console.error("Error reactivating restaurant:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to reactivate restaurant",
-    };
+    return actionFailure(error, "Failed to reactivate restaurant");
   }
 }
 
@@ -265,10 +251,7 @@ export async function approveClosureRequest(requestId: string): Promise<ActionRe
     return { success: true };
   } catch (error) {
     console.error("Error approving closure request:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to approve closure request",
-    };
+    return actionFailure(error, "Failed to approve closure request");
   }
 }
 
@@ -304,9 +287,6 @@ export async function rejectClosureRequest(requestId: string): Promise<ActionRes
     return { success: true };
   } catch (error) {
     console.error("Error rejecting closure request:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to reject closure request",
-    };
+    return actionFailure(error, "Failed to reject closure request");
   }
 }

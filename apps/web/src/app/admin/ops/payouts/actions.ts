@@ -1,16 +1,10 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult, Role } from "@dinewithme/shared";
 import { userRepository, restaurantRepository, payoutRepository, auditLogger } from "@dinewithme/db";
 import { emailService } from "@dinewithme/email";
-import { Role } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -75,10 +69,7 @@ export async function processSelectedPayouts(payoutIds: string[]): Promise<Actio
     revalidatePath("/admin/ops/payouts");
     return { success: true, data: { processedCount } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to process payouts",
-    };
+    return actionFailure(error, "Failed to process payouts");
   }
 }
 
@@ -99,9 +90,6 @@ export async function verifyBankDetails(restaurantId: string): Promise<ActionRes
     revalidatePath("/admin/ops/payouts");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to verify bank details",
-    };
+    return actionFailure(error, "Failed to verify bank details");
   }
 }

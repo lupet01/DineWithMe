@@ -1,15 +1,10 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult, Role } from "@dinewithme/shared";
 import { themeRepository, userRepository, themeIcebreakerRepository } from "@dinewithme/db";
-import { Role } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
 
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -63,10 +58,7 @@ export async function createTheme(input: ThemeFormInput): Promise<ActionResult<{
     revalidatePath("/admin/ops/themes");
     return { success: true, data: { id: theme.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to create theme",
-    };
+    return actionFailure(error, "Failed to create theme");
   }
 }
 
@@ -91,10 +83,7 @@ export async function updateTheme(
     revalidatePath("/admin/ops/themes");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update theme",
-    };
+    return actionFailure(error, "Failed to update theme");
   }
 }
 
@@ -128,10 +117,7 @@ export async function updateThemeContent(themeId: string, input: ThemeContentInp
     revalidatePath(`/admin/ops/themes/${themeId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update theme",
-    };
+    return actionFailure(error, "Failed to update theme");
   }
 }
 
@@ -156,10 +142,7 @@ export async function addIcebreaker(themeId: string, text: string): Promise<Acti
     revalidatePath(`/admin/ops/themes/${themeId}`);
     return { success: true, data: { id: icebreaker.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to add icebreaker",
-    };
+    return actionFailure(error, "Failed to add icebreaker");
   }
 }
 
@@ -179,10 +162,7 @@ export async function updateIcebreaker(themeId: string, icebreakerId: string, te
     revalidatePath(`/admin/ops/themes/${themeId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update icebreaker",
-    };
+    return actionFailure(error, "Failed to update icebreaker");
   }
 }
 
@@ -197,10 +177,7 @@ export async function deleteIcebreaker(themeId: string, icebreakerId: string): P
     revalidatePath(`/admin/ops/themes/${themeId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete icebreaker",
-    };
+    return actionFailure(error, "Failed to delete icebreaker");
   }
 }
 
@@ -223,9 +200,6 @@ export async function toggleThemeActive(themeId: string, isActive: boolean): Pro
     revalidatePath("/admin/ops/themes");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update theme",
-    };
+    return actionFailure(error, "Failed to update theme");
   }
 }

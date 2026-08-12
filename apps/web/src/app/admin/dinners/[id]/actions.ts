@@ -1,17 +1,13 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { dinnerRepository, seatRepository, userRepository, paymentIntentRepository, auditLogger, AuditAction, AuditEntity } from "@dinewithme/db";
 import { revalidatePath } from "next/cache";
 import { refundPaymentIntent } from "@/app/api/payments/refund/service";
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requireDinnerManager(dinnerId: string) {
   const { userId: clerkUserId } = await auth();
@@ -67,10 +63,7 @@ export async function checkInGuest(dinnerId: string, seatId: string): Promise<Ac
     revalidatePath(`/admin/dinners/${dinnerId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to check in guest",
-    };
+    return actionFailure(error, "Failed to check in guest");
   }
 }
 
@@ -116,10 +109,7 @@ export async function checkInAllSeats(dinnerId: string): Promise<ActionResult<{ 
     revalidatePath(`/admin/dinners/${dinnerId}`);
     return { success: true, data: { checkedIn, failed } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to check in guests",
-    };
+    return actionFailure(error, "Failed to check in guests");
   }
 }
 
@@ -164,10 +154,7 @@ export async function refundSeat(dinnerId: string, seatId: string): Promise<Acti
     revalidatePath(`/admin/dinners/${dinnerId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to refund seat",
-    };
+    return actionFailure(error, "Failed to refund seat");
   }
 }
 
@@ -218,9 +205,6 @@ export async function duplicateDinner(dinnerId: string): Promise<ActionResult<{ 
     revalidatePath("/admin/dinners");
     return { success: true, data: { newDinnerId: created.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to duplicate dinner",
-    };
+    return actionFailure(error, "Failed to duplicate dinner");
   }
 }

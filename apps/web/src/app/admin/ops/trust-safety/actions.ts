@@ -2,13 +2,9 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { userRepository, safetyReportRepository, trustProfileRepository } from "@dinewithme/db";
-import { Role } from "@dinewithme/shared";
+import { Role, actionFailure, type ActionResult } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
 
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -38,10 +34,7 @@ export async function dismissReport(reportId: string, resolution?: string): Prom
     revalidatePath("/admin/ops/trust-safety");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to dismiss report",
-    };
+    return actionFailure(error, "Failed to dismiss report");
   }
 }
 
@@ -67,10 +60,7 @@ export async function warnReportedUser(reportId: string, resolution: string): Pr
     revalidatePath("/admin/ops/trust-safety");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to warn user",
-    };
+    return actionFailure(error, "Failed to warn user");
   }
 }
 
@@ -100,9 +90,6 @@ export async function suspendReportedUser(reportId: string, resolution: string):
     revalidatePath(`/admin/ops/users/${report.reportedUserId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to suspend user",
-    };
+    return actionFailure(error, "Failed to suspend user");
   }
 }

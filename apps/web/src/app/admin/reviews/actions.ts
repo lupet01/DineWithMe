@@ -1,14 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { feedbackRepository, dinnerRepository, restaurantRepository } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requireOwnerForFeedback(feedbackId: string) {
   const feedback = await feedbackRepository.findById(feedbackId);
@@ -53,9 +48,6 @@ export async function setReviewNote(feedbackId: string, note: string): Promise<A
     return { success: true };
   } catch (error) {
     console.error("[Reviews] Error saving review note:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save note",
-    };
+    return actionFailure(error, "Failed to save note");
   }
 }

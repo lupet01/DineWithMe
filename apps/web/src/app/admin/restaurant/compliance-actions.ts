@@ -1,6 +1,7 @@
 "use server";
 
 import { restaurantRepository, complianceDocumentRepository } from "@dinewithme/db";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { getStorage } from "@dinewithme/storage";
 import { requireAuthUser } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
@@ -9,12 +10,6 @@ import {
   COMPLIANCE_DOC_TYPES,
   ALLOWED_COMPLIANCE_CONTENT_TYPES,
 } from "@/lib/compliance-document";
-
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 /**
  * Restaurant-owner-facing compliance document actions. Deliberately a
@@ -63,10 +58,7 @@ export async function requestComplianceUploadUrl(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to prepare upload",
-    };
+    return actionFailure(error, "Failed to prepare upload");
   }
 }
 
@@ -105,10 +97,7 @@ export async function saveComplianceDocument(
 
     return { success: true, data: { id: document.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save document",
-    };
+    return actionFailure(error, "Failed to save document");
   }
 }
 
@@ -135,9 +124,6 @@ export async function deleteComplianceDocument(
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete document",
-    };
+    return actionFailure(error, "Failed to delete document");
   }
 }

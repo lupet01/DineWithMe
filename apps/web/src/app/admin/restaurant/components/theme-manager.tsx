@@ -47,7 +47,7 @@ export function ThemeManager({ restaurantId, allThemes, enabledThemeIds }: Theme
         return next;
       });
     } else {
-      setError(result.error);
+      setError(result.error ?? "Something went wrong");
     }
   };
 

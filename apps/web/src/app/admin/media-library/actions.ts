@@ -1,15 +1,10 @@
 "use server";
 
 import { restaurantRepository, mediaAssetRepository, restaurantGalleryItemRepository } from "@dinewithme/db";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { getStorage } from "@dinewithme/storage";
 import { requireAuthUser } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 const ALLOWED_IMAGE_CONTENT_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
@@ -53,10 +48,7 @@ export async function requestMediaUploadUrl(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to prepare upload",
-    };
+    return actionFailure(error, "Failed to prepare upload");
   }
 }
 
@@ -93,10 +85,7 @@ export async function saveMediaAsset(
 
     return { success: true, data: { mediaAssetId: mediaAsset.id, galleryItemId: galleryItem.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save photo",
-    };
+    return actionFailure(error, "Failed to save photo");
   }
 }
 
@@ -111,10 +100,7 @@ export async function setFeaturedPhoto(restaurantId: string, mediaAssetId: strin
     revalidatePath("/admin/media-library");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to set featured photo",
-    };
+    return actionFailure(error, "Failed to set featured photo");
   }
 }
 
@@ -142,9 +128,6 @@ export async function deleteMediaAsset(
     revalidatePath("/admin/media-library");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete photo",
-    };
+    return actionFailure(error, "Failed to delete photo");
   }
 }

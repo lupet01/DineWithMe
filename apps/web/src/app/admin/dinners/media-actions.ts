@@ -7,14 +7,9 @@ import {
   dinnerMediaRepository,
   mediaAssetRepository,
 } from "@dinewithme/db";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { requireAuthUser } from "@/lib/auth/server";
 import { revalidatePath } from "next/cache";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requireOwner(restaurantId: string) {
   const user = await requireAuthUser();
@@ -53,10 +48,7 @@ export async function getRestaurantPhotoPool(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to load photos",
-    };
+    return actionFailure(error, "Failed to load photos");
   }
 }
 
@@ -124,10 +116,7 @@ export async function saveDinnerListingPhotos(
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save listing photos",
-    };
+    return actionFailure(error, "Failed to save listing photos");
   }
 }
 
@@ -152,9 +141,6 @@ export async function getDinnerListingPhotos(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to load listing photos",
-    };
+    return actionFailure(error, "Failed to load listing photos");
   }
 }

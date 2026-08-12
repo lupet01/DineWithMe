@@ -150,8 +150,8 @@ export function RestaurantOnboardingWizard() {
 
     startTransition(async () => {
       const result = await createRestaurant(formData);
-      if (!result.success) {
-        setError(result.error);
+      if (!result.success || !result.data) {
+        setError(result.error ?? "Something went wrong");
         if (result.fieldErrors) {
           setFieldErrors(result.fieldErrors);
           if (result.fieldErrors.name) setStep(1);

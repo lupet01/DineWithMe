@@ -1,16 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { menuItemRepository, restaurantRepository, mediaAssetRepository } from "@dinewithme/db";
 import { MenuCourse, DietaryTag } from "@prisma/client";
 import { getStorage } from "@dinewithme/storage";
 import { requireAuthUser } from "@/lib/auth/server";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 const ALLOWED_IMAGE_CONTENT_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
@@ -100,10 +95,7 @@ export async function createMenuItem(
     return { success: true, data: { menuItemId: menuItem.id } };
   } catch (error) {
     console.error("[MenuItem] Error creating menu item:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to create menu item",
-    };
+    return actionFailure(error, "Failed to create menu item");
   }
 }
 
@@ -153,10 +145,7 @@ export async function updateMenuItem(menuItemId: string, input: MenuItemInput): 
     return { success: true };
   } catch (error) {
     console.error("[MenuItem] Error updating menu item:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update menu item",
-    };
+    return actionFailure(error, "Failed to update menu item");
   }
 }
 
@@ -185,10 +174,7 @@ export async function toggleMenuItemAvailability(
     return { success: true };
   } catch (error) {
     console.error("[MenuItem] Error toggling menu item availability:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update availability",
-    };
+    return actionFailure(error, "Failed to update availability");
   }
 }
 
@@ -217,10 +203,7 @@ export async function deleteMenuItem(menuItemId: string): Promise<ActionResult> 
     return { success: true };
   } catch (error) {
     console.error("[MenuItem] Error deleting menu item:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete menu item",
-    };
+    return actionFailure(error, "Failed to delete menu item");
   }
 }
 
@@ -260,10 +243,7 @@ export async function requestDishPhotoUploadUrl(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to prepare upload",
-    };
+    return actionFailure(error, "Failed to prepare upload");
   }
 }
 
@@ -286,9 +266,6 @@ export async function saveDishPhoto(
 
     return { success: true, data: { mediaAssetId: mediaAsset.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save photo",
-    };
+    return actionFailure(error, "Failed to save photo");
   }
 }

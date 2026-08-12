@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import type { ConversationStyle } from "@prisma/client";
 import {
   dinnerRepository,
@@ -15,9 +16,6 @@ import {
 import { requireAuthUser } from "@/lib/auth/server";
 import { track } from "@dinewithme/analytics";
 
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string; fieldErrors?: Record<string, string[]> };
 
 interface CreateDinnerInput {
   restaurantId: string;
@@ -229,10 +227,7 @@ export async function createDinner(
     };
   } catch (error) {
     console.error("[Dinner] Error creating dinner:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to create dinner",
-    };
+    return actionFailure(error, "Failed to create dinner");
   }
 }
 
@@ -377,10 +372,7 @@ export async function updateDinner(
     return { success: true, data: { dinnerId: input.dinnerId } };
   } catch (error) {
     console.error("[Dinner] Error updating dinner:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update dinner",
-    };
+    return actionFailure(error, "Failed to update dinner");
   }
 }
 
@@ -423,9 +415,6 @@ export async function getRestaurantEnabledThemes(
     };
   } catch (error) {
     console.error("[Dinner] Error fetching enabled themes:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch themes",
-    };
+    return actionFailure(error, "Failed to fetch themes");
   }
 }

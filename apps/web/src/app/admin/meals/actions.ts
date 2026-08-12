@@ -1,14 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import { mealRepository, restaurantRepository, menuItemRepository } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requireOwner(restaurantId: string) {
   const user = await requireAuthUser();
@@ -55,10 +50,7 @@ export async function createMeal(
     revalidatePath("/admin/meals");
     return { success: true, data: { mealId: meal.id } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to create meal",
-    };
+    return actionFailure(error, "Failed to create meal");
   }
 }
 
@@ -89,10 +81,7 @@ export async function updateMeal(
     revalidatePath(`/admin/meals/${mealId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update meal",
-    };
+    return actionFailure(error, "Failed to update meal");
   }
 }
 
@@ -107,10 +96,7 @@ export async function deleteMeal(mealId: string): Promise<ActionResult> {
     revalidatePath("/admin/meals");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to delete meal",
-    };
+    return actionFailure(error, "Failed to delete meal");
   }
 }
 
@@ -145,10 +131,7 @@ export async function addCourseOption(
     revalidatePath(`/admin/meals/${mealId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to add dish option",
-    };
+    return actionFailure(error, "Failed to add dish option");
   }
 }
 
@@ -171,9 +154,6 @@ export async function removeCourseOption(mealId: string, optionId: string): Prom
     revalidatePath(`/admin/meals/${mealId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to remove dish option",
-    };
+    return actionFailure(error, "Failed to remove dish option");
   }
 }

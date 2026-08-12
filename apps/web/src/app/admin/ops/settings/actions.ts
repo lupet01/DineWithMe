@@ -1,17 +1,11 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult, Role } from "@dinewithme/shared";
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { userRepository, teamInviteRepository } from "@dinewithme/db";
 import { emailService } from "@dinewithme/email";
-import { Role } from "@dinewithme/shared";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 const INVITE_EXPIRY_DAYS = 7;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -80,10 +74,7 @@ export async function invitePlatformMember(email: string): Promise<ActionResult>
     revalidatePath("/admin/ops/settings");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to send invite",
-    };
+    return actionFailure(error, "Failed to send invite");
   }
 }
 
@@ -103,9 +94,6 @@ export async function revokePlatformInvite(inviteId: string): Promise<ActionResu
     revalidatePath("/admin/ops/settings");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to revoke invite",
-    };
+    return actionFailure(error, "Failed to revoke invite");
   }
 }

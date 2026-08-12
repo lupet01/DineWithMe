@@ -1,19 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { restaurantRepository, auditLogger } from "@dinewithme/db";
 import {
+  actionFailure,
+  type ActionResult,
+  type CreateRestaurantInput,
+  type UpdateRestaurantInput,
+  type OperatingHours,
   createRestaurantSchema,
   updateRestaurantSchema,
   operatingHoursSchema,
 } from "@dinewithme/shared";
-import type { CreateRestaurantInput, UpdateRestaurantInput, OperatingHours } from "@dinewithme/shared";
+import { restaurantRepository, auditLogger } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
 import { track, trackServerSide, AnalyticsEvents } from "@dinewithme/analytics";
 
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string; fieldErrors?: Record<string, string[]> };
 
 /**
  * Create a new restaurant and assign the current user as owner
@@ -95,10 +96,7 @@ export async function createRestaurant(
     };
   } catch (error) {
     console.error("[Restaurant] Error creating restaurant:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to create restaurant",
-    };
+    return actionFailure(error, "Failed to create restaurant");
   }
 }
 
@@ -208,10 +206,7 @@ export async function updateRestaurant(
     };
   } catch (error) {
     console.error("[Restaurant] Error updating restaurant:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update restaurant",
-    };
+    return actionFailure(error, "Failed to update restaurant");
   }
 }
 
@@ -264,9 +259,6 @@ export async function updateOperatingHours(
 
     return { success: true, data: undefined };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to save operating hours",
-    };
+    return actionFailure(error, "Failed to save operating hours");
   }
 }

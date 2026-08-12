@@ -159,14 +159,14 @@ export function DinnerForm({
         ? await updateDinner({ dinnerId, ...shared })
         : await createDinner({ restaurantId, ...shared, status: pendingStatusRef.current });
 
-    if (result.success) {
+    if (result.success && result.data) {
       await saveDinnerListingPhotos(result.data.dinnerId, selectedPhotoIds);
       setLoading(false);
       router.push(mode === "edit" ? `/admin/dinners/${result.data.dinnerId}` : "/admin/dinners");
       router.refresh();
     } else {
       setLoading(false);
-      setError(result.error);
+      setError(result.error ?? "Something went wrong");
     }
   };
 

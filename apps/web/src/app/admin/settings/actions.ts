@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionFailure, type ActionResult } from "@dinewithme/shared";
 import {
   restaurantRepository,
   restaurantClosureRequestRepository,
@@ -8,12 +9,6 @@ import {
 } from "@dinewithme/db";
 import { requireAuthUser } from "@/lib/auth/server";
 import { track, AnalyticsEvents } from "@dinewithme/analytics";
-
-interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 /**
  * Owner-only auth boundary for this file - deliberately not shared with
@@ -68,10 +63,7 @@ export async function pauseRestaurantSelfServe(
     return { success: true };
   } catch (error) {
     console.error("[Settings] Error pausing restaurant:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to pause restaurant",
-    };
+    return actionFailure(error, "Failed to pause restaurant");
   }
 }
 
@@ -107,10 +99,7 @@ export async function reactivateRestaurantSelfServe(
     return { success: true };
   } catch (error) {
     console.error("[Settings] Error reactivating restaurant:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to reactivate restaurant",
-    };
+    return actionFailure(error, "Failed to reactivate restaurant");
   }
 }
 
@@ -131,10 +120,7 @@ export async function updateNotificationPreferences(
     return { success: true };
   } catch (error) {
     console.error("[Settings] Error updating notification preferences:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update notification preferences",
-    };
+    return actionFailure(error, "Failed to update notification preferences");
   }
 }
 
@@ -179,10 +165,7 @@ export async function requestRestaurantClosure(
     return { success: true };
   } catch (error) {
     console.error("[Settings] Error requesting restaurant closure:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to submit closure request",
-    };
+    return actionFailure(error, "Failed to submit closure request");
   }
 }
 
@@ -212,9 +195,6 @@ export async function cancelRestaurantClosureRequest(requestId: string): Promise
     return { success: true };
   } catch (error) {
     console.error("[Settings] Error cancelling closure request:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to cancel request",
-    };
+    return actionFailure(error, "Failed to cancel request");
   }
 }

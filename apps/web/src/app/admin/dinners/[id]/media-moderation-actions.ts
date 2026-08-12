@@ -1,15 +1,9 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { actionFailure, type ActionResult, Role } from "@dinewithme/shared";
 import { userRepository, dinnerMediaRepository } from "@dinewithme/db";
-import { Role } from "@dinewithme/shared";
 import { revalidatePath } from "next/cache";
-
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 async function requirePlatformAdmin() {
   const { userId: clerkUserId } = await auth();
@@ -57,10 +51,7 @@ export async function approvePhotoPromotion(dinnerMediaId: string): Promise<Acti
     revalidatePath("/discover");
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to approve photo",
-    };
+    return actionFailure(error, "Failed to approve photo");
   }
 }
 
@@ -84,9 +75,6 @@ export async function rejectPhotoPromotion(dinnerMediaId: string): Promise<Actio
     revalidatePath(`/admin/dinners/${item.dinnerId}`);
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to reject photo",
-    };
+    return actionFailure(error, "Failed to reject photo");
   }
 }
